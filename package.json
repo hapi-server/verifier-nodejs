@@ -1,0 +1,33 @@
+{
+  "name": "hapi-server-verifier",
+  "version": "0.0.1",
+  "license": "MIT",
+  "engines": {
+    "node": ">=4"
+  },
+  "people": {
+    "name": "Bob Weigel",
+    "email": "rweigel@gmu.edu",
+    "url": "http://bobweigel.info/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hapi-server/nodejs-server-verifier.git"
+  },
+  "dependencies": {
+    "chai": "^4.0.2",
+    "chai-http": "^3.0.0",
+    "chai-integer": "^0.1.0",
+    "chai-string": "^1.3.0",
+    "express": "^4.15.3",
+    "jsonschema": "^1.1.1",
+    "mocha": "^3.4.2",
+    "moment": "^2.18.1",
+    "request": "^2.81.0",
+    "yargs": "^8.0.2"
+  },
+  "scripts": {
+    "start": "node test.js",
+    "test": "node test.js http://mag.gmu.edu/TestData/hapi"
+  }
+}

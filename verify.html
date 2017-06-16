@@ -1,0 +1,36 @@
+<html>
+	<body>
+		<p>
+			<a href="https://github.com/hapi-server/data-specification/tree/v1.1.0">HAPI 1.1</a> server verifier.  See <a href="https://github.com/hapi-server/verifier-nodejs">server-verifier-nodejs</a> for source code for tests.
+		</p>
+		<p>
+			Usage: <code>?url=URL&id=ID&amp;parameter=PARAMETER&time.min=TIME&time.max=TIME&id=ID</code>.
+		</p>
+		<p>
+			Only a <code>URL</code> that end in <code>/hapi</code> is required.  Only one <code>PARAMETER</code> may be specified (comma-separated list not supported).
+		</p>
+		<p>
+			Default is to use <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> and check all dataset IDs from <code>/catalog</code> response.
+		</p>
+		<p>
+			Examples
+			<ul>
+				<li>
+					<a href='?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10&id=TestData&parameter=scalar'>?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10&id=TestData&amp;parameter=scalar</a>
+				</li>
+				<li>
+					<a href='?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10&id=TestData'>?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10&id=TestData</a>
+				</li>
+				<li>
+					<a href='?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10'>?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10</a>
+				</li>
+				<li>
+					<a href='?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01'>?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01</a>
+				</li>
+				<li>
+					<a href='?url=http://mag.gmu.edu/TestData/hapi'>?url=http://mag.gmu.edu/TestData/hapi</a>
+				</li>
+			</ul>
+		</p>
+	</body>
+</html>

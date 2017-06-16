@@ -24,11 +24,11 @@ node test.js
 	--url URL 
 	--id DATASETID 
 	--parameter PARAMETERNAME 
-	--time.min ISO8601 
-	--time.max ISO8601
+	--timemin ISO8601 
+	--timemax ISO8601
 ```
 
-Only `URL` is required.   Default is to check all datasets and all parameters and use `time.min=sampleStartDate` and `time.max=sampleStopDate` if both given, otherwise `time.min=startDate` and `time.max=startDate+P1D` are used.
+Only `URL` is required.   Default is to check all datasets and all parameters and use `timemin=sampleStartDate` and `timemax=sampleStopDate` if both given, otherwise `timemin=startDate` and `timemax=startDate+P1D` are used.
 
 # Server Usage
 
@@ -42,6 +42,7 @@ node verify.js --port PORT
 2. Add to schema optional HAPI entities.
 3. Add tests for HAPI Binary and JSON format (first/last lines of CSV only tested now).
 4. Check response when no parameters or all parameters are given (`/info` and `/data` tests are for one parameter at a time).
+5. Send invalid query parameters and check error responses.
 
 # Contact
 

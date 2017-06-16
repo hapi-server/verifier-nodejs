@@ -4,13 +4,13 @@
 			<a href="https://github.com/hapi-server/data-specification/tree/v1.1.0">HAPI 1.1</a> server verifier.  See <a href="https://github.com/hapi-server/verifier-nodejs">server-verifier-nodejs</a> for source code for tests.
 		</p>
 		<p>
-			Usage: <code>?url=URL&id=ID&amp;parameter=PARAMETER&time.min=TIME&time.max=TIME&id=ID</code>.
+			Usage: <code>?url=URL&id=ID&amp;parameter=PARAMETER&time.min=ISO8601&time.max=ISO8601</code>.
 		</p>
 		<p>
-			Only a <code>URL</code> that end in <code>/hapi</code> is required.  Only one <code>PARAMETER</code> may be specified (comma-separated list not supported).
+			Only a <code>URL</code> that ends in <code>/hapi</code> is required.  Only one <code>ID</code> and one <code>PARAMETER</code> may be specified (comma-separated list not supported).
 		</p>
 		<p>
-			Default is to use <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> and check all dataset IDs from <code>/catalog</code> response.
+			Only URL is required. Default is to check all datasets and all parameters and use <code>time.min=sampleStartDate</code> and <code>time.max=sampleStopDate</code> if both given in <code>/info</code> response, otherwise the required <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> from <code>/info</code> are used.
 		</p>
 		<p>
 			Examples

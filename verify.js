@@ -27,7 +27,7 @@ if (argv.port == false) {
   		res.end('Application error.');
 	});
 
-	app.get('/verify-hapi', function (req, res, next) {
+	app.get('/', function (req, res, next) {
 
 		var addr = req.headers['x-forwarded-for'] || req.connection.remoteAddress
 		console.log(new Date().toISOString() + " Request from " + addr + ": " + req.originalUrl)

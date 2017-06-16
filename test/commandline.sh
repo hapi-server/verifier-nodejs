@@ -2,7 +2,8 @@
 # TODO: Collect exit status as in server.sh
 
 TESTDATA=http://mag.gmu.edu/TestData/hapi
-TESTDATA=http://localhost:8999/hapi
+#TESTDATA=http://localhost:8999/hapi
+
 set -x;
 
 node verify.js --url $TESTDATA --id dataset1 --timemin 2000-01-01 --timemax 2000-01-01T00:00:10

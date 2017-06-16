@@ -1,10 +1,10 @@
 # HAPI Server Verifier
 
-Runs a suite of API tests on a HAPI server.  Most of the tests are for things that are required for a basic HAPI client to work.
+Runs a suite of tests on a HAPI server. The tests involve a combination of [JSON schema](https://github.com/hapi-server/verifier-nodejs) validation	 and ad-hoc code.
 
-A running instance is available at http://tsds.org/verify-hapi
+A running instance and examples are available at http://tsds.org/verify-hapi
 
-To run tests on the command line, see the installation notes.
+To run tests on the command line or to run a server, see the below.
 
 # Installation
 
@@ -20,25 +20,29 @@ npm install
 # Command-Line Usage
 
 ```
-node test.js --url URL --id DATASETID --time.min TIME --time.max TIME
+node test.js 
+	--url URL 
+	--id DATASETID 
+	--parameter PARAMETERNAME 
+	--time.min ISO8601 
+	--time.max ISO8601
 ```
 
-Only `URL` is required.  Default `time.min=startDate` and `time.max=startDate+P1D`.  Default is to check all dataset ids.
+Only `URL` is required.   Default is to check all datasets and all parameters and use `time.min=sampleStartDate` and `time.max=sampleStopDate` if both given, otherwise `time.min=startDate` and `time.max=startDate+P1D` are used.
 
 # Server Usage
 
 ```
-node test.js --port PORT
+node verify.js --port PORT
 ```
 
 # TODO
 
-1. Combine repeated JSON Schema information in [JSON schema files](https://github.com/hapi-server/verifier-nodejs)
-2. Allow warnings for optional but "should" HAPI elements/functionality
-3. Add schema for optional HAPI entities and write code for additional associated verifications can't be verified with a schema.
-4. Add tests for HAPI Binary and JSON (first/last lines of CSV only tested now)
-5. If `sampleStartDate` and `sampleStartDate` are given in `/info` response, use them instead of `time.min=startDate` and `time.max=startDate+1D`.
-6. Check for monotonic Time
-7. Check for correct errors for `time.max` and `time.min`
-8. Check for correct errors for invalid parameters
-9. Check response when no parameters or all parameters are given
+1. Combine repeated JSON Schema information in [JSON schema files](https://github.com/hapi-server/verifier-nodejs).
+2. Add to schema optional HAPI entities.
+3. Add tests for HAPI Binary and JSON format (first/last lines of CSV only tested now).
+4. Check response when no parameters or all parameters are given (`/info` and `/data` tests are for one parameter at a time).
+
+# Contact
+
+Bob Weigel <rweigel@gmu.edu>

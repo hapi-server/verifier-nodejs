@@ -1,6 +1,6 @@
 # HAPI Server Verifier
 
-Runs a suite of tests on a HAPI server. The tests involve a combination of [JSON schema](https://github.com/hapi-server/verifier-nodejs) validation	 and ad-hoc code.
+Runs a suite of tests on a HAPI server. The tests involve a combination of [JSON schema](https://github.com/hapi-server/verifier-nodejs) validation and ad-hoc code.
 
 A running instance and examples are available at http://tsds.org/verify-hapi
 
@@ -38,7 +38,7 @@ node verify.js --port PORT
 
 # TODO
 
-1. Combine repeated JSON Schema information in [JSON schema files](https://github.com/hapi-server/verifier-nodejs).
+1. Combine repeated JSON Schema information in [JSON schema files](https://github.com/hapi-server/verifier-nodejs/schemas).
 2. Add to schema optional HAPI entities.
 3. Add tests for HAPI Binary and JSON format (first/last lines of CSV only tested now).
 4. Check response when no parameters or all parameters are given (`/info` and `/data` tests are for one parameter at a time).

@@ -5,12 +5,21 @@ var is      = require('./is.js'); // Test library
 
 function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	
-	root()
+	try {
+		root();
+	} catch (err) {
+		if (RES) RES.end('Problem with verification server. Aborting.');
+	}
 	
+	function abort() {
+		if (RES) RES.end('Problem with verification server. Aborting.');	
+	}
+
 	function report(url,obj,opts) {
 		// Print URL and message in object obj.
 		// If message indicates error, stop if opts["stop"] is true.
-		// If message indicates error, give warning if opts["ward"] is true.
+		// If message indicates error, give warning if opts["warn"] is true.
+		// If obj is false, test was not appropriate to perform so exit and return false.
 		// If RES is defined, in server mode so send HTML.
 
 		if (obj == false) return false; // Case where test was not appropriate.
@@ -226,14 +235,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				header.parameters = removeDuplicates(header.parameters,'name');
 				report(url,{"description":'Expect first parameter to be Time',"error":header.parameters[0].name !== "Time","got":header.parameters[0].name});
 
-				report(url,is.TimeIncreasing(header,"dataset"));
-				report(url,is.TimeIncreasing(header,"sample"));
-
-				// TODO: 
-				// sampleStartDate > startDate
-				// sampleStopDate < stopDate
-				// sampleStopDate - sampleStartDate > cadence
-				//report(url,is.sampleDatesSensible(header));
+				report(url,is.TimeIncreasing(header,"{start,stop}Date"));
+				report(url,is.TimeIncreasing(header,"sample{Start,Stop}Date"));
+				report(url,is.DurationOK(header,"{start,stop}Date"));
+				report(url,is.DurationOK(header,"sample{Start,Stop}Date"));
 
 				for (var i = 0;i<header.parameters.length;i++) {
 					len  = header.parameters[i]["length"];
@@ -241,7 +246,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					name = header.parameters[i]["name"];
 					size = header.parameters[i]["size"];
 					report(url,is.LengthAppropriate(len,type,name));
-					report(url,is.SizeAppropriate(size,name),{"warn":true});
+					report(url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
+					report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
 				}
 				if (PARAMETER !== "") {
 					var Time = header.parameters[0];
@@ -272,7 +278,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 			var stop  = header["sampleStopDate"];
 		} else {
 			var start = header["startDate"];
-			var stop  = new Date(start).valueOf() + 86400*1000;
+			var stop  = new Date(start).valueOf() + 86400*1000; // Check one day
 			// TODO: Use a multiple of cadence.
 			//stop = new Date(start).valueOf() + 1000; // Add one second			
 		}
@@ -298,16 +304,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				report(url,is.CompressionAvailable(res.headers),{"warn":true});
 				report(url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
 
-				if (report(url,{"description":'Expect CSV response to start with integer',"error":!/^[0-9]/.test(body.substring(0,1)),"got":body.substring(0,1)},{"stop":true})) return;
-				report(url,{"description":'Expect last character of CSV response be a newline',"error":!/\n$/.test(body.slice(-1)),"got":body.slice(-1).replace(/\n/g,"\\n")});
-				report(url,{"description":'Expect last two characters of CSV response to not be newlines',"error":/\n\n$/.test(body.slice(-2)),"got":body.slice(-2).replace(/\n/g,"\\n")});
-
-				lines = body.split("\n");
-				var got = lines.length + " lines";
-				if (lines.length == 0) {
-					got = "No lines.  Consider setting time.max and time.min to be larger for test."
-				}
-				report(url,{"description":'Expect at least one line in CSV response',"warn": false,"error":lines.length == 0,"got": got},{"stop":true});
+				report(url,is.FileOK(body,"firstchar"));
+				report(url,is.FileOK(body,"lastchar"));
+				report(url,is.FileOK(body,"extranewline"));
+				report(url,is.FileOK(body,"numlines"));
 
 				line1 = lines[0].split(",");
 				time1 = line1[0].trim();
@@ -315,6 +315,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				
 				report(url,is.ISO8601(time1));
 				report(url,is.CorrectLength(time1,timeLength,"Time","",true));
+				report(url,is.TimeIncreasing(lines,"CSV"));
+				report(url,is.TimeInBounds(lines,start,stop));
 
 				len  = header.parameters[pn]["length"];
 				type = header.parameters[pn]["type"];

@@ -173,10 +173,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		request(url, 
 			function (err,res,body) {
 				if (err) {
-					if (report(url,{"description":"Probably " + url + " is not a valid URL","error":true,"warning":false,"got":error},{"stop":true})) return;
+					if (report(url,{"description":"Probably " + url + " is not a valid URL","error":true,"warning":false,"got":error},{"stop":true,"abort":true})) return;
 					return;
 				}
-				if (report(url,is.HTTP200(res),{"stop":true})) return;
+				if (report(url,is.HTTP200(res),{"stop":true,"abort":true})) return;
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				if (report(url,is.JSONparsable(body),{"stop":true})) return;
 				report(url,is.HAPIJSON(body,'catalog'));
@@ -202,7 +202,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 			// Only check one dataset with id = ID.
 			datasets = selectOne(datasets,'id',ID);
 			if (datasets.length == 0) {
-				if (report(url,{"description": "Dataset " + ID + " is not in catalog","error":true,"got": "to abort"},{"stop":true})) return;
+				if (report(url,{"description": "Dataset " + ID + " is not in catalog","error":true,"got": "to abort"},{"stop":true,"abort":true})) return;
 			}
 		}
 
@@ -210,6 +210,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 			// Don't just request metadata for PARAMETER.  Instead,
 			// get metadata for all parameters, check them,
 			// and then only make data request for PARAMETER.
+			// TODO: Add test to verify that a reduced parameter list is given
+			// only one parameter requested.
 			if (PARAMETER !== "") {
 				var url = ROOT + '/info' + "?id=" + ID + "&parameters=" + PARAMETER;
 			}
@@ -223,7 +225,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					report(url,{"description":"","error":true,"got":err},{"stop":true})
 					return;
 				}
-
 				if (report(url,is.HTTP200(res),{"stop":true})) return;
 
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
@@ -288,7 +289,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 		// TODO: Possibly warn if parameter not a valid c identifier: /[_a-zA-Z][_a-zA-Z0-9]{0,30}/
 		var url = ROOT + '/data' + "?id=" + datasets[0].id + '&parameters=' + parameter + '&time.min=' + start + '&time.max=' + stop	
-		report(url);
+		//report(url);
 		request({"url":url,"gzip":true}, 
 			function (err,res,body) {
 				var url = res.request.href;

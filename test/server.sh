@@ -40,7 +40,7 @@ curl "$VURL/?https://voyager.gsfc.nasa.gov/hapiproto/hapi&id=AC_H0_MFI&time.min=
 grep "End of validation tests." test.html
 stat=$stat$?
 
-node verify.js --url http://datashop.elasticbeanstalk.com/hapi --id WEYGAND_GEOTAIL_MAG_GSM
+curl "$VURL/?http://datashop.elasticbeanstalk.com/hapi&id=WEYGAND_GEOTAIL_MAG_GSM" > test.html
 grep "End of validation tests." test.html
 stat=$stat$?
 

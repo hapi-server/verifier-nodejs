@@ -137,7 +137,7 @@ function TimeInBounds(lines,start,stop) {
 	var firstTime = lines[0].split(",").shift();
 	var lastTime  = lines[lines.length-2].split(",").shift(); // -2 because of split gives empty string in last array element if last line is newline.
 	var got = "First time = " + firstTime + "; LastTime = " + lastTime;
-	var t = new Date(firstTime).getTime() >=  new Date(start).getTime() && new Date(lastTime).getTime() <  new Date(stop).getTime();
+	var t = new Date(firstTime.trim()).getTime() >=  new Date(start).getTime() && new Date(lastTime.trim()).getTime() <  new Date(stop).getTime();
 	return {"description": "is.TimeInBounds(): Expect first time in CSV >= " + start + " and last time in CSV < " + stop + " (only checks to ms)","error": t != true,"got":got};
 }
 exports.TimeInBounds = TimeInBounds;
@@ -150,7 +150,7 @@ function TimeIncreasing(header,what) {
 			var line = header[i].split(",");
 			var linenext = header[i+1].split(",");
 			var ts = "Time(i+1) > Time(i)";
-			var t = new Date(linenext[0]).getTime() > new Date(line[0]).getTime();
+			var t = new Date(linenext[0].trim()).getTime() > new Date(line[0].trim()).getTime();
 			if (!t) {
 				var got = linenext[0] + " <= " + line[0];
 				break;			

@@ -5,6 +5,68 @@ var moment   = require('moment');
 // Note that for reporting to have correct line numbers, must start functions with
 // 'function FNAME('' and start description with 'is.FNAME'.
 
+function DurationOK(header,what) {
+
+	if (what === "{start,stop}Date") {
+		if (!header["cadence"]) return false; // Don't do test.
+		startstr = "startDate";
+		stopstr = "stopDate";
+	}
+
+	if (what === "sample{Start,Stop}Date") {
+		if (!header["cadence"] || !header["sampleStartDate"] || !header["sampleStartDate"]) return false; // Don't do test.
+		startstr = "sampleStartDate";
+		stopstr = "sampleStopDate";
+	}
+
+	var dt = moment.duration(header["cadence"]);
+	var dT = new Date(header[stopstr]).getTime() - new Date(header[startstr]).getTime();
+	var t = dt <= dT;
+	var got = header["cadence"] + " <= " + header[stopstr] + " - " + header[startstr];
+	if (!t) {
+		var got = got.replace("<=",">");
+	}
+	return {"description":"is.DurationOK(): Cadence <= " + stopstr + " - " + startstr,"error": t != true,"got":got};
+}
+exports.DurationOK = DurationOK;
+
+function FileOK(body,what) {
+
+	if (what === "firstchar") {
+		desc = "Expect CSV response to start w/ integer.";
+		t    = !/^[0-9]/.test(body.substring(0,1));
+		got  = body.substring(0,1);
+	}
+
+	if (what === "lastchar") {
+		desc = "Expect last character of CSV response be a newline."
+		t = !/\n$/.test(body.slice(-1))
+		got = body.slice(-1).replace(/\n/g,"\\n");
+	}
+
+	if (what === "extranewline") {	
+		desc = "Expect last two characters of CSV response to not be newlines.";
+		t    = /\n\n$/.test(body.slice(-2));
+		got  = body.slice(-2).replace(/\n/g,"\\n")
+	}
+
+	if (what === "numlines") {
+		lines = body.split("\n");
+		var got = lines.length + " lines";
+		if (lines.length == 0) {
+			got = "No lines.";
+		} else {
+			got = lines.length + " lines";
+		}
+		desc = "Expect at least one line in CSV response.";
+		t = lines.length == 0
+	}
+
+	return {"description":"isFileOK(): " + desc,"error":t,"got":got};
+
+}
+exports.FileOK = FileOK;
+
 function LengthAppropriate(len,type,name) {
 	if (/isotime|string/.test(type) && !len) {
 		obj = {"description":"If type = string or isotime, length must not be given","error":true,"got": "Type = " + type + " and length = " + len + " for parameter " + name};
@@ -13,20 +75,34 @@ function LengthAppropriate(len,type,name) {
 	} else {
 		obj = {"description":"Length may only be given for types string and isotime","error":false,"got": "Type = " + type + " and length = " + len + " for parameter " + name};
 	}
+	obj["description"] = "is.SizeAppropriate(): " + obj["description"];
 	return obj;
 }
 exports.LengthAppropriate = LengthAppropriate;
 
-function SizeAppropriate(size,name,extra) {
-	t = false;
-	if (size) {
-		t = (size.length > 1)
+function SizeAppropriate(size,name,what) {
+	if (!size) return;
+	if (what === "needed") {
+		// Test if all elements of size are 1.
+		t = 0;
+		for (var i=0;i<size.length;i++) {
+			t = t + size[i];
+		}
+		t = t == size.length;
+		return {"description":"is.SizeAppropriate(): Size is not needed if all elements are 1.","error":t,"got": "size = " + JSON.stringify(size) + " for parameter " + name}
 	}
-	return {"description":"Size arrays with more than one element are experimental.","error":t,"got": "size = " + JSON.stringify(size) + " for parameter " + name}
+	if (what === "2D+") {
+		t = false;
+		if (size) {
+			t = (size.length > 1)
+		}
+		return {"description":"is.SizeAppropriate(): Size arrays with more than one element are experimental.","error":t,"got": "size = " + JSON.stringify(size) + " for parameter " + name}
+	}
 }
 exports.SizeAppropriate = SizeAppropriate;
 
 function HTTP200(res){
+	var body = "";
 	if (res.statusCode != 200) {
 
 		try {
@@ -51,20 +127,49 @@ function CorrectLength(str,len,name,extra,required) {
 	var got = "(" + (str.length) + ") - (" + (len-1) + ")"
 	var t = str.length != (len - 1);
 	if (t && !required) {
-		got = got + extra + ". Not an error for CSV, but whitespace padding will cause error in binary."
+		got = got + extra + " Not an error for CSV, but whitespace padding will cause error in binary."
 	}
-	return {"description":'is.CorrectLength(): Expect (trimmed length of ' + name + ' string in CSV) - (parameters.'+ name + '.length-1) should be zero.',"error":t,"got":got}
+	return {"description":'is.CorrectLength(): Expect (trimmed length of ' + name + ' string parameter in CSV) - (parameters.'+ name + '.length-1) should be zero.',"error":t,"got":got}
 }
 exports.CorrectLength = CorrectLength;
 
+function TimeInBounds(lines,start,stop) {
+	var firstTime = lines[0].split(",").shift();
+	var lastTime  = lines[lines.length-2].split(",").shift(); // -2 because of split gives empty string in last array element if last line is newline.
+	var got = "First time = " + firstTime + "; LastTime = " + lastTime;
+	var t = new Date(firstTime).getTime() >=  new Date(start).getTime() && new Date(lastTime).getTime() <  new Date(stop).getTime();
+	return {"description": "is.TimeInBounds(): Expect first time in CSV >= " + start + " and last time in CSV < " + stop + " (only checks to ms)","error": t != true,"got":got};
+}
+exports.TimeInBounds = TimeInBounds;
+
 function TimeIncreasing(header,what) {
-	if (what === "dataset") {
+	if (what === "CSV") {
+		var got = "Monotonically increasing time in CSV"
+		var starttest = new Date().getTime();
+		for (i = 0;i < header.length-2;i++) {// -2 instead of -1 b/c split will place an '' for a line that is only \n.
+			var line = header[i].split(",");
+			var linenext = header[i+1].split(",");
+			var ts = "Time(i+1) > Time(i)";
+			var t = new Date(linenext[0]).getTime() > new Date(line[0]).getTime();
+			if (!t) {
+				var got = linenext[0] + " <= " + line[0];
+				break;			
+			}
+			if (new Date().getTime() - starttest > 10) {
+				// Stop testing after 10 ms.
+				got = got + " in first " + (i+1) + " lines.";
+				break
+			}
+		}
+	}
+	if (what === "{start,stop}Date") {
 		var start = header.startDate;
 		var stop  = header.stopDate;
 		var ts = "info.startDate < info.stopDate";
 		var t = new Date(start).getTime() < new Date(stop).getTime();
 		var got = start + " < " + stop;
-	} else {
+	}
+	if (what === "sample{Start,Stop}Date") {
 		var start = header.sampleStartDate;
 		var stop  = header.sampleStopDate;
 		if (!start && !stop) return false;

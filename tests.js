@@ -4,15 +4,15 @@ var clc     = require('cli-color');
 var is      = require('./is.js'); // Test library
 
 function run(ROOT,ID,PARAMETER,START,STOP,RES) {
+
+	// Catch bugs in verification code.
+	process.on('uncaughtException', function(err) {abort()});
 	
-	try {
-		root();
-	} catch (err) {
-		if (RES) RES.end('Problem with verification server. Aborting.');
-	}
+	root();
 	
 	function abort() {
-		if (RES) RES.end('Problem with verification server. Aborting.');	
+		if (RES) RES.end('Problem with verification server (Uncaught Exception). Aborting.');	
+		if (!RES) console.log('Problem with verification server (Uncaught Exception). Aborting.');	
 	}
 
 	function report(url,obj,opts) {
@@ -134,6 +134,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	function root() {
 		var url = ROOT;
 		report(url);
+
 		request(url, 
 			function (err,res,body) {
 				if (err) {
@@ -143,7 +144,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				report(url,is.HTTP200(res),{"warn":true});
 				report(url,is.ContentType(/^text\/html/,res.headers["content-type"]),{"warn":true});
 				capabilities();
-			})
+			}).on('error',abort)
 	}
 
 	function capabilities() {
@@ -238,8 +239,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 				report(url,is.TimeIncreasing(header,"{start,stop}Date"));
 				report(url,is.TimeIncreasing(header,"sample{Start,Stop}Date"));
-				report(url,is.DurationOK(header,"{start,stop}Date"));
-				report(url,is.DurationOK(header,"sample{Start,Stop}Date"));
+				report(url,is.CadenceOK(header,"{start,stop}Date"));
+				report(url,is.CadenceOK(header,"sample{Start,Stop}Date"));
 
 				for (var i = 0;i<header.parameters.length;i++) {
 					len  = header.parameters[i]["length"];
@@ -280,10 +281,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		} else {
 			var start = header["startDate"];
 			var stop  = new Date(start).valueOf() + 86400*1000; // Check one day
+			var stop = new Date(stop).toISOString().slice(0,-1);
 			// TODO: Use a multiple of cadence.
 			//stop = new Date(start).valueOf() + 1000; // Add one second			
 		}
-		stop = new Date(stop).toISOString().slice(0,-1); // -1 to remove Z
 		
 		var parameter = header.parameters[pn].name;
 
@@ -315,7 +316,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				timeLength = header.parameters[0].length;
 				
 				report(url,is.ISO8601(time1));
-				report(url,is.CorrectLength(time1,timeLength,"Time","",true));
+				report(url,is.CorrectLength(time1,timeLength,"Time","",false),{"warn":true});
 				report(url,is.TimeIncreasing(lines,"CSV"));
 				report(url,is.TimeInBounds(lines,start,stop));
 
@@ -337,6 +338,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				} else {
 					nf = nf + prod(header.parameters[pn]["size"])
 				}
+
+				// Note line.length - 1 = because split() add extra empty element at end.
+				report(url,is.SizeCorrect(line1.length-1,nf-1,header.parameters[pn]),{"warn":true});
 
 				for (var j=1;j < nf;j++) {
 					var extra = ' in column ' + j + ' on first line.'

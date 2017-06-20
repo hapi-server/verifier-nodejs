@@ -3,12 +3,12 @@ var validate = require('jsonschema').validate;
 var moment   = require('moment');
 
 // Note that for reporting to have correct line numbers, must start functions with
-// 'function FNAME('' and start description with 'is.FNAME'.
+// function FNAME( and start description with 'is.FNAME()'.
 
-function DurationOK(header,what) {
+function CadenceOK(header,what) {
 
 	if (what === "{start,stop}Date") {
-		if (!header["cadence"]) return false; // Don't do test.
+		if (!header["cadence"]) return false; // Don't do test. No cadence provided.
 		startstr = "startDate";
 		stopstr = "stopDate";
 	}
@@ -26,14 +26,14 @@ function DurationOK(header,what) {
 	if (!t) {
 		var got = got.replace("<=",">");
 	}
-	return {"description":"is.DurationOK(): Cadence <= " + stopstr + " - " + startstr,"error": t != true,"got":got};
+	return {"description":"is.CadenceOK(): Cadence <= " + stopstr + " - " + startstr,"error": t != true,"got":got};
 }
-exports.DurationOK = DurationOK;
+exports.CadenceOK = CadenceOK;
 
 function FileOK(body,what) {
 
 	if (what === "firstchar") {
-		desc = "Expect CSV response to start w/ integer.";
+		desc = "Expect first character of CSV response to be an integer.";
 		t    = !/^[0-9]/.test(body.substring(0,1));
 		got  = body.substring(0,1);
 	}
@@ -58,7 +58,7 @@ function FileOK(body,what) {
 		} else {
 			got = lines.length + " lines";
 		}
-		desc = "Expect at least one line in CSV response.";
+		desc = "Expect at least one newline in CSV response.";
 		t = lines.length == 0
 	}
 
@@ -68,20 +68,39 @@ function FileOK(body,what) {
 exports.FileOK = FileOK;
 
 function LengthAppropriate(len,type,name) {
+	var got = "Type = " + type + " and length = " + len + " for parameter " + name;
 	if (/isotime|string/.test(type) && !len) {
-		obj = {"description":"If type = string or isotime, length must not be given","error":true,"got": "Type = " + type + " and length = " + len + " for parameter " + name};
-	} else if (t = !/isotime|string/.test(type) && len) {
-		obj = {"description":"If type = string or isotime, length must be given","error":true,"got": "Type = " + type + " and length = " + len + " for parameter " + name};
+		obj = {"description":"If type = string or isotime, length must not be given","error":true,"got": got};
+	} else if (!/isotime|string/.test(type) && len) {
+		obj = {"description":"If type = string or isotime, length must be given","error":true,"got": got};
 	} else {
-		obj = {"description":"Length may only be given for types string and isotime","error":false,"got": "Type = " + type + " and length = " + len + " for parameter " + name};
+		obj = {"description":"Length may only be given for types string and isotime","error":false,"got": got};
 	}
-	obj["description"] = "is.SizeAppropriate(): " + obj["description"];
+	obj["description"] = "is.LengthAppropriate(): " + obj["description"];
 	return obj;
 }
 exports.LengthAppropriate = LengthAppropriate;
 
+function TimeFirstParameter(header) {
+	return {"description":'is.TimeFirstParameter(): Expect first parameter to be Time',"error":header.parameters[0].name !== "Time","got":header.parameters[0].name}
+}
+exports.TimeFirstParameter = TimeFirstParameter;
+
+function SizeCorrect(nc,nf,header) {
+	var t = nc == nf
+	if (header.size) {
+		var extra = "product of elements in size array " + JSON.stringify(header.size) + ".";
+		var got = nc + " commas and " + extra + " = " + nf;
+	} else {
+		var extra = "1 because no size given."
+		var got = nc + " commas";
+	}
+	return {"description":"is.SizeCorrect(): Expect number of commas on first line to be " + extra,"error":t !=true,"got": got};
+}
+exports.SizeCorrect = SizeCorrect;
+
 function SizeAppropriate(size,name,what) {
-	if (!size) return;
+	if (!size) return; // No test.
 	if (what === "needed") {
 		// Test if all elements of size are 1.
 		t = 0;
@@ -92,6 +111,7 @@ function SizeAppropriate(size,name,what) {
 		return {"description":"is.SizeAppropriate(): Size is not needed if all elements are 1.","error":t,"got": "size = " + JSON.stringify(size) + " for parameter " + name}
 	}
 	if (what === "2D+") {
+		// Test size array has 2 or more elements.
 		t = false;
 		if (size) {
 			t = (size.length > 1)
@@ -104,20 +124,18 @@ exports.SizeAppropriate = SizeAppropriate;
 function HTTP200(res){
 	var body = "";
 	if (res.statusCode != 200) {
-
 		try {
 			var json = JSON.parse(res.body);
 			var body = " and JSON body\n\t" + JSON.stringify(body,null,4).replace(/\n/g,"\n\t");
 		} catch (error) {}
 
 		if (!body) {
-			var body = " and non JSON.parseable() body\t\n" + res.body.replace(/\n/g,"\n\t");
+			var body = " and non JSON.parse()-able body\t\n" + res.body.replace(/\n/g,"\n\t");
 		} else {
 			var body = "";
 		}
-
 	}
-	return {"description":"is.HTTP200(): Expect HTTP status code to be 200","error":200 != res.statusCode,"got":"HTTP status " + res.statusCode + body};
+	return {"description":"is.HTTP200(): Expect HTTP status code to be 200","error":200 != res.statusCode,"got": "HTTP status " + res.statusCode + body};
 }
 exports.HTTP200 = HTTP200;
 
@@ -134,10 +152,17 @@ function CorrectLength(str,len,name,extra,required) {
 exports.CorrectLength = CorrectLength;
 
 function TimeInBounds(lines,start,stop) {
-	var firstTime = lines[0].split(",").shift();
-	var lastTime  = lines[lines.length-2].split(",").shift(); // -2 because of split gives empty string in last array element if last line is newline.
+	// Remove Z from all times so Date().getTime() gives local timezone time for all.
+	// Javascript Date assumes all date/times are in local timezone.
+	start = start.trim().replace(/Z$/,"");
+	stop = stop.trim().replace(/Z$/,"");
+
+	var firstTime = lines[0].split(",").shift().trim().replace(/Z$/,"");
+	var lastTime  = lines[lines.length-2].split(",").shift().trim().replace(/Z$/,"");
+	// lines.length-2 above because of split gives empty string in last array element if last line is newline
+
 	var got = "First time = " + firstTime + "; LastTime = " + lastTime;
-	var t = new Date(firstTime.trim()).getTime() >=  new Date(start).getTime() && new Date(lastTime.trim()).getTime() <  new Date(stop).getTime();
+	var t = new Date(firstTime).getTime() >=  new Date(start).getTime() && new Date(lastTime).getTime() <  new Date(stop).getTime();
 	return {"description": "is.TimeInBounds(): Expect first time in CSV >= " + start + " and last time in CSV < " + stop + " (only checks to ms)","error": t != true,"got":got};
 }
 exports.TimeInBounds = TimeInBounds;
@@ -229,6 +254,10 @@ function NaN(str,extra) {
 exports.NaN = NaN;
 
 function Unique(arr,arrstr,idstr){
+	if (!arr.length) {
+ 		return {"description":"is.Unique(): Expect " + arrstr + " to be an array","error":true,"got": typeof(arr)};
+	}
+
 	var ids = [];
 	var rids = [];
 	for (var i = 0;i<arr.length;i++) {
@@ -239,7 +268,14 @@ function Unique(arr,arrstr,idstr){
 		ids[i] = arr[i][idstr];
 	}
 	var uids = Array.from(new Set(ids)); // Unique values
- 	return {"description":"is.Unique(): Expect all '" + idstr + "' values in objects in " + arrstr + " array to be unique","error":!(uids.length == ids.length),"got": "Repeated at least once: " + rids.join(",")};
+	
+	var t = !(uids.length == ids.length);
+	if (t) {
+		var got ="Repeated at least once: " + rids.join(",");
+	} else {
+		var got ="All unique.";
+	}
+ 	return {"description":"is.Unique(): Expect all '" + idstr + "' values in objects in " + arrstr + " array to be unique","error":t,"got": got};
 }
 exports.Unique = Unique;
 
@@ -264,15 +300,15 @@ exports.TooLong = TooLong;
 
 function CompressionAvailable(headers){
 	var available = false;
-	// Note: request module used for http requests only allows gzip to be specified in Accept-Encoding.
-	// So error here may be misleading if server can use compress or deflate compression algorithms.
+	// Note: request module used for http requests only allows gzip to be specified in Accept-Encoding,
+	// so error here may be misleading if server can use compress or deflate compression algorithms but not gzip (should be a rare occurence).
 	got = "No gzip in Content-Encoding header. Compression will usually speed up transfer speed of data."
 	var re = /gzip/;
 	if (headers["content-encoding"]) {
 		available = re.test(headers["content-encoding"]);
 		if (available) {got = headers["content-encoding"]}
 	}
-	return {"description":"is.CompressionAvailable(): Expect HTTP Accept-Encoding to match " + re,"error":!available,"got":got};
+	return {"description":"is.CompressionAvailable(): Expect HTTP Accept-Encoding to match " + re + ". (Note, only compression tested for is gzip.)","error":!available,"got":got};
 }
 exports.CompressionAvailable = CompressionAvailable;
 
@@ -282,13 +318,13 @@ function ContentType(re,given){
 exports.ContentType = ContentType;
 
 function JSONparsable(text){
-	ret = {"description":"is.JSONparsable(): Expect JSON.parse(str) to not throw error","error":false,"got":"no error"};
+	ret = {"description":"is.JSONparsable(): Expect JSON.parse(response) to not throw error","error":false,"got":"no error"};
 	try {
 		JSON.parse(text);
 		return ret;
 	}
 	catch (error) {
-		ret.got = error + " See http://jsonlint.org/ for better error report";
+		ret.got = error + " See http://jsonlint.org/ for a more detailed error report";
 		ret.error = true;
 		return ret;
 	}

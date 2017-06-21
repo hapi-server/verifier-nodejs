@@ -420,7 +420,7 @@ exports.JSONparsable = JSONparsable;
 
 function HAPIJSON(text,schema){
 	var json = JSON.parse(text);
-	jsonschema = fs.readFileSync(__dirname + "/schemas/" + schema + ".json");
+	jsonschema = fs.readFileSync(__dirname + "/1.1/schemas/" + schema + ".json");
 	jsonschema = JSON.parse(jsonschema);
 	v = validate(json,jsonschema).errors;
 	got = "is valid"

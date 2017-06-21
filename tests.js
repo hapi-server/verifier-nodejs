@@ -201,7 +201,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				report(url,is.ErrorCorrect(res.statusCode,404,"httpcode"));
 				report(url,is.ErrorInformative(res.statusMessage,1406,"httpmessage"),{"warn":true});
 				if (!report(url,is.JSONparsable(body))) {
-					report(url,is.HAPIJSON(body,'error400'));
+					report(url,is.HAPIJSON(body,'error14xx'));
 					var json = JSON.parse(body);
 					report(url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
 					var err1406 = errors(1406);

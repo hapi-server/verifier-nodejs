@@ -13,6 +13,16 @@
 			Only URL is required. Default is to check all datasets and all parameters and use <code>time.min=sampleStartDate</code> and <code>time.max=sampleStopDate</code> if both given in <code>/info</code> response, otherwise the required <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> from <code>/info</code> are used.
 		</p>
 		<p>
+		Not tested:
+			<ul>
+				<li><code>/info</code> response for all parameters individually (only response for first non-time parameter is tested).</li>
+				<li>Binary data response</li>
+				<li>JSON data response</li>
+				<li>Headers for data response with <code>include=header</code></li>
+				<li>Data response for all parameters or combinations of parameters (only <code>/data</code> responses for requests for a single parameter are tested).</li>
+			</ul>
+		</p>	
+		<p>
 			Examples
 			<ul>
 				<li>

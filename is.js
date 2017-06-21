@@ -5,6 +5,42 @@ var moment   = require('moment');
 // Note that for reporting to have correct line numbers, must start functions with
 // function FNAME( and start description with 'is.FNAME()'.
 
+function isinteger(str) {
+	return (parseInt(str) < 2^31 - 1 || parseInt(str) > -2^31) && parseInt(str) == parseFloat(str);
+}
+function isfloat(str) {
+	return Math.abs(parseFloat(str)) < Number.MAX_VALUE && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
+}
+
+function ErrorCorrect(code,wanted,what) {
+
+	if (what === "httpcode") {
+		return {"description":"Expect HTTP code to be " + wanted,"error": code != wanted,"got": code};
+	}
+	if (what === "hapicode") {
+		return {"description":"Expect HAPI code to be " + wanted,"error": code != wanted,"got": code};
+	}
+
+}
+exports.ErrorCorrect = ErrorCorrect;
+
+function ErrorInformative(message,wanted,what) {
+
+	if (what === "httpmessage") {
+		var re = new RegExp(wanted+"");
+		var t = /HAPI/.test(message) && re.test(message);
+		return {"description":"Want HTTP message to match 'HAPI' and '" + wanted + "'' for clients who do not have access to response body for HTTP 400-level errors","error": t != true,"got": message};
+	}
+
+	if (what === "hapimessage") {
+		var re = new RegExp(wanted);
+		var t = re.test(wanted);
+		return {"description":"Want HTTP message to contain the string '" + wanted + "' (default HAPI error message)","error": t != true,"got": message};
+	}
+
+}
+exports.ErrorInformative = ErrorInformative;
+
 function CadenceOK(header,what) {
 
 	if (what === "{start,stop}Date") {
@@ -85,6 +121,57 @@ function TimeFirstParameter(header) {
 	return {"description":'is.TimeFirstParameter(): Expect first parameter to be Time',"error":header.parameters[0].name !== "Time","got":header.parameters[0].name}
 }
 exports.TimeFirstParameter = TimeFirstParameter;
+
+function FillOK(fill,type,len,name,what) {
+	if (!fill) return; // No fill or fill=null
+	var t = false;
+	var got = "fill = " + fill + " for parameter " + name + ".";
+	var desc = "";
+	if (what === "null") {
+		desc = "is.FillOK(): Expect fill value to not be the string 'null'.";
+		if (fill === "null") {
+			t = true;
+			got  = " The string 'null'; Probably fill=null and not fill='null' was intended.";
+		}
+	}
+	if (what === "isotimelength") {
+		desc = "is.FillOK(): Expect length of fill value for a isotime parameter to be equal to length of the string parameter - 1";
+		if (len < fill.length && name !== "Time") {
+			t = true;
+			got  = got;
+		}
+	}
+	if (what === "stringlength") {
+		desc = "is.FillOK(): Expect length of fill value for a string parameter to be < length of the string parameter";
+		if (len < fill.length) {
+			t = true;
+			got  = got;
+		}
+	}
+	if (what === "stringparse") {
+		desc = "is.FillOK(): Expect fill value for a string parameter to not parse to an integer or float";
+		if (isinteger(fill) || isfloat(fill)) {
+			t = true;
+			got  = got + " This was probably not intended.";
+		}
+	}
+	if (what === "integer") {
+		desc = "is.FillOK(): Expect fill value for a integer parameter to not have a decimal point";
+		if (/\./.test(fill)) {
+			t = true;
+			got  = got + " This was probably not intended.";
+		}
+	}
+	if (what === "double") {
+		desc = "is.FillOK(): Expect fill value for a double parameter to not have a two or more non-zero decimal places.";
+		if (/\.[1-9][1-9]/.test(fill)) {
+			t = true;
+			got  = got + " This is uncommon and was probably not intended.";
+		}
+	}
+	return {"description":desc,"error":t,"got":got};
+}
+exports.FillOK = FillOK;
 
 function SizeCorrect(nc,nf,header) {
 	var t = nc == nf
@@ -231,7 +318,7 @@ exports.ISO8601 = ISO8601;
 
 function Integer(str,extra) {
 	var extra = extra || ""
-	var t  = (parseInt(str) < 2^31 - 1 || parseInt(str) > -2^31) && parseInt(str) == parseFloat(str);
+	var t  = isinteger(str);
 	var ts = "(parseInt('"+str+"') < 2^31 - 1 || parseInt('"+str+"') > -2^31) && parseInt(" + str + ") == parseFloat(" + str + ")"+extra;
 	return {"description":"is.Integer(): Expect " + ts,"error":t != true,"got":"parseInt(" + str + ") = " + parseInt(str) + " and " + "parseFloat(" + str + ") = " + parseFloat(str)};
 }
@@ -239,7 +326,7 @@ exports.Integer = Integer;
 
 function Float(str,extra) {
 	var extra = extra || ""
-	var t  = Math.abs(parseFloat(str)) < Number.MAX_VALUE && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim());
+	var t  = isfloat(str);
 	var ts = "Math.abs(parseFloat('"+str+"')) < " + Number.MAX_VALUE + " && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('"+str+"'.trim()) == true"+extra;
 	return {"description":"is.Float(): Expect " + ts,"error":t != true,"got":"/^-?\d*(\.\d+)?$/.test('"+str+"'.trim()) = "+t};
 }

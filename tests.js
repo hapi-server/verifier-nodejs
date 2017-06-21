@@ -246,7 +246,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 				report(url,is.Unique(header.parameters,"parameters","name"));
 				header.parameters = removeDuplicates(header.parameters,'name');
-				report(url,is.TimeFirstParameter(header));
+				report(url,is.TimeFirstParameter(header),{"warn":true});
 
 				report(url,is.TimeIncreasing(header,"{start,stop}Date"));
 				report(url,is.TimeIncreasing(header,"sample{Start,Stop}Date"));

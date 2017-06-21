@@ -118,7 +118,7 @@ function LengthAppropriate(len,type,name) {
 exports.LengthAppropriate = LengthAppropriate;
 
 function TimeFirstParameter(header) {
-	return {"description":'is.TimeFirstParameter(): Expect first parameter to be Time',"error":header.parameters[0].name !== "Time","got":header.parameters[0].name}
+	return {"description":"is.TimeFirstParameter(): First parameter should (not must) be named 'Time'.","error":header.parameters[0].name !== "Time","got":header.parameters[0].name}
 }
 exports.TimeFirstParameter = TimeFirstParameter;
 

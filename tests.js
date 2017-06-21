@@ -185,6 +185,28 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				report(url,is.Unique(datasets,"datasets","id"));			
 				datasets = removeDuplicates(datasets,'id');
 				report(url,is.TooLong(datasets,"catalog","id","title",40),{"warn":true});
+				infoerr(datasets);
+			})
+	}
+
+	function infoerr(datasets) {
+		var url = ROOT + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
+		request(url, 
+			function (err,res,body) {
+				if (err) {
+					if (report(url,{"description":"Probably " + url + " is not a valid URL","error":true,"warning":false,"got":err},{"stop":true,"abort":true})) return;
+					return;
+				}
+				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
+				report(url,is.ErrorCorrect(res.statusCode,404,"httpcode"));
+				report(url,is.ErrorInformative(res.statusMessage,1406,"httpmessage"),{"warn":true});
+				if (!report(url,is.JSONparsable(body))) {
+					report(url,is.HAPIJSON(body,'error400'));
+					var json = JSON.parse(body);
+					report(url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
+					var err1406 = errors(1406);
+					report(url,is.ErrorInformative(json.status.message,err1406.message,"hapimessage"),{"warn":true});
+				}
 				info(datasets);
 			})
 	}
@@ -207,17 +229,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 			}
 		}
 
-		if (false) {
-			// Don't just request metadata for PARAMETER.  Instead,
-			// get metadata for all parameters, check them,
-			// and then only make data request for PARAMETER.
-			// TODO: Add test to verify that a reduced parameter list is given
-			// only one parameter requested.
-			if (PARAMETER !== "") {
-				var url = ROOT + '/info' + "?id=" + ID + "&parameters=" + PARAMETER;
-			}
-		}
-
 		report(url);
 		request(url, 
 			function (err,res,body) {
@@ -235,7 +246,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 				report(url,is.Unique(header.parameters,"parameters","name"));
 				header.parameters = removeDuplicates(header.parameters,'name');
-				report(url,{"description":'Expect first parameter to be Time',"error":header.parameters[0].name !== "Time","got":header.parameters[0].name});
+				report(url,is.TimeFirstParameter(header));
 
 				report(url,is.TimeIncreasing(header,"{start,stop}Date"));
 				report(url,is.TimeIncreasing(header,"sample{Start,Stop}Date"));
@@ -247,6 +258,25 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					type = header.parameters[i]["type"];
 					name = header.parameters[i]["name"];
 					size = header.parameters[i]["size"];
+					fill = header.parameters[i]["fill"];
+
+					report(url,is.FillOK(fill,type,len,name,'null'),{"warn":true});
+
+					if (type === "isotime") {
+						report(url,is.FillOK(fill,type,len,name,'isotimelength'),{"warn":true});
+					}
+					if (type === "string") {
+						report(url,is.FillOK(fill,type,len,name,'stringlength'));
+						report(url,is.FillOK(fill,type,len,name,'stringparse'),{"warn":true});
+					}
+					if (type === "integer") {
+						report(url,is.FillOK(fill,type,len,name,'integer'),{"warn":true});
+					}
+
+					if (type === "double") {
+						report(url,is.FillOK(fill,type,len,name,'double'),{"warn":true});
+					}
+
 					report(url,is.LengthAppropriate(len,type,name));
 					report(url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
 					report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
@@ -260,6 +290,33 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 						if (report(url,{"description": "Parameter " + PARAMETER + " is not in parameter array","error":true,"got": "to abort"},{"stop":true})) return;
 					}
 				}
+				//data(datasets,header,0);
+				infor(datasets,header);
+			})
+	}
+
+	function infor(datasets,header) {
+		// Check if JSON has two parameter objects when only one parameter is requested.
+		// Checks only the second parameter (first parameter after Time).
+		var url = ROOT + '/info' + "?id=" + datasets[0].id + '&parameters=' + header.parameters[1].name;
+
+		report(url);
+		request(url, 
+			function (err,res,body) {
+				var url = res.request.href;
+				if (err) {
+					if (report(url,{"description":"","error":true,"got":err},{"stop":true}))
+					return;
+				}
+				if (report(url,is.HTTP200(res),{"stop":true,"abort":false})) {
+					data(datasets,header,0);
+					return;
+				}
+				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
+				if (report(url,is.JSONparsable(body),{"stop":true})) return;
+				report(url,is.HAPIJSON(body,'info'));
+				var headerr = JSON.parse(body); // Reduced header
+				report(url,{"description":"Expect # parameters in JSON to be 2 when one non-time parameter is requested","error": headerr.parameters.length != 2,"got": headerr.parameters.length + " parameters."});
 				data(datasets,header,0);
 			})
 	}
@@ -366,6 +423,29 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 }
 exports.run = run;
+
+function errors(num) {
+
+	var errs = {
+		"1400": {status: 400, "message": "HAPI error 1400: user input error"},
+		"1401": {status: 400, "message": "HAPI error 1401: unknown request field"},
+		"1402": {status: 400, "message": "HAPI error 1402: error in start time"},
+		"1403": {status: 400, "message": "HAPI error 1403: error in stop time"},
+		"1404": {status: 400, "message": "HAPI error 1404: start time equal to or after stop time"},
+		"1405": {status: 400, "message": "HAPI error 1405: time outside valid range"},
+		"1406": {status: 404, "message": "HAPI error 1406: unknown dataset id"},
+		"1407": {status: 404, "message": "HAPI error 1407: unknown dataset parameter"},
+		"1408": {status: 400, "message": "HAPI error 1408: too much time or data requested"},
+		"1409": {status: 400, "message": "HAPI error 1409: unsupported output format"},
+		"1410": {status: 400, "message": "HAPI error 1410: unsupported include value"},
+		"1500": {status: 500, "message": "HAPI error 1500: internal server error"},
+		"1501": {status: 500, "message": "HAPI error 1501: upstream request error"}
+	};
+	
+	if (!num) return errs;
+
+	return errs[num+""];
+}
 
 function prod(arr) {
 	// Compute product of array elements.

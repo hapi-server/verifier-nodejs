@@ -12,13 +12,49 @@ function isfloat(str) {
 	return Math.abs(parseFloat(str)) < Number.MAX_VALUE && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
 }
 
+function CadenceValid(cadence) {
+	var md = moment.duration(cadence);
+	t = md._isValid;
+	return {"description":"Expect cadence to be a valid ISO8601 duration","error": t != true,"got": cadence};
+}
+exports.CadenceValid = CadenceValid;
+
+function CadenceOK(cadence,start,stop,what) {
+	if (!cadence) return; // Don't do test; no cadence given.
+	if (!stop) return {"description":"Need more than two lines to do cadence comparison with consecutive samples.","error":true,"got":"One line."}
+	var startms = new Date(start).valueOf();
+	var stopms = new Date(stop).valueOf();
+	var md = moment.duration(cadence);
+	var R = (stopms-startms)/md._milliseconds;
+	if (what === "start/stop") {
+		t = R > 1;
+		var got = "(stopDate-startDate)/cadence = " + (stopms-startms)/md._milliseconds;
+		return {"description":"is.CadenceOK(): Expect (stopDate-startDate)/cadence > 1","error":t != true,"got":got}
+	}
+	if (what === "sampleStart/sampleStop") {
+		t = R > 10;
+		var got = "(sampleStartDate-sampleStopDate)/cadence = " + (stopms-startms)/md._milliseconds;
+		return {"description":"is.CadenceOK(): Expect (sampleStartDate-sampleStopDate)/cadence > 10","error":t != true,"got":got}
+	}
+	if (what === "consecsamples") {
+		t = R > 10;
+		var got = "Cadence/(time[i+1]-time[i]) = " + (stopms-startms)/md._milliseconds;
+		return {"description":"is.CadenceOK(): Expect (t[i+1]-t[i])/cadence > 10","error":t != true,"got":got}
+	}
+
+}
+exports.CadenceOK = CadenceOK;
+
 function ErrorCorrect(code,wanted,what) {
 
 	if (what === "httpcode") {
 		return {"description":"Expect HTTP code to be " + wanted,"error": code != wanted,"got": code};
 	}
 	if (what === "hapicode") {
-		return {"description":"Expect HAPI code to be " + wanted,"error": code != wanted,"got": code};
+		t = code == wanted
+		var got = code;
+		if (t != true) {got = code + ". Consider using https://github.com/hapi-server/verifier-nodejs/blob/master/schema/1.1/errors.json"}
+		return {"description":"Expect HAPI code to be " + wanted,"error":t != true,"got": got};
 	}
 
 }
@@ -35,36 +71,13 @@ function ErrorInformative(message,wanted,what) {
 	if (what === "hapimessage") {
 		var re = new RegExp(wanted);
 		var t = re.test(wanted);
+		var got = message;
+		if (t != true) {got = message + ". Consider using https://github.com/hapi-server/verifier-nodejs/blob/master/errors/1.1/errors.json"}
 		return {"description":"Want HTTP message to contain the string '" + wanted + "' (default HAPI error message)","error": t != true,"got": message};
 	}
 
 }
 exports.ErrorInformative = ErrorInformative;
-
-function CadenceOK(header,what) {
-
-	if (what === "{start,stop}Date") {
-		if (!header["cadence"]) return false; // Don't do test. No cadence provided.
-		startstr = "startDate";
-		stopstr = "stopDate";
-	}
-
-	if (what === "sample{Start,Stop}Date") {
-		if (!header["cadence"] || !header["sampleStartDate"] || !header["sampleStartDate"]) return false; // Don't do test.
-		startstr = "sampleStartDate";
-		stopstr = "sampleStopDate";
-	}
-
-	var dt = moment.duration(header["cadence"]);
-	var dT = new Date(header[stopstr]).getTime() - new Date(header[startstr]).getTime();
-	var t = dt <= dT;
-	var got = header["cadence"] + " <= " + header[stopstr] + " - " + header[startstr];
-	if (!t) {
-		var got = got.replace("<=",">");
-	}
-	return {"description":"is.CadenceOK(): Cadence <= " + stopstr + " - " + startstr,"error": t != true,"got":got};
-}
-exports.CadenceOK = CadenceOK;
 
 function FileOK(body,what) {
 
@@ -88,11 +101,11 @@ function FileOK(body,what) {
 
 	if (what === "numlines") {
 		lines = body.split("\n");
-		var got = lines.length + " lines";
+		var got = lines.length + " newlines";
 		if (lines.length == 0) {
 			got = "No lines.";
 		} else {
-			got = lines.length + " lines";
+			got = lines.length + " newlines";
 		}
 		desc = "Expect at least one newline in CSV response.";
 		t = lines.length == 0
@@ -127,21 +140,21 @@ function FillOK(fill,type,len,name,what) {
 	var t = false;
 	var got = "fill = " + fill + " for parameter " + name + ".";
 	var desc = "";
-	if (what === "null") {
+	if (what === "nullstring") {
 		desc = "is.FillOK(): Expect fill value to not be the string 'null'.";
 		if (fill === "null") {
 			t = true;
 			got  = " The string 'null'; Probably fill=null and not fill='null' was intended.";
 		}
 	}
-	if (what === "isotimelength") {
+	if (what === "isotime") {
 		desc = "is.FillOK(): Expect length of fill value for a isotime parameter to be equal to length of the string parameter - 1";
 		if (len < fill.length && name !== "Time") {
 			t = true;
 			got  = got;
 		}
 	}
-	if (what === "stringlength") {
+	if (what === "string") {
 		desc = "is.FillOK(): Expect length of fill value for a string parameter to be < length of the string parameter";
 		if (len < fill.length) {
 			t = true;
@@ -176,7 +189,7 @@ exports.FillOK = FillOK;
 function SizeCorrect(nc,nf,header) {
 	var t = nc == nf
 	if (header.size) {
-		var extra = "product of elements in size array " + JSON.stringify(header.size) + ".";
+		var extra = "product of elements in size array " + JSON.stringify(header.size);
 		var got = nc + " commas and " + extra + " = " + nf;
 	} else {
 		var extra = "1 because no size given."
@@ -214,7 +227,8 @@ function HTTP200(res){
 		try {
 			var json = JSON.parse(res.body);
 			var body = " and JSON body\n\t" + JSON.stringify(body,null,4).replace(/\n/g,"\n\t");
-		} catch (error) {}
+		} catch (error) {
+		}
 
 		if (!body) {
 			var body = " and non JSON.parse()-able body\t\n" + res.body.replace(/\n/g,"\n\t");
@@ -234,7 +248,7 @@ function CorrectLength(str,len,name,extra,required) {
 	if (t && !required) {
 		got = got + extra + " Not an error for CSV, but whitespace padding will cause error in binary."
 	}
-	return {"description":'is.CorrectLength(): Expect (trimmed length of ' + name + ' string parameter in CSV) - (parameters.'+ name + '.length-1) should be zero.',"error":t,"got":got}
+	return {"description":'is.CorrectLength(): Expect (trimmed length of ' + name + ' string parameter in CSV) - (parameters.'+ name + '.length-1) = 0.',"error":t,"got":got}
 }
 exports.CorrectLength = CorrectLength;
 
@@ -385,6 +399,23 @@ function TooLong(arr,arrstr,idstr,elstr,N){
 }
 exports.TooLong = TooLong;
 
+function CORSAvailable(head){
+	var ahead = "Access-Control-Allow-Origin";
+	var bhead = "Access-Control-Allow-Methods";
+	var chead = "Access-Control-Allow-Headers";
+	var astr = head[ahead.toLowerCase()];
+	var bstr = head[bhead.toLowerCase()];
+	var cstr = head[chead.toLowerCase()];
+	var a = /\*/.test(astr);
+	var b = /GET/.test(bstr);
+	var c = /Content-Type/.test(cstr);
+	var want = "Access-Control-Allow-{Origin,Methods,Headers} = " + "{*, GET, Content-Type}";
+	var got = "Access-Control-Allow-{Origin,Methods,Headers} = {" + astr + ", " + bstr + ", " + cstr + "}";
+	t = a && b && c;
+	return {"description":"is.CORSAvailable(): To enable AJAX clients, want CORS HTTP Headers " + want,"error":t != true,"got":got};
+}
+exports.CORSAvailable = CORSAvailable;
+
 function CompressionAvailable(headers){
 	var available = false;
 	// Note: request module used for http requests only allows gzip to be specified in Accept-Encoding,
@@ -404,13 +435,12 @@ function ContentType(re,given){
 }
 exports.ContentType = ContentType;
 
-function JSONparsable(text){
+function JSONparsable(text) {
 	ret = {"description":"is.JSONparsable(): Expect JSON.parse(response) to not throw error","error":false,"got":"no error"};
 	try {
 		JSON.parse(text);
 		return ret;
-	}
-	catch (error) {
+	} catch (error) {
 		ret.got = error + " See http://jsonlint.org/ for a more detailed error report";
 		ret.error = true;
 		return ret;

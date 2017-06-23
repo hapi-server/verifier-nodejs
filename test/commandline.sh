@@ -5,6 +5,7 @@ TESTDATA=http://mag.gmu.edu/TestData/hapi
 #TESTDATA=http://localhost:8999/hapi
 
 set -x;
+stat=0
 
 node verify.js --url $TESTDATA --id dataset1 --timemin 2000-01-01 --timemax 2000-01-01T00:00:10
 stat=$stat$?
@@ -13,7 +14,7 @@ node verify.js --url $TESTDATA --id dataset1 --parameter scalar
 stat=$stat$?
 
 node verify.js --url $TESTDATA --id dataset0
-stat=$?
+stat=$stat$?
 
 node verify.js --url $TESTDATA --id dataset1
 stat=$stat$?

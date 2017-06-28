@@ -28,7 +28,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		console.log(err.stack);
 		if (RES) RES.end('Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown in report to https://github.com/hapi-server/verifier-nodejs/issues');	
 		if (!RES) console.log('Problem with verification server (Uncaught Exception). Aborting.');	
-		process.exit(1);
+		if (!RES) process.exit(1);
+		if (!RES) console.log(err.stack);
 	});
 	
 	root();
@@ -150,7 +151,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				if (RES) RES.end("<br>Premature end of validation tests due to last error.</body></html>");
 				if (RES) RES.end();
 				if (!RES) console.log(clc.red("\nPremature end of validation tests due to last error."));
-				process.exit(0);
+				if (!RES) process.exit(0);
 			}
 		}
 
@@ -277,6 +278,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				if (report(url,is.JSONparsable(body),{"stop":true})) {
 					var json = JSON.parse(body);
 					if (report(url,is.HAPIJSON(body,'error14xx'),{"stop":true})) {
+						report(url,is.HAPIJSON(body,'error14xx'),{"stop":true})
 						report(url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
 						var err1406 = errors(1406);
 						report(url,is.ErrorInformative(json.status.message,err1406.status.message,"hapimessage"),{"warn":true});
@@ -552,17 +554,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 exports.run = run;
 
 function errors(num) {
-
-	if (errors.errs) {
-		if (!num) return errors.errs;
-		return errs.json[num+""];
-	};
-	json = fs.readFileSync(__dirname + "/schemas/1.1/errors.json");
-	var errs = JSON.parse(json);
-	if (!errors.errs) {errors.errs = json;}
-	
-	if (!num) return errs;
-	return errs[num+""];
+	if (!errors.errs) {
+		json = fs.readFileSync(__dirname + "/schemas/1.1/errors.json");
+		errors.errs = JSON.parse(json);
+	}
+	return errors.errs[num+""];	
 }
 
 function prod(arr) {

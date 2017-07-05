@@ -3,24 +3,6 @@ var request = require('request');
 var clc     = require('cli-color');
 var is      = require('./is.js'); // Test library
 
-function timeout(what,when) {
-
-	var obj = {
-		"datapreviousfail":{"timeout":5000,"when":"A previous request for data failed."},
-		"datasampledefault":{"timeout":10000,"when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."},
-		"datasample10xcadence":{"timeout":1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
-		"datasamplesuggested":{"timeout":1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
-		"datasamplechosen":{"timeout":1000,"when":"time.min/max given to validator"},
-		"default":{"timeout":200,"when":"Request is not for data"}
-	};
-
-	if (!when) {
-		return obj[what]["timeout"];
-	} else {
-		return obj[what]["when"];
-	}
-
-}
 function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	// Catch bugs in verification code.
@@ -552,6 +534,24 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 }
 exports.run = run;
+
+function timeout(what,when) {
+
+	var obj = {
+		"datapreviousfail":{"timeout":5000,"when":"A previous request for data failed."},
+		"datasampledefault":{"timeout":10000,"when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."},
+		"datasample10xcadence":{"timeout":1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
+		"datasamplesuggested":{"timeout":1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
+		"datasamplechosen":{"timeout":1000,"when":"time.min/max given to validator"},
+		"default":{"what":200,"timeout":200,"when":"Request is not for data"}
+	};
+
+	if (!when) {
+		return obj[what]["timeout"];
+	} else {
+		return obj[what]["when"];
+	}
+}
 
 function errors(num) {
 	if (!errors.errs) {

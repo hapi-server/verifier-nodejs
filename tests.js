@@ -11,13 +11,13 @@ function timeout(what,when) {
 		"datasample10xcadence":{"timeout":1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
 		"datasamplesuggested":{"timeout":1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
 		"datasamplechosen":{"timeout":1000,"when":"time.min/max given to validator"},
-		"default":{"what":200,"timeout":"Request is not for data"}
+		"default":{"timeout":200,"when":"Request is not for data"}
 	};
 
 	if (!when) {
 		return obj[what]["timeout"];
 	} else {
-		return obj[what][when];
+		return obj[what]["when"];
 	}
 
 }
@@ -191,7 +191,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		request({"url":url,"timeout": timeout("default")}, 
 			function (err,res,body) {
 				if (err) {
-					requesterr(url,err,'root',{"warn":true}); // Need to make next fn a callback.					
+					requesterr(url,err,'default',{"warn":true}); // Need to make next fn a callback.					
 					capabilities();
 					return;
 				}
@@ -209,7 +209,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		request({"url":url,"timeout": timeout("default")}, 
 			function (err,res,body) {
 				if (err) {
-					requesterr(url,err,'capabilities'); // Need to make next fn a callback.					
+					requesterr(url,err,'default'); // Need to make next fn a callback.					
 					catalog();
 					return;
 				}
@@ -240,7 +240,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		request({"url":url,"timeout": timeout("default")}, 
 			function (err,res,body) {
 				if (err) {
-					requesterr(url,err,'catalog',{"abort":true});
+					requesterr(url,err,'default',{"abort":true});
 					return;
 				}
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
@@ -267,7 +267,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		request({"url":url,"timeout": timeout("default")}, 
 			function (err,res,body) {
 				if (err) {
-					requesterr(url,err,'infoerr',{"stop":true});
+					requesterr(url,err,'default',{"stop":true});
 					data(datasets,header,0);
 					return;
 				}
@@ -312,7 +312,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		request({"url":url,"timeout": timeout("default")}, 
 			function (err,res,body) {
 				if (err) {
-					if (requesterr(url,err,'info',{"abort":true})); return;
+					if (requesterr(url,err,'default',{"abort":true})); return;
 				}
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
@@ -406,7 +406,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		request({"url":url,"timeout": timeout("default")}, 
 			function (err,res,body) {
 				if (err) {
-					requesterr(url,err,'infor',{"stop":true});
+					requesterr(url,err,'default',{"stop":true});
 					data(datasets,header,start,stop,useTimeoutFor,0);
 					return;
 				}

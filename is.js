@@ -1,6 +1,6 @@
-var fs       = require('fs');
-var validate = require('jsonschema').validate;
-var moment   = require('moment');
+var fs        = require('fs');
+var moment    = require('moment');
+var Validator = require('jsonschema').Validator;
 
 // Note that for reporting to have correct line numbers, must start functions with
 // function FNAME( and start description with 'is.FNAME()'.
@@ -448,19 +448,23 @@ function JSONparsable(text) {
 }
 exports.JSONparsable = JSONparsable;
 
-function HAPIJSON(text,schema){
+function HAPIJSON(text,schema,part){
 	var json = JSON.parse(text);
-	jsonschema = fs.readFileSync(__dirname + "/schemas/1.1/" + schema + ".json");
-	jsonschema = JSON.parse(jsonschema);
-	v = validate(json,jsonschema).errors;
-	got = "is valid"
-	if (v.length != 0) {
+	//console.log(JSON.stringify(json,null,4))
+	var v = new Validator();
+	v.addSchema(schema, '/HAPI');
+	v.addSchema(schema, '/HAPIDateTime');
+	v.addSchema(schema, '/HAPIStatus');
+	vr = v.validate(json, schema[part]);
+	ve = vr.errors;
+	var got = "is valid"
+	if (ve.length != 0) {
 		var err = [];
-		for (var i = 0;i< v.length;i++) {
-			err[i] = v[i].property.replace("instance","object") + " " + v[i].message.replace(/\"/g,"'");
+		for (var i = 0;i< ve.length;i++) {
+			err[i] = ve[i].property.replace("instance","object") + " " + ve[i].message.replace(/\"/g,"'");
 		}
 		got = "\n\t" + JSON.stringify(err,null,4).replace(/\n/g,"\n\t")
 	}
-	return {"description":"is.HAPIJSON(): Expect body to be valid " + schema + " schema","error":v.length != 0,"got":got};
+	return {"description":"is.HAPIJSON(): Expect body to be valid " + part + " schema","error":ve.length != 0,"got":got};
 }
 exports.HAPIJSON = HAPIJSON;

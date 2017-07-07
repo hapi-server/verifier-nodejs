@@ -3,12 +3,15 @@ var request = require('request');
 var clc     = require('cli-color');
 var is      = require('./is.js'); // Test library
 
+var schema = fs.readFileSync(__dirname + "/schemas/HAPI-data-access-schema-1.1.json");
+var schema = JSON.parse(schema);
+
 function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
-	// Catch bugs in verification code.
+	// Catch uncaught execeptions.
 	process.on('uncaughtException', function(err) {
 		console.log(err.stack);
-		if (RES) RES.end('Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown in report to https://github.com/hapi-server/verifier-nodejs/issues');	
+		if (RES) RES.end('Problem with verification server (Uncaught Exception). Aborting.\nPlease report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.');	
 		if (!RES) console.log('Problem with verification server (Uncaught Exception). Aborting.');	
 		if (!RES) process.exit(1);
 		if (!RES) console.log(err.stack);
@@ -18,14 +21,17 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	
 	function report(url,obj,opts) {
 
+		// Returns !(obj.error && (stop || abort))
+		// stop means processing can't continue on current URL
+		// Abort means can't move to testing new URL.
+		// Note that abort = true implies stop = true.
 		if (obj == false) return false; // Case where test was not appropriate.
 
 		if (opts) {
-			var warn  = opts["warn"]  || false; // Warn on error
-			var stop  = opts["stop"]  || false; // return !(obj.error && stop) to signal processing can't continue
+			var warn  = opts["warn"]  || false; // Warn message on error
+			var stop  = opts["stop"]  || false; // Need to stop tests on current URL
 			var abort = opts["abort"] || false; // Stop and send abort message on error
-			var shush = opts["shush"] || false; // Don't print unless warning, error or url changed
-
+			var shush = opts["shush"] || false; // Don't print unless warning, error, or url changed
 		} else {
 			var warn  = false;
 			var stop  = false;
@@ -33,11 +39,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 			var shush = false;
 		}
 		var stop = stop || abort; // Make stop true when abort true.
-		var firstshush = false;
+
+		var firstshush = false; // Don't print pass results for long list of similar tests.
 		if (shush && report.shushon == false) {var firstshush = true};
 		report.shushon = shush;
+
 		if (!url) {
-			// Print summary.
+			// Print summary when report() called.
 			if (RES) RES.write("<p>End of validation tests.</p><p>Summary: <font style='color:black;background:green'>Passes</font>:&nbsp;" + report.passes.length + ". <font style='color:black;background:yellow'>Warnings:&nbsp;</font>" + report.warns.length + ". <font style='background:red;color:black'>Failures:&nbsp;</font>" + report.fails.length + ". Warnings and failures repeated below.</p>");
 			if (!RES) console.log("\nEnd of validation tests.");
 			if (!RES) console.log("************************************************************************************");
@@ -63,8 +71,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 			}
 			return;
 		}
+
 		if (typeof(report.url) === "undefined") {
-			// First call to report(), initialize and attach arrays
+			// First call to report(); initialize and attach arrays
 			// to report object.
 			if (RES) {RES.write("<html><body>");}
 			report.fails = [];  // Initalize failure array
@@ -83,9 +92,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				}
 			}
 		}
-		var indentcons = "";
-		var indenthtml = ""
+		var indentcons = ""; // Indent console
+		var indenthtml = ""; // Indent html
 		if (/\/hapi\/data/.test(url)) {
+			// Indent extra amount when testing data url
 			var indentcons = "  ";
 			var indenthtml = "&nbsp;&nbsp;"
 		}
@@ -96,7 +106,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 			if (!RES) console.log("\n" + indentcons + clc.blue(url));
 		}
 		report.url = url;
-		if (!obj) return;
+		if (!obj) return; // If report(url) was called, only print URL so user knows it is being requested.
 		obj.url = url;
 		if (RES) {
 			// Get function name from description in obj and replace it
@@ -126,14 +136,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		}
 
 		if (obj.error && stop) {
-			// Can't continue testing.  Send abort message.
-			if (RES) RES.write("<br>&nbsp&nbsp;<font style='color:red'>Cannot continue tests due to last failure.</font><br>");
-			if (!RES) console.log(clc.red("\nCannot continue tests on URL due to last failure."));
 			if (abort) {
-				if (RES) RES.end("<br>Premature end of validation tests due to last error.</body></html>");
+				if (RES) RES.end("<br><font style='color:red'>Cannot continue validation tests due to last failure.</font></body></html>");
 				if (RES) RES.end();
-				if (!RES) console.log(clc.red("\nPremature end of validation tests due to last error."));
+				if (!RES) console.log(clc.red("\nCannot continue validation tests due to last failure."));
 				if (!RES) process.exit(0);
+			} else {
+				if (RES) RES.write("<br>&nbsp&nbsp;<font style='color:red'>Cannot continue tests on URL due to last failure.</font><br>");
+				if (!RES) console.log(clc.red("\nCannot continue tests on URL due to last failure."));				
 			}
 		}
 
@@ -142,6 +152,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 
 	function requesterr(url,err,what,obj) {
+		// Catch errors that occur when reqeust is made and before tests are done on response.
 		if (obj) {
 			if (!obj.warn) obj.warn = false;
 			if (!obj.stop) obj.stop = false;
@@ -168,13 +179,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function root() {
 
+		// Check optional landing page.
 		var url = ROOT;
 		report(url);
-		request({"url":url,"timeout": timeout("default")}, 
+		request({"url": url,"timeout": timeout("default")}, 
 			function (err,res,body) {
 				if (err) {
-					requesterr(url,err,'default',{"warn":true}); // Need to make next fn a callback.					
-					capabilities();
+					requesterr(url,err,'default',{"warn":true});
+					capabilities(); // Should be a callback to requesterr().  Implement when modifying everything to use await.
 					return;
 				}
 				// TODO: if (!body), warn.
@@ -191,7 +203,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		request({"url":url,"timeout": timeout("default")}, 
 			function (err,res,body) {
 				if (err) {
-					requesterr(url,err,'default'); // Need to make next fn a callback.					
+					requesterr(url,err,'default');
 					catalog();
 					return;
 				}
@@ -205,12 +217,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					catalog();
 					return;
 				}
-				if (!report(url,is.HAPIJSON(body,'capabilities')),{"stop":true}){
+				if (!report(url,is.HAPIJSON(body,schema,'capabilities'),{"stop":true})) {
 					catalog();
 					return;
 				}
-				var json = JSON.parse(body)
+				var json = JSON.parse(body);
 				var outputFormats = json.outputFormats || "No outputFormats element."
+				// Existence of 'csv' can't be checked with schema using enum b/c
+				// only requirement is 'csv'; any other output formats can be defined.
 				report(url,{"description":"Expect outputFormats to have 'csv'","error": outputFormats.indexOf("csv") == -1,"got": outputFormats.toString()});
 				catalog();
 			})
@@ -229,7 +243,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				if (!report(url,is.JSONparsable(body),{"abort":true})) return;
-				report(url,is.HAPIJSON(body,'catalog'));
+				report(url,is.HAPIJSON(body,schema,'catalog'));
 				var datasets = JSON.parse(body).catalog;
 				if (datasets) {
 					report(url,is.Unique(datasets,"datasets","id"));
@@ -250,7 +264,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 			function (err,res,body) {
 				if (err) {
 					requesterr(url,err,'default',{"stop":true});
-					data(datasets,header,0);
+					info(datasets);
 					return;
 				}
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
@@ -259,8 +273,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				report(url,is.ErrorInformative(res.statusMessage,1406,"httpmessage"),{"warn":true});
 				if (report(url,is.JSONparsable(body),{"stop":true})) {
 					var json = JSON.parse(body);
-					if (report(url,is.HAPIJSON(body,'error14xx'),{"stop":true})) {
-						report(url,is.HAPIJSON(body,'error14xx'),{"stop":true})
+					if (report(url,is.HAPIJSON(body,schema,'HAPIStatus'),{"stop":true})) {
 						report(url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
 						var err1406 = errors(1406);
 						report(url,is.ErrorInformative(json.status.message,err1406.status.message,"hapimessage"),{"warn":true});
@@ -272,7 +285,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function info(datasets) {
 
-		if (datasets.length == 0) { // All datsets checked.
+		if (datasets.length == 0) { // All datsets have been checked.
 			report();
 			return;
 		}
@@ -299,7 +312,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				if (!report(url,is.JSONparsable(body),{"abort":true})) return;
-				report(url,is.HAPIJSON(body,'info'));
+				report(url,is.HAPIJSON(body,schema,'info'));
 				var header = JSON.parse(body);
 				if (header.parameters) {
 					if (header.parameters[0].name) {
@@ -382,6 +395,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	function infor(datasets,header,start,stop,useTimeoutFor) {
 		// Check if JSON has two parameter objects when only one parameter is requested.
 		// Checks only the second parameter (first parameter after Time).
+
+		if (header.parameters.length == 1) {
+			// Time is only parameter; can't do request for two parameters.
+			data(datasets,header,start,stop,useTimeoutFor,0);
+			return;
+		}
+
 		var url = ROOT + '/info' + "?id=" + datasets[0].id + '&parameters=' + header.parameters[1].name;
 
 		report(url);
@@ -402,7 +422,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					return;
 				}
 				var headerReduced = JSON.parse(body); // Reduced header
-				if (!report(url,is.HAPIJSON(body,'info'))) {
+				if (!report(url,is.HAPIJSON(body,schema,'info'))) {
 					if (headerReduced.parameters) {
 						if (headerReduced.parameters[0]) {
 							report(url,{"description":"Expect # parameters in JSON to be 2 when one non-time parameter is requested","error": headerReduced.parameters.length != 2,"got": headerReduced.parameters.length + " parameters."});
@@ -483,6 +503,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				timeLength = header.parameters[0].length;
 				
 				report(url,is.ISO8601(time1));
+				// TODO: 
+				//report(url,is.HAPIISO8601(time1));
 				report(url,is.CorrectLength(time1,timeLength,"Time","",false),{"warn":true});
 				report(url,is.TimeIncreasing(lines,"CSV"));
 				report(url,is.TimeInBounds(lines,start,stop));
@@ -543,7 +565,7 @@ function timeout(what,when) {
 		"datasample10xcadence":{"timeout":1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
 		"datasamplesuggested":{"timeout":1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
 		"datasamplechosen":{"timeout":1000,"when":"time.min/max given to validator"},
-		"default":{"what":200,"timeout":200,"when":"Request is not for data"}
+		"default":{"timeout":200,"when":"Request is not for data"}
 	};
 
 	if (!when) {
@@ -554,11 +576,25 @@ function timeout(what,when) {
 }
 
 function errors(num) {
-	if (!errors.errs) {
-		json = fs.readFileSync(__dirname + "/schemas/1.1/errors.json");
-		errors.errs = JSON.parse(json);
-	}
-	return errors.errs[num+""];	
+
+	var errs = 
+		{
+			"1400": {"status":{"code": 1400, "message": "HAPI error 1400: user input error"}},
+			"1401": {"status":{"code": 1401, "message": "HAPI error 1401: unknown request field"}},
+			"1402": {"status":{"code": 1402, "message": "HAPI error 1402: error in start time"}},
+			"1403": {"status":{"code": 1403, "message": "HAPI error 1403: error in stop time"}},
+			"1404": {"status":{"code": 1404, "message": "HAPI error 1404: start time equal to or after stop time"}},
+			"1405": {"status":{"code": 1405, "message": "HAPI error 1405: time outside valid range"}},
+			"1406": {"status":{"code": 1406, "message": "HAPI error 1406: unknown dataset id"}},
+			"1407": {"status":{"code": 1407, "message": "HAPI error 1407: unknown dataset parameter"}},
+			"1408": {"status":{"code": 1408, "message": "HAPI error 1408: too much time or data requested"}},
+			"1409": {"status":{"code": 1409, "message": "HAPI error 1409: unsupported output format"}},
+			"1410": {"status":{"code": 1410, "message": "HAPI error 1410: unsupported include value"}},
+			"1500": {"status":{"code": 1500, "message": "HAPI error 1500: internal server error"}},
+			"1501": {"status":{"code": 1501, "message": "HAPI error 1501: upstream request error"}}
+		};
+
+	return errs[num+""];	
 }
 
 function prod(arr) {

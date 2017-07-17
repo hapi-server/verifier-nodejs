@@ -2,18 +2,18 @@ var fs   = require('fs');
 var clc  = require('cli-color');
 var argv = require('yargs')
 				.default({
-					"port": false,
+					"port": 9999,
+					"url": "",
 					"id": "",
 					"parameter": "",
 					"timemax": "",
-					"timemin": "",
-					"url": "http://mag.gmu.edu/hapi"
+					"timemin": ""
 				})
 				.argv
 
 var tests = require('./tests.js'); // Test runner
 
-if (argv.port == false) {
+if (argv.url !== "") {
 	// Command-line mode
 	tests.run(argv.url,argv.id,argv.parameter,argv["timemin"],argv["timemax"]);
 } else {

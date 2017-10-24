@@ -10,7 +10,7 @@ To run tests on the command line or to run a server, see the below.
 
 ```
 # Install Node Version Manager (NVM)
-curl -O https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
+curl https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
 # Install node.js 4
 nvm install 4
 # Install required Node packages

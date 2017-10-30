@@ -13,8 +13,10 @@ To run tests on the command line or to run a server, see the below.
 curl https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
 # Install node.js 4
 nvm install 4
+# Clone repository
+git clone https://github.com/hapi-server/verifier-nodejs.git
 # Install required Node packages
-npm install
+cd verifier-nodejs; npm install
 ```
 
 # Command-Line Usage

@@ -131,7 +131,7 @@ function LengthAppropriate(len,type,name) {
 exports.LengthAppropriate = LengthAppropriate;
 
 function TimeFirstParameter(header) {
-	return {"description":"is.TimeFirstParameter(): First parameter should (not must) be named 'Time'.","error":header.parameters[0].name !== "Time","got":header.parameters[0].name}
+	return {"description":"is.TimeFirstParameter(): First parameter should (not must) be named 'Time' b/c clients will likely label first parameter name 'Time' when plotting to protect against first parameter names that are not sensible.","error":header.parameters[0].name !== "Time","got":header.parameters[0].name}
 }
 exports.TimeFirstParameter = TimeFirstParameter;
 

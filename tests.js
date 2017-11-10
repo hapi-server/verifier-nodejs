@@ -565,7 +565,7 @@ function timeout(what,when) {
 		"datasample10xcadence":{"timeout":1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
 		"datasamplesuggested":{"timeout":1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
 		"datasamplechosen":{"timeout":1000,"when":"time.min/max given to validator"},
-		"default":{"timeout":200,"when":"Request is not for data"}
+		"default":{"timeout":500,"when":"Request is not for data"}
 	};
 
 	if (!when) {

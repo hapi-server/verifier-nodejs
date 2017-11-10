@@ -231,7 +231,7 @@ function HTTP200(res){
 		}
 
 		if (!body) {
-			var body = " and non JSON.parse()-able body\t\n" + res.body.replace(/\n/g,"\n\t");
+			var body = " and non JSON.parse()-able body:\n" + res.body.replace(/\n/g,"\n\t");
 		} else {
 			var body = "";
 		}
@@ -259,8 +259,14 @@ function TimeInBounds(lines,start,stop) {
 	stop = stop.trim().replace(/Z$/,"");
 
 	var firstTime = lines[0].split(",").shift().trim().replace(/Z$/,"");
-	var lastTime  = lines[lines.length-2].split(",").shift().trim().replace(/Z$/,"");
-	// lines.length-2 above because of split gives empty string in last array element if last line is newline
+	if (lines.length == 1) {
+		var lastTime  = firstTime;
+	} else if (lines[lines.length-1] === '' && lines.length > 1) {
+		var lastTime  = lines[lines.length-2].split(",").shift().trim().replace(/Z$/,"");
+		// lines.length-2 above because of split gives empty string in last array element if last line is newline
+	} else {
+		var lastTime  = lines[lines.length-1].split(",").shift().trim().replace(/Z$/,"");
+	}
 
 	var got = "First time = " + firstTime + "; LastTime = " + lastTime;
 	var t = new Date(firstTime).getTime() >=  new Date(start).getTime() && new Date(lastTime).getTime() <  new Date(stop).getTime();
@@ -323,6 +329,8 @@ function TimeIncreasing(header,what) {
 exports.TimeIncreasing = TimeIncreasing;
 
 function ISO8601(str,extra) {
+	// TODO: Change to HAPIISO8601.
+	// https://github.com/hapi-server/data-specification/issues/54
 	var extra = extra || ""
 	var t  = moment(str,moment.ISO_8601).isValid();
 	var ts = "moment('" + str + "',moment.ISO_8601).isValid() == true"+extra;

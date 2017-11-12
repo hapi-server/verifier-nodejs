@@ -1,0 +1,54 @@
+1710-01-01T00:00:00Z,1,First allowed date/time
+2199-12-31T23:59:59Z,1,Last allowed date/time
+
+2000-01-01T00:00:00.0,0,Fail because no Z
+2000-01-01T00:00:00,0,Fail because no Z
+2000-01-01T00:00,0,Fail because no Z
+2000-01-01T00,0,Fail because no Z
+2000-01-01T,0,Fail because no Z
+2000-01-01,0,Fail because no Z
+2000-01,0,Fail because no Z
+2000,0,Fail because no Z
+2000-00Z,0
+2000-13Z,0
+
+2000Z,1
+
+2000-01Z,1
+2000-12Z,1
+
+2000-0Z,0
+
+2000-01-01Z,1
+2000-001Z,1
+
+2000-01-01T00Z,1
+2000-01-01T23Z,1
+2000-01-01T0Z,0,Fail because one-digit hour
+2000-01-01T00:Z,0,Fail because trailing :
+
+2000-01-01T00:0Z,0,Fail because one-digit minute
+2000-01-01T00:00Z,1
+2000-01-01T23:59Z,1
+
+2000-01-01T00:00:0Z,0,Fail because one-digit minute
+2000-01-01T00:00:00Z,1
+2000-01-01T23:59:59Z,1
+
+2000-01-01T00:00:00.Z,1
+2000-01-01T00:00:00.0Z,1
+2000-01-01T00:00:00.000000000Z,1
+2000-01-01T00:00:00.0000000000Z,0,Fail because more than nine digits in subsec
+
+2000-01-01T01:01:60Z,1,Pass because possible leap second day
+2000-01-01T23:59:60Z,1,Pass because possible leap second day
+2000-12-31T24:01:01Z,0,Fail because 24 allowed only if hr=00,sec=00,subsec=0
+2000-12-31T24:00:00.01Z,0,Fail because 24 allowed only if hr=00,sec=00,subsec=0
+
+2000-366T00Z,1
+2000-367T00Z,0
+2001-366T00Z,0
+
+1710-01-01T00:00:00Z,1
+2199-01-01T00:00:00Z,1
+2199-01-01T24:00:00Z,1

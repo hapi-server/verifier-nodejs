@@ -326,10 +326,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					report(url,{"description":"Expect parameters element in catalog","error":true,"got": header.parameters},{"abort":true});
 					return;
 				}
+
 				report(url,is.TimeFirstParameter(header),{"warn":true});
+				//TODO:
+				//report(url,is.ISO8601(header,"{start,stop}Date"));
+				//report(url,is.ISO8601(header,"sample{Start,Stop}Date"));
 				report(url,is.TimeIncreasing(header,"{start,stop}Date"));
 				report(url,is.TimeIncreasing(header,"sample{Start,Stop}Date"));
-				
+								
 				for (var i = 0;i<header.parameters.length;i++) {
 					len  = header.parameters[i]["length"];
 					type = header.parameters[i]["type"];
@@ -502,10 +506,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 				timeLength = header.parameters[0].length;
 				
-				report(url,is.ISO8601(time1));
-				// TODO: 
-				//report(url,is.HAPIISO8601(time1));
 				report(url,is.CorrectLength(time1,timeLength,"Time","",false),{"warn":true});
+				//TODO: report(url,is.HAPIISO8601(lines,"CSV"));
+				//TODO: Remove next line once above is implemented.
+				report(url,is.ISO8601(time1));
 				report(url,is.TimeIncreasing(lines,"CSV"));
 				report(url,is.TimeInBounds(lines,start,stop));
 

@@ -1,0 +1,44 @@
+--
+1710-01-01T00:00:00Z: Pass Expected: Pass 
+2199-12-31T23:59:59Z: Pass Expected: Pass 
+2000-01-01T00:00:00.0: Fail Expected: Fail 
+2000-01-01T00:00:00: Fail Expected: Fail 
+2000-01-01T00:00: Fail Expected: Fail 
+2000-01-01T00: Fail Expected: Fail 
+2000-01-01T: Fail Expected: Fail 
+2000-01-01: Fail Expected: Fail 
+2000-01: Fail Expected: Fail 
+2000: Fail Expected: Fail 
+2000-00Z: Fail Expected: Fail 
+2000-13Z: Fail Expected: Fail 
+2000Z: Pass Expected: Pass 
+2000-01Z: Pass Expected: Pass 
+2000-12Z: Pass Expected: Pass 
+2000-0Z: Fail Expected: Fail 
+2000-01-01Z: Pass Expected: Pass 
+2000-001Z: Pass Expected: Pass 
+2000-01-01T00Z: Pass Expected: Pass 
+2000-01-01T23Z: Pass Expected: Pass 
+2000-01-01T0Z: Fail Expected: Fail 
+2000-01-01T00:Z: Fail Expected: Fail 
+2000-01-01T00:0Z: Fail Expected: Fail 
+2000-01-01T00:00Z: Pass Expected: Pass 
+2000-01-01T23:59Z: Pass Expected: Pass 
+2000-01-01T00:00:0Z: Fail Expected: Fail 
+2000-01-01T00:00:00Z: Pass Expected: Pass 
+2000-01-01T23:59:59Z: Pass Expected: Pass 
+2000-01-01T00:00:00.Z: Fail Expected: Pass ??? Error: HAPI code got wrong answer.
+2000-01-01T00:00:00.0Z: Pass Expected: Pass 
+2000-01-01T00:00:00.000000000Z: Pass Expected: Pass 
+2000-01-01T00:00:00.0000000000Z: Fail Expected: Fail 
+2000-01-01T01:01:60Z: Pass Expected: Pass 
+2000-01-01T23:59:60Z: Pass Expected: Pass 
+2000-12-31T24:01:01Z: Fail Expected: Fail 
+2000-12-31T24:00:00.01Z: Fail Expected: Fail 
+2000-366T00Z: Pass Expected: Pass 
+2000-367T00Z: Fail Expected: Fail 
+2001-366T00Z: Fail Expected: Fail 
+1710-01-01T00:00:00Z: Pass Expected: Pass 
+2199-01-01T00:00:00Z: Pass Expected: Pass 
+2199-01-01T24:00:00Z: Fail Expected: Pass ??? Error: HAPI code got wrong answer.
+--

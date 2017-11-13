@@ -22,7 +22,7 @@ cd verifier-nodejs; npm install
 # Command-Line Usage
 
 ```
-node test.js 
+node verify.js 
 	--url URL 
 	--id DATASETID 
 	--parameter PARAMETERNAME 

@@ -1,16 +1,19 @@
 var moment = require('moment');
 var fs = require('fs');
 
+// Read test file
 var tests = fs.readFileSync('hapi8601.txt').toString();
 var tests = tests.split(/\n/);
+
 console.log("--")
 for (var i = 0;i < tests.length; i++) {
 
 	var tmp = tests[i].split(",");
 	var isostr = tmp[0];
-	if (isostr === "") {continue;}
-	var expect = tmp[1];
-	expect = expect === "1" ? true: false;
+	if (!/^\d/.test(isostr)) {continue;} // Ignore lines that dont start with digit
+
+	var expect = tmp[1]; // Expected result is second column of file
+	expect = expect === "1" ? true: false; // Convert to boolean
 
 	test_hapi = HAPITime(isostr);
 	test_moment = moment(isostr,moment.ISO_8601).isValid();
@@ -30,6 +33,7 @@ for (var i = 0;i < tests.length; i++) {
 console.log("--")
 
 function HAPITime(isostr) {
+
 	function isleap(year) {return ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0)}
 
 	// MONTH, DOM, DOY should all be optional (this needs to be handled in regexp)
@@ -49,16 +53,22 @@ function HAPITime(isostr) {
 
 	// TZ inserted so it passes next regexp.
 	// TODO: **** REMOVE WHEN REGEXP FIXED ****
+	// YYYY-MM-DDZ -> YYYY-MM-DDTZ etc.
 	isostr = isostr.replace(/(^\d{4})-(\d{2})-(\d{2})Z$/,"$1-$2-$3TZ");
 	isostr = isostr.replace(/(^\d{4})-(\d{3})Z$/,"$1-$2TZ");
 
+	isostr = isostr.replace(/(.*)\.Z$/,"$1.0Z");	
+
+	// Main regular expression
 	// https://github.com/hapi-server/data-specification/issues/54#issuecomment-338637245
 	var re = /((?:((?:16|17|18|19|20|21)\d\d)-(0[1-9]|10|11|12)-([0-3]\d))|(?:((?:16|17|18|19|20|21)\d\d)-([0-3]\d\d)))T(([01]\d|2[0-4])(?:\:([0-5]\d)(?::([0-5]\d|60)(\.\d{1,9})?)?)?)?Z/;
 	var test_re = re.test(isostr);
 
 	var test_semantic = true;
-	if (test_re) { // Only check if main regular expression test passed.
+	if (test_re) { // Only check semantic main regular expression test passed.
 
+		// Can't use moment.js here to parse as it may not parse certain
+		// date/times that we consider valid.
 		var date = isostr.split("-");
 		var year = parseInt(isostr.slice(0,4));
 		if (date.length == 2) {
@@ -82,9 +92,11 @@ function HAPITime(isostr) {
 		if (/T/.test(isostr)) {
 			var hr_mn_sec_subsec = isostr.replace("Z","").split("T")[1].split(/:|\./);
 			for (var i = 0;i<4;i++) {
+				// Set missing time elements to 0
 				hr_mn_sec_subsec[i] = hr_mn_sec_subsec[i] || "0";
 				hr_mn_sec_subsec[i] = parseInt(hr_mn_sec_subsec[i]);
 			}
+
 			// 24 is allowed for HOURS, but only if MINUTES=00, SECONDS=00, SUBSECONDS=0
 			if (hr_mn_sec_subsec[0] == 24) {
 				if (hr_mn_sec_subsec[1] != 0 || hr_mn_sec_subsec[2] != 0 || hr_mn_sec_subsec[3] != 0) {
@@ -97,7 +109,6 @@ function HAPITime(isostr) {
 					test_semantic = false;
 				}
 				if (date.length == 2) {
-					//console.log(date)
 					var jun30 = isleap(year) ? 182 : 181;
 					var dec31 = isleap(year) ? 366 : 365;
 					if (!( (doy == jun30) || (doy == dec31) )) {

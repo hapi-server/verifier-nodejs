@@ -9,13 +9,14 @@
 2000-01-01,0,Fail because no Z
 2000-01,0,Fail because no Z
 2000,0,Fail because no Z
-2000-00Z,0
-2000-13Z,0
 
 2000Z,1
+200Z,0
 
 2000-01Z,1
 2000-12Z,1
+2000-00Z,0,Fail because invalid month
+2000-13Z,0,Fail because invalid month
 
 2000-0Z,0
 

@@ -32,9 +32,6 @@ console.log("--")
 function HAPITime(isostr) {
 	function isleap(year) {return ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0)}
 
-	// Not implemented:
-	// SECONDS can be 0-59, and 60 on leap second days (Jun 30 or Dec 31).
-
 	// MONTH, DOM, DOY should all be optional (this needs to be handled in regexp)
 	var re2 = /^\d{4}Z|^\d{4}-\d{2}Z/;
 	var test_re2 = re2.test(isostr);
@@ -60,7 +57,7 @@ function HAPITime(isostr) {
 	var test_re = re.test(isostr);
 
 	var test_semantic = true;
-	if (test_re) { // Only check if main expression test passed.
+	if (test_re) { // Only check if main regular expression test passed.
 
 		var date = isostr.split("-");
 		var year = parseInt(isostr.slice(0,4));
@@ -68,8 +65,8 @@ function HAPITime(isostr) {
 			var doy = parseInt(date[1]);
 		}
 		if (date.length == 3) {
-			var day = parseInt(date[1]);
-			var mo  = parseInt(date[2]);
+			var mo  = parseInt(date[1]);
+			var day = parseInt(date[2]);
 		}
 
 		// DOY can be no more than 365 on non-leap years, 366 on leap years.
@@ -82,15 +79,39 @@ function HAPITime(isostr) {
 			test_semantic = false;
 		}
 
-		// 24 is allowed for HOURS, but only if MINUTES=00, SECONDS=00, SUBSECONDS=0
 		if (/T/.test(isostr)) {
-			var hr_mn_sec_subsec = isostr.split("T")[1].split(/:|\./);
-			if (hr_mn_sec_subsec[0] === "24") {
-				if (hr_mn_sec_subsec[1] !== "00" || hr_mn_sec_subsec[2] !== "00" || parseInt(hr_mn_sec_subsec[3]) != 0) {
+			var hr_mn_sec_subsec = isostr.replace("Z","").split("T")[1].split(/:|\./);
+			for (var i = 0;i<4;i++) {
+				hr_mn_sec_subsec[i] = hr_mn_sec_subsec[i] || "0";
+				hr_mn_sec_subsec[i] = parseInt(hr_mn_sec_subsec[i]);
+			}
+			// 24 is allowed for HOURS, but only if MINUTES=00, SECONDS=00, SUBSECONDS=0
+			if (hr_mn_sec_subsec[0] == 24) {
+				if (hr_mn_sec_subsec[1] != 0 || hr_mn_sec_subsec[2] != 0 || hr_mn_sec_subsec[3] != 0) {
 					test_semantic = false;
 				}
 			}
+			// SECONDS can be 0-59, and 60 on leap second days (Jun 30 or Dec 31).
+			if (hr_mn_sec_subsec[2] == 60) {
+				if (hr_mn_sec_subsec[0] != 23 && hr_mn_sec_subsec[1] != 59) {
+					test_semantic = false;
+				}
+				if (date.length == 2) {
+					//console.log(date)
+					var jun30 = isleap(year) ? 182 : 181;
+					var dec31 = isleap(year) ? 366 : 365;
+					if (!( (doy == jun30) || (doy == dec31) )) {
+						test_semantic = false;
+					}
+				}
+				if (date.length == 3) {
+					if (!( (mo == 6 && day == 31) || (mo == 12 && day == 31) )) {
+						test_semantic = false;
+					}
+				}
+			}
 		}
+
 
 	}
 	return test_re && test_semantic;

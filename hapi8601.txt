@@ -40,8 +40,20 @@
 2000-01-01T00:00:00.000000000Z,1
 2000-01-01T00:00:00.0000000000Z,0,Fail because more than nine digits in subsec
 
-2000-01-01T01:01:60Z,1,Pass because possible leap second day
-2000-01-01T23:59:60Z,1,Pass because possible leap second day
+2000-366T23:59:60Z,1,Pass because possible leap second day
+2000-366T01:01:60Z,0
+2000-365T23:59:60Z,0
+
+2000-182T23:59:60Z,1,Pass because possible leap second day
+2000-182T01:01:60Z,0
+
+2001-181T23:59:60Z,1,Pass because possible leap second day
+2001-182T23:59:60Z,0
+2000-181T01:01:60Z,0
+
+2000-12-31T23:59:60Z,1,Pass because possible leap second day
+2000-12-31T00:00:60Z,0
+
 2000-12-31T24:01:01Z,0,Fail because 24 allowed only if hr=00,sec=00,subsec=0
 2000-12-31T24:00:00.01Z,0,Fail because 24 allowed only if hr=00,sec=00,subsec=0
 

@@ -31,8 +31,16 @@
 2000-01-01T00:00:00.0Z: Pass Expected: Pass 
 2000-01-01T00:00:00.000000000Z: Pass Expected: Pass 
 2000-01-01T00:00:00.0000000000Z: Fail Expected: Fail 
-2000-01-01T01:01:60Z: Pass Expected: Pass 
-2000-01-01T23:59:60Z: Pass Expected: Pass 
+2000-366T23:59:60Z: Pass Expected: Pass 
+2000-366T01:01:60Z: Fail Expected: Fail 
+2000-365T23:59:60Z: Fail Expected: Fail 
+2000-182T23:59:60Z: Pass Expected: Pass 
+2000-182T01:01:60Z: Fail Expected: Fail 
+2001-181T23:59:60Z: Pass Expected: Pass 
+2001-182T23:59:60Z: Fail Expected: Fail 
+2000-181T01:01:60Z: Fail Expected: Fail 
+2000-12-31T23:59:60Z: Pass Expected: Pass 
+2000-12-31T00:00:60Z: Fail Expected: Fail 
 2000-12-31T24:01:01Z: Fail Expected: Fail 
 2000-12-31T24:00:00.01Z: Fail Expected: Fail 
 2000-366T00Z: Pass Expected: Pass 
@@ -40,5 +48,5 @@
 2001-366T00Z: Fail Expected: Fail 
 1710-01-01T00:00:00Z: Pass Expected: Pass 
 2199-01-01T00:00:00Z: Pass Expected: Pass 
-2199-01-01T24:00:00Z: Fail Expected: Pass ??? Error: HAPI code got wrong answer.
+2199-01-01T24:00:00Z: Pass Expected: Pass 
 --

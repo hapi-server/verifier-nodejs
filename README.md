@@ -30,13 +30,14 @@ node verify.js
 	--timemax ISO8601
 ```
 
-Only `URL` is required.   Default is to check all datasets and all parameters and use `timemin=sampleStartDate` and `timemax=sampleStopDate` if both given, otherwise `timemin=startDate` and `timemax=startDate+P1D` are used.
+If no arguments are provided, then a web server is started on port 9999, which can be accessed as "http://localhost:9999".  If `URL` is provided, then output goes to stdout.  Default is to check all datasets and all parameters and use `timemin=sampleStartDate` and `timemax=sampleStopDate` if both given, otherwise `timemin=startDate` and `timemax=startDate+P1D` are used.
 
 # Server Usage
 
 ```
 node verify.js --port PORT
 ```
+The default port is 9999.
 
 # TODO
 

@@ -6,6 +6,25 @@ var is      = require('./is.js'); // Test library
 var schema = fs.readFileSync(__dirname + "/schemas/HAPI-data-access-schema-1.1.json");
 var schema = JSON.parse(schema);
 
+function timeout(what,when) {
+
+	var obj = {
+		"datapreviousfail":{"timeout":5000,"when":"A previous request for data failed. Will try again."},
+		"datasampledefault":{"timeout":10000,"when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."},
+		"datasample10xcadence":{"timeout":1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
+		"datasamplesuggested":{"timeout":1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
+		"datasamplechosen":{"timeout":1000,"when":"time.min/max given to validator"},
+		"default":{"timeout":200,"when":"Request is for metadata. Will try again."},
+		"defaultpreviousfail":{"timeout":5000,"when":"A previous request for metadata timed out."}
+	};
+
+	if (!when) {
+		return obj[what]["timeout"];
+	} else {
+		return obj[what]["when"];
+	}
+}
+
 function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	// Catch uncaught execeptions.
@@ -100,7 +119,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 			var indenthtml = "&nbsp;&nbsp;"
 		}
 		if (report.url !== url) { 
-			// Display URL only if not the same as last one seen 
+			// Display URL only if not the same as last one seen or requested to be displayed
 			// when report() was called.
 			if (RES) RES.write("<br>" + indenthtml + "<font style='color:blue'><a href='" + url + "'>" + url.replace(/\&parameters/,"&amp;parameters") + "</a></font></br>");
 			if (!RES) console.log("\n" + indentcons + clc.blue(url));
@@ -152,13 +171,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 
 	function requesterr(url,err,what,obj) {
+
 		// Catch errors that occur when reqeust is made and before tests are done on response.
 		if (obj) {
 			if (!obj.warn) obj.warn = false;
 			if (!obj.stop) obj.stop = false;
 			if (!obj.abort) obj.abort = false;
 		} else {
-			obj = {"warn":false,"stop":false,"abort":false};
+			obj = {"warn":false,"stop":false,"abort":false,"showurl":true};
 		}
 		var tout = timeout(what);
 		var when = timeout(what,"when");
@@ -180,13 +200,28 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	function root() {
 
 		// Check optional landing page.
+
+		if (typeof(root.tries) === "undefined") {
+			root.tries = 0
+			var timeoutFor = "default";
+		} else {
+			root.tries += 1;
+			var timeoutFor = "defaultpreviousfail";			
+		};
+
 		var url = ROOT;
 		report(url);
-		request({"url": url,"timeout": timeout("default")}, 
+		request({"url": url,"timeout": timeout(timeoutFor)}, 
 			function (err,res,body) {
+
 				if (err) {
-					requesterr(url,err,'default',{"warn":true});
-					capabilities(); // Should be a callback to requesterr().  Implement when modifying everything to use await.
+					if (root.tries == 0) {
+						requesterr(url,err,timeoutFor,{"warn":true});
+						root(); // Try again
+					} else {
+						requesterr(url,err,timeoutFor);
+						capabilities();
+					}
 					return;
 				}
 				// TODO: if (!body), warn.
@@ -198,13 +233,26 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function capabilities() {
 
+		if (typeof(capabilities.tries) === "undefined") {
+			capabilities.tries = 0
+			var timeoutFor = "default";
+		} else {
+			capabilities.tries += 1;
+			var timeoutFor = "defaultpreviousfail";			
+		};
+
 		url = ROOT + "/capabilities";
 		report(url);
-		request({"url":url,"timeout": timeout("default")}, 
+		request({"url":url,"timeout": timeout(timeoutFor)}, 
 			function (err,res,body) {
 				if (err) {
-					requesterr(url,err,'default');
-					catalog();
+					if (capabilities.tries == 0) {
+						requesterr(url,err,timeoutFor,{"warn":true});
+						capabilities(); // Try again
+					} else {
+						requesterr(url,err,timeoutFor);
+						catalog();
+					}
 					return;
 				}
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
@@ -231,14 +279,30 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 
 	function catalog() {
+
+		if (typeof(catalog.tries) === "undefined") {
+			catalog.tries = 0
+			var timeoutFor = "default";
+		} else {
+			catalog.tries += 1;
+			var timeoutFor = "defaultpreviousfail";			
+		};
+
 		var url = ROOT + "/catalog";
 		report(url);
-		request({"url":url,"timeout": timeout("default")}, 
+		request({"url":url,"timeout": timeout(timeoutFor)}, 
 			function (err,res,body) {
+
 				if (err) {
-					requesterr(url,err,'default',{"abort":true});
+					if (catalog.tries == 0) {
+						requesterr(url,err,timeoutFor,{"warn":true});
+						catalog(); // Try again
+					} else {
+						requesterr(url,err,timeoutFor,{"abort":true});
+					}
 					return;
 				}
+
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
@@ -285,6 +349,17 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function info(datasets) {
 
+		var timeoutFor = "default";
+		if (typeof(info.tries) === "undefined") {
+			info.tries = [];
+		}
+		if (typeof(info.tries[datasets.length]) === "undefined") {
+			info.tries[datasets.length] = 0;
+		} else {
+			info.tries[datasets.length] += 1;
+			timeoutFor = "defaultpreviousfail";			
+		};
+
 		if (datasets.length == 0) { // All datsets have been checked.
 			report();
 			return;
@@ -304,11 +379,19 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		}
 
 		report(url);
-		request({"url":url,"timeout": timeout("default")}, 
+		request({"url":url,"timeout": timeout(timeoutFor)}, 
 			function (err,res,body) {
+
 				if (err) {
-					if (requesterr(url,err,'default',{"abort":true})); return;
+					if (info.tries[datasets.length] == 0) {
+						requesterr(url,err,timeoutFor,{"warn":true});
+						info(datasets); // Try again
+					} else {
+						requesterr(url,err,timeoutFor,{"abort":true});
+					}
+					return;
 				}
+
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				if (!report(url,is.JSONparsable(body),{"abort":true})) return;
@@ -397,8 +480,20 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 
 	function infor(datasets,header,start,stop,useTimeoutFor) {
+		
 		// Check if JSON has two parameter objects when only one parameter is requested.
 		// Checks only the second parameter (first parameter after Time).
+
+		var timeoutFor = "default";
+		if (typeof(infor.tries) === "undefined") {
+			infor.tries = [];
+		}
+		if (typeof(infor.tries[datasets.length]) === "undefined") {
+			infor.tries[datasets.length] = 0;
+		} else {
+			infor.tries[datasets.length] += 1;
+			timeoutFor = "defaultpreviousfail";			
+		};
 
 		if (header.parameters.length == 1) {
 			// Time is only parameter; can't do request for two parameters.
@@ -409,13 +504,19 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		var url = ROOT + '/info' + "?id=" + datasets[0].id + '&parameters=' + header.parameters[1].name;
 
 		report(url);
-		request({"url":url,"timeout": timeout("default")}, 
+		request({"url":url,"timeout": timeout(timeoutFor)}, 
 			function (err,res,body) {
 				if (err) {
-					requesterr(url,err,'default',{"stop":true});
-					data(datasets,header,start,stop,useTimeoutFor,0);
+					if (infor.tries[datasets.length] == 0) {
+						requesterr(url,err,timeoutFor,{"warn":true});
+						infor(datasets,header,start,stop,useTimeoutFor); // Try again
+					} else {
+						requesterr(url,err,'default',{"stop":true});
+						data(datasets,header,start,stop,useTimeoutFor,0);
+					}
 					return;
 				}
+
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
 					data(datasets,header,start,stop,useTimeoutFor,0);
 					return;
@@ -560,24 +661,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 }
 exports.run = run;
-
-function timeout(what,when) {
-
-	var obj = {
-		"datapreviousfail":{"timeout":5000,"when":"A previous request for data failed."},
-		"datasampledefault":{"timeout":10000,"when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."},
-		"datasample10xcadence":{"timeout":1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
-		"datasamplesuggested":{"timeout":1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
-		"datasamplechosen":{"timeout":1000,"when":"time.min/max given to validator"},
-		"default":{"timeout":500,"when":"Request is not for data"}
-	};
-
-	if (!when) {
-		return obj[what]["timeout"];
-	} else {
-		return obj[what]["when"];
-	}
-}
 
 function errors(num) {
 

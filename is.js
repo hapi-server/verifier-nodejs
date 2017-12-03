@@ -243,31 +243,32 @@ exports.HTTP200 = HTTP200;
 function CorrectLength(str,len,name,extra,required) {
 	var extra = extra || ""
 	var required = required || false
-	var got = "(" + (str.length) + ") - (" + (len-1) + ")"
-	var t = str.length != (len - 1);
+	var got = "(" + (str.length) + ") - (" + (len) + ")"
+	var t = str.length != len;
 	if (t && !required) {
-		got = got + extra + " Not an error for CSV, but whitespace padding will cause error in binary."
+		got = got + extra + " Not an error for CSV, but may cause error in binary."
 	}
-	return {"description":'is.CorrectLength(): Expect (trimmed length of ' + name + ' string parameter in CSV) - (parameters.'+ name + '.length-1) = 0.',"error":t,"got":got}
+	return {"description":'is.CorrectLength(): Expect (trimmed length of ' + name + ' string parameter in CSV) - (parameters.'+ name + '.length) = 0.',"error":t,"got":got}
 }
 exports.CorrectLength = CorrectLength;
 
 function TimeInBounds(lines,start,stop) {
 	// Remove Z from all times so Date().getTime() gives local timezone time for all.
 	// Javascript Date assumes all date/times are in local timezone.
+
+	// TODO: Need to deal with file lines in different format (metadata uses YYYY-MM-DD and data is in YYYY-DOY)
 	start = start.trim().replace(/Z$/,"");
 	stop = stop.trim().replace(/Z$/,"");
 
 	var firstTime = lines[0].split(",").shift().trim().replace(/Z$/,"");
-	if (lines.length == 1) {
-		var lastTime  = firstTime;
-	} else if (lines[lines.length-1] === '' && lines.length > 1) {
-		var lastTime  = lines[lines.length-2].split(",").shift().trim().replace(/Z$/,"");
-		// lines.length-2 above because of split gives empty string in last array element if last line is newline
-	} else {
-		var lastTime  = lines[lines.length-1].split(",").shift().trim().replace(/Z$/,"");
+	var lastTime = firstTime;
+	// Find the last line with content.
+	for (var i = 0;i<lines.length-1;i++) {
+		if (lines[lines.length-i-1] !== '') {
+			lastTime = lines[lines.length-i-1].split(",").shift().trim().replace(/Z$/,"");
+			break;
+		}
 	}
-
 	var got = "First time = " + firstTime + "; LastTime = " + lastTime;
 	var t = new Date(firstTime).getTime() >=  new Date(start).getTime() && new Date(lastTime).getTime() <  new Date(stop).getTime();
 	return {"description": "is.TimeInBounds(): Expect first time in CSV >= " + start + " and last time in CSV < " + stop + " (only checks to ms)","error": t != true,"got":got};
@@ -278,19 +279,20 @@ function TimeIncreasing(header,what) {
 	if (what === "CSV") {
 		var got = "Monotonically increasing time in CSV"
 		var starttest = new Date().getTime();
+		var ts = got;
 		for (i = 0;i < header.length-2;i++) {// -2 instead of -1 b/c split will place an '' for a line that is only \n.
 			var line = header[i].split(",");
 			var linenext = header[i+1].split(",");
-			var ts = "Time(i+1) > Time(i)";
 			var t = new Date(linenext[0].trim()).getTime() > new Date(line[0].trim()).getTime();
 			if (!t) {
-				var got = linenext[0] + " <= " + line[0];
+				var ts = "Time(line="+(i+1)+") > Time(line="+i+")";
+				var got = "line " + (i+1) + " = "+ linenext[0] + "; line " + (i) + " = " + line[0];
 				break;			
 			}
 			if (new Date().getTime() - starttest > 10) {
 				// Stop testing after 10 ms.
 				got = got + " in first " + (i+1) + " lines.";
-				break
+				break;
 			}
 		}
 	}
@@ -299,7 +301,7 @@ function TimeIncreasing(header,what) {
 		var stop  = header.stopDate;
 		var ts = "info.startDate < info.stopDate";
 		var t = new Date(start).getTime() < new Date(stop).getTime();
-		var got = start + " < " + stop;
+		var got = "startDate = " + start + "; stopDate = " + stop;
 	}
 	if (what === "sample{Start,Stop}Date") {
 		var start = header.sampleStartDate;
@@ -308,7 +310,7 @@ function TimeIncreasing(header,what) {
 		if (start && stop) {
 			var t = new Date(start).getTime() < new Date(stop).getTime();
 			var ts = "info.sampleStartDate < info.sampleStopDate";
-			var got = start + " < " + stop;
+			var got = "sampleStartDate = " + start + "; sampleStopDate = " + stop;
 		} else {
 			if (!stop) {
 				var ts = "info.sampleStartDate does not have a matching sampleStopDate";

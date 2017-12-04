@@ -40,6 +40,12 @@ if (argv.url !== "") {
 		}
 
 		// TODO: Test that these make sense and check for unknown query parameters.
+		var allowed = ["url","id","parameter","time.min","time.max"];
+		for (var key in req.query) {
+			if (!allowed.includes(key)) {
+				res.end("Only allowed parameters are " + allowed.join(",") + " (not "+key+").");
+			}
+		}
 		var start = req.query["time.min"] || ""
 		var stop  = req.query["time.max"] || ""
 		var id    = req.query["id"] || ""

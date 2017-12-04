@@ -3,7 +3,9 @@ var request = require('request');
 var clc     = require('cli-color');
 var is      = require('./is.js'); // Test library
 
-var schema = fs.readFileSync(__dirname + "/schemas/HAPI-data-access-schema-1.1.json");
+//var schema = fs.readFileSync(__dirname + "/schemas/HAPI-data-access-schema-1.1.json");
+var schema = fs.readFileSync(__dirname + "/schemas/HAPI-data-access-schema-2.0.json");
+
 var schema = JSON.parse(schema);
 
 function timeout(what,when) {
@@ -545,6 +547,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 
 	function data(datasets,header,start,stop,useTimeoutFor,pn) {
+
+		// TODO: Try data request with different but equivalent representations of time
+		// and verify that response does not change.
+
 
 		if (header.parameters.length == pn) {
 			datasets.shift(); // Remove first element

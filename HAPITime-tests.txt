@@ -1,0 +1,85 @@
+# Test lines start with an integer. 
+# Second column is 0 if test should fail, 1 if pass. 
+# Third column is comment.
+
+2000-01-01T00:00:00.0,0,No Z
+2000-01-01T00:00:00,0,No Z
+2000-01-01T00:00,0,No Z
+2000-01-01T00,0,No Z
+2000-01-01T,0,No Z
+2000-01-01,0,No Z
+2000-01,0,No Z
+2000,0,No Z
+
+2000Z,1
+200Z,0
+
+2000-01Z,1
+2000-12Z,1
+2000-00Z,0,Invalid month
+2000-13Z,0,Invalid month
+2000-01-32Z,0,Invalid day
+2000-02-30Z,0,Invalid day
+2000-03-31Z,1
+2000-03-32Z,0,Invalid day
+2000-04-31Z,0,Invalid day
+2000-02-29Z,1
+2001-02-29Z,0,Invalid day
+
+2000-0Z,0,Invalid DOY or month
+
+2000-01-01Z,1
+2000-001Z,1
+
+2000-01-01T00Z,1
+2000-01-01T23Z,1
+2000-01-01T0Z,0,One-digit hour
+2000-01-01T00:Z,0,Trailing :
+
+2000-01-01T00:0Z,0,One-digit minute
+2000-01-01T00:00Z,1
+2000-01-01T23:59Z,1
+
+2000-01-01T00:00:0Z,0,One-digit minute
+2000-01-01T00:00:00Z,1
+2000-01-01T23:59:59Z,1
+
+2000-01-01T00:00:00.Z,1
+2000-01-01T00:00:00.0Z,1
+2000-01-01T00:00:00.000000000Z,1
+2000-01-01T00:00:00.0000000000Z,0,More than nine digits in subsec
+2000-01-01T00:00:00.9999999999Z,0,More than nine digits in subsec
+
+2012-182T23:59:60Z,1,Leap second
+2015-06-30T23:59:60Z,1,Possible leap second
+2015-181T23:59:60Z,1,Possible leap second
+
+2012-06-30T23:59:60Z,1,Possible leap second
+2016-12-31T23:59:60Z,1,Possible leap second
+2016-366T23:59:60Z,1,Possible leap second
+
+2011-182T23:59:60Z,0,Not a leap second
+2012-182T01:01:60Z,0,Not a leap second
+
+2012-06-30T00:00:60Z,0,Not a leap second
+2011-06-30T23:59:60Z,0,Not a leap second
+2012-12-31T59:59:60Z,0,Not a leap second
+
+2000-366T24:01:01Z,0,24 allowed only if hr=00,sec=00,subsec=0
+2000-366T24:00:00.01Z,0,24 allowed only if hr=00,sec=00,subsec=0
+2000-12-31T24:01:01Z,0,24 allowed only if hr=00,sec=00,subsec=0
+2000-12-31T24:00:00.01Z,0,24 allowed only if hr=00,sec=00,subsec=0
+2000-12-31T24:00Z,1
+2000-12-31T24:01Z,0
+
+2000-366Z,1
+2000-367Z,0,Invalid DOY
+2001-366T00Z,0,Invalid DOY
+
+2000-366T00Z,1
+2000-367T00Z,0,Invalid DOY
+2001-366T00Z,0,Invalid DOY
+
+1710-01-01T00:00:00Z,1
+2199-01-01T00:00:00Z,1
+2199-01-01T24:00:00Z,1

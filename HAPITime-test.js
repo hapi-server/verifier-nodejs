@@ -3,7 +3,7 @@ var fs = require('fs');
 var HAPITime = require('./HAPITime.js').HAPITime;
 
 // Read test file
-var tests = fs.readFileSync('HAPITime-test.txt').toString();
+var tests = fs.readFileSync('HAPITime-tests.txt').toString();
 var tests = tests.split(/\n/);
 
 var schema = fs.readFileSync('./schemas/HAPI-data-access-schema-2.0.json');
@@ -12,26 +12,6 @@ var tmp = schema.HAPIDateTime.anyOf;
 var schemaregexes = [];
 for (var i = 0;i < tmp.length;i++) {
 	schemaregexes[i] = tmp[i].pattern;
-}
-
-var leapfile = fs.readFileSync('./HAPITime-leaps.txt').toString();
-leapfile = leapfile.split(/\n/);
-var leaps = [];
-var k = 0;
-var delta = 1;
-tai = 9;
-for (var i = 0;i < leapfile.length;i++) {
-	if (/^[0-9]/.test(leapfile[i])) {
-		tmp = leapfile[i].split(/\s+/);
-		var ms = new Date('1972-01-01');		
-		delta = parseInt(tmp[1])-tai;
-		if (delta > 0) {
-			// Only keep positive leaps
-			leaps[k] = new Date(1000*(parseInt(tmp[0])-2272060800+ms/1000)-1000).toISOString().replace("59.000",60);
-		}
-		k = k + 1;
-		tai = tmp[1];
-	}
 }
 
 console.log("--")
@@ -47,7 +27,7 @@ for (var i = 0;i < tests.length; i++) {
 	if (reason) {reason = " ("+reason+")"}
 	expect = expect === "1" ? true: false; // Convert to boolean
 
-	test_hapi = HAPITime(isostr,schemaregexes,leaps);
+	test_hapi = HAPITime(isostr,schemaregexes);
 
 	var errmsg = (test_hapi != expect) ? "??? Error: HAPITime code got wrong answer.": "";
 	console.log(isostr + ": " + (test_hapi ? "Pass": "Fail")

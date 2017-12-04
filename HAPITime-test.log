@@ -1,0 +1,67 @@
+--
+2000-01-01T00:00:00.0: Fail Expected: Fail (No Z) 
+2000-01-01T00:00:00: Fail Expected: Fail (No Z) 
+2000-01-01T00:00: Fail Expected: Fail (No Z) 
+2000-01-01T00: Fail Expected: Fail (No Z) 
+2000-01-01T: Fail Expected: Fail (No Z) 
+2000-01-01: Fail Expected: Fail (No Z) 
+2000-01: Fail Expected: Fail (No Z) 
+2000: Fail Expected: Fail (No Z) 
+2000Z: Pass Expected: Pass 
+200Z: Fail Expected: Fail 
+2000-01Z: Pass Expected: Pass 
+2000-12Z: Pass Expected: Pass 
+2000-00Z: Fail Expected: Fail (Invalid month) 
+2000-13Z: Fail Expected: Fail (Invalid month) 
+2000-01-32Z: Fail Expected: Fail (Invalid day) 
+2000-02-30Z: Fail Expected: Fail (Invalid day) 
+2000-03-31Z: Pass Expected: Pass 
+2000-03-32Z: Fail Expected: Fail (Invalid day) 
+2000-04-31Z: Fail Expected: Fail (Invalid day) 
+2000-02-29Z: Pass Expected: Pass 
+2001-02-29Z: Fail Expected: Fail (Invalid day) 
+2000-0Z: Fail Expected: Fail (Invalid DOY or month) 
+2000-01-01Z: Pass Expected: Pass 
+2000-001Z: Pass Expected: Pass 
+2000-01-01T00Z: Pass Expected: Pass 
+2000-01-01T23Z: Pass Expected: Pass 
+2000-01-01T0Z: Fail Expected: Fail (One-digit hour) 
+2000-01-01T00:Z: Fail Expected: Fail (Trailing :) 
+2000-01-01T00:0Z: Fail Expected: Fail (One-digit minute) 
+2000-01-01T00:00Z: Pass Expected: Pass 
+2000-01-01T23:59Z: Pass Expected: Pass 
+2000-01-01T00:00:0Z: Fail Expected: Fail (One-digit minute) 
+2000-01-01T00:00:00Z: Pass Expected: Pass 
+2000-01-01T23:59:59Z: Pass Expected: Pass 
+2000-01-01T00:00:00.Z: Pass Expected: Pass 
+2000-01-01T00:00:00.0Z: Pass Expected: Pass 
+2000-01-01T00:00:00.000000000Z: Pass Expected: Pass 
+2000-01-01T00:00:00.0000000000Z: Fail Expected: Fail (More than nine digits in subsec) 
+2000-01-01T00:00:00.9999999999Z: Fail Expected: Fail (More than nine digits in subsec) 
+2012-182T23:59:60Z: Pass Expected: Pass (Leap second) 
+2015-06-30T23:59:60Z: Pass Expected: Pass (Possible leap second) 
+2015-181T23:59:60Z: Pass Expected: Pass (Possible leap second) 
+2012-06-30T23:59:60Z: Pass Expected: Pass (Possible leap second) 
+2016-12-31T23:59:60Z: Pass Expected: Pass (Possible leap second) 
+2016-366T23:59:60Z: Pass Expected: Pass (Possible leap second) 
+2011-182T23:59:60Z: Fail Expected: Fail (Not a leap second) 
+2012-182T01:01:60Z: Fail Expected: Fail (Not a leap second) 
+2012-06-30T00:00:60Z: Fail Expected: Fail (Not a leap second) 
+2011-06-30T23:59:60Z: Fail Expected: Fail (Not a leap second) 
+2012-12-31T59:59:60Z: Fail Expected: Fail (Not a leap second) 
+2000-366T24:01:01Z: Fail Expected: Fail (24 allowed only if hr=00) 
+2000-366T24:00:00.01Z: Fail Expected: Fail (24 allowed only if hr=00) 
+2000-12-31T24:01:01Z: Fail Expected: Fail (24 allowed only if hr=00) 
+2000-12-31T24:00:00.01Z: Fail Expected: Fail (24 allowed only if hr=00) 
+2000-12-31T24:00Z: Pass Expected: Pass 
+2000-12-31T24:01Z: Fail Expected: Fail 
+2000-366Z: Pass Expected: Pass 
+2000-367Z: Fail Expected: Fail (Invalid DOY) 
+2001-366T00Z: Fail Expected: Fail (Invalid DOY) 
+2000-366T00Z: Pass Expected: Pass 
+2000-367T00Z: Fail Expected: Fail (Invalid DOY) 
+2001-366T00Z: Fail Expected: Fail (Invalid DOY) 
+1710-01-01T00:00:00Z: Pass Expected: Pass 
+2199-01-01T00:00:00Z: Pass Expected: Pass 
+2199-01-01T24:00:00Z: Pass Expected: Pass 
+--

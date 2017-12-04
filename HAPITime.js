@@ -1,4 +1,4 @@
-function HAPITime(isostr,schemaregexes,leaps) {
+function HAPITime(isostr,schemaregexes) {
 
 	// Tests if a string is a valid HAPI time representation, which is a subset of ISO 8601.
 	// Two tests are made: (1) A set of regular expressions in the JSON schema (see ./schemas)

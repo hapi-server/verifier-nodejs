@@ -5,8 +5,16 @@ var is      = require('./is.js'); // Test library
 
 //var schema = fs.readFileSync(__dirname + "/schemas/HAPI-data-access-schema-1.1.json");
 var schema = fs.readFileSync(__dirname + "/schemas/HAPI-data-access-schema-2.0.json");
-
 var schema = JSON.parse(schema);
+
+// Get HAPI time regular expressions from schema
+var schema = fs.readFileSync(__dirname + '/schemas/HAPI-data-access-schema-2.0.json');
+schema = JSON.parse(schema);
+var tmp = schema.HAPIDateTime.anyOf;
+var schemaregexes = [];
+for (var i = 0;i < tmp.length;i++) {
+	schemaregexes[i] = tmp[i].pattern;
+}
 
 function timeout(what,when) {
 
@@ -67,7 +75,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 		if (!url) {
 			// Print summary when report() called.
-			if (RES) RES.write("<p>End of validation tests.</p><p>Summary: <font style='color:black;background:green'>Passes</font>:&nbsp;" + report.passes.length + ". <font style='color:black;background:yellow'>Warnings:&nbsp;</font>" + report.warns.length + ". <font style='background:red;color:black'>Failures:&nbsp;</font>" + report.fails.length + ". Warnings and failures repeated below.</p>");
+			if (RES) RES.write("<p>End of validation tests.</p><p>Summary: <font style='color:black;background:green'>Passes</font>:&nbsp;" + report.passes.length + ". <font style='color:black;background:yellow'>Warnings</font>:&nbsp;" + report.warns.length + ". <font style='background:red;color:black'>Failures</font>:&nbsp;" + report.fails.length + ". Warnings and failures repeated below.</p>");
 			if (!RES) console.log("\nEnd of validation tests.");
 			if (!RES) console.log("************************************************************************************");
 			if (!RES) console.log("Summary: " + clc.green.inverse('Passes') + ": " + report.passes.length + ". " + clc.yellowBright.inverse('Warnings') + ": " + report.warns.length + ". " + clc.inverse.red('Failures') + ": " + report.fails.length + ". Warnings and failures repeated below.");
@@ -548,10 +556,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function data(datasets,header,start,stop,useTimeoutFor,pn) {
 
-		// TODO: Try data request with different but equivalent representations of time
-		// and verify that response does not change.
-
-
 		if (header.parameters.length == pn) {
 			datasets.shift(); // Remove first element
 			info(datasets); // Start next dataset
@@ -575,6 +579,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		report(url);
 		request({"url":url,"time":true,"gzip":true,"timeout": timeout(useTimeoutFor)}, 
 			function (err,res,body) {
+
 				if (err) {
 					if (useTimeoutFor === "datapreviousfail") {
 						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
@@ -596,11 +601,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					report(url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
 					report(url,is.CORSAvailable(res.headers),{"warn":true});
 				}
+
 				report(url,is.FileOK(body,"firstchar"));
+
 				report(url,is.FileOK(body,"lastchar"));
 				report(url,is.FileOK(body,"extranewline"));
 				report(url,is.FileOK(body,"numlines"));
 
+				var lines = body.split("\n");
 				line1 = lines[0].split(",");
 				time1 = line1[0].trim();
 				if (lines[1]) {
@@ -614,9 +622,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				timeLength = header.parameters[0].length;
 				
 				report(url,is.CorrectLength(time1,timeLength,"Time","",false),{"warn":true});
-				//TODO: report(url,is.HAPIISO8601(lines,"CSV"));
-				//TODO: Remove next line once above is implemented.
-				report(url,is.ISO8601(time1));
+				report(url,is.HAPITime(lines,schemaregexes));
 				report(url,is.TimeIncreasing(lines,"CSV"));
 				report(url,is.TimeInBounds(lines,start,stop));
 

@@ -80,6 +80,8 @@ function ErrorInformative(message,wanted,what) {
 exports.ErrorInformative = ErrorInformative;
 
 function FileOK(body,what) {
+	
+	var desc,t,got
 
 	if (what === "firstchar") {
 		desc = "Expect first character of CSV response to be an integer.";
@@ -100,8 +102,8 @@ function FileOK(body,what) {
 	}
 
 	if (what === "numlines") {
-		lines = body.split("\n");
-		var got = lines.length + " newlines";
+		var lines = body.split("\n");
+		got = lines.length + " newlines";
 		if (lines.length == 0) {
 			got = "No lines.";
 		} else {
@@ -339,6 +341,97 @@ function ISO8601(str,extra) {
 	return {"description":"is.ISO8601(): Expect " + ts,"error":t != true,"got":"moment(" + str + ",moment.ISO_8601).isValid() = " + t};
 }
 exports.ISO8601 = ISO8601;
+
+function HAPITime(isostr,schemaregexes) {
+
+	// schemaregexes come from list in a schema file in ./schemas.
+	var t,got,str;
+	if (typeof(isostr) === 'object') {
+		var starttest = new Date().getTime();
+		got = "Valid HAPI Time format";
+		for (var i = 0; i < isostr.length; i++) {
+			if (isostr === '') {break};
+			str = isostr[i].split(",")[0];
+			t = HAPITime(str,schemaregexes);
+			if (t.error == true) {
+				got = str + " is not a valid HAPI Time string.";
+				break;
+			}
+			if (new Date().getTime() - starttest > 10) {
+				// Stop testing after 10 ms.
+				got = got + " in first " + (i+1) + " lines.";
+				break;
+			}
+		}
+		return {"description":"is.HAPITime(): Expect time column to contain valid HAPI time strings.","error":t != true,"got":got};
+	}
+	// Tests if a string is a valid HAPI time representation, which is a subset of ISO 8601.
+	// Two tests are made: (1) A set of regular expressions in the JSON schema (see ./schemas)
+	// and (2) A set of semantic tests.
+
+	// The semantic tests are that:
+	// (1) DOY can be no more than 365 on non-leap years, 366 on leap years,
+	// (2) DOM must be valid
+
+	function isleap(year) {return ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0)}
+
+	var regex_pass = false;
+	var re;
+	var regex_pass;
+	for (var i = 0;i < schemaregexes.length;i++) {
+		re = new RegExp(schemaregexes[i]);
+		regex_pass = re.test(isostr);
+		if (regex_pass) {
+			//console.log('Passing pattern:' + schemaregexes[i])
+			break;
+		}
+	}
+
+	var semantic_pass = true;
+	if (regex_pass) { // Only check semantic rules if regular expression test passed.
+
+		var year = parseInt(isostr.slice(0,4));
+		var isostr_split = isostr.split(/-|T/);
+
+		if (isostr_split.length > 1) {
+			if (isostr_split[1].length == 3) {
+				var doy = parseInt(isostr_split[1]);
+			} else {
+				var mo = parseInt(isostr_split[1]);
+				isostr_split = isostr.split(/-/);
+				if (isostr_split.length > 2) {
+					var day = parseInt(isostr_split[2]);
+				}
+			}
+		}
+
+		// DOY can be no more than 365 on non-leap years, 366 on leap years
+		if (doy == 366 && isleap(year) == false) {
+			semantic_pass = false;
+		}
+		if (doy > 366) {
+			semantic_pass = false;
+		}
+
+		// DOM must be correct
+		if (day) {
+			if ([4,6,9,11].includes(mo) && day > 30) {
+				semantic_pass = false;
+			}
+			if (mo == 2 && isleap(year) && day > 29) {
+				semantic_pass = false;
+			}
+			if (mo == 2 && !isleap(year) && day > 28) {
+				semantic_pass = false;
+			}
+		}
+	}
+
+	var t = regex_pass && semantic_pass;
+	return {"description":"is.HAPITime(): Expect time value to be a valid HAPI time string.","error":t != true,"got":"Invalid string."};
+
+}
+exports.HAPITime = HAPITime;
 
 function Integer(str,extra) {
 	var extra = extra || ""

@@ -1,7 +1,7 @@
 <html>
 	<body>
 		<p>
-			<a href="https://github.com/hapi-server/data-specification/tree/v1.1.0">HAPI 1.1</a> server verifier.  See <a href="https://github.com/hapi-server/verifier-nodejs">verifier-nodejs</a> for source code for tests.
+			<a href="https://github.com/hapi-server/data-specification/">HAPI 2.0</a> server verifier.  See <a href="https://github.com/hapi-server/verifier-nodejs">verifier-nodejs</a> for source code for tests.
 		</p>
 		<p>
 			Usage: <code>?url=URL&id=ID&amp;parameter=PARAMETER&time.min=ISO8601&time.max=ISO8601</code>.
@@ -13,32 +13,22 @@
 			Only URL is required. Default is to check all datasets and all parameters and use <code>time.min=sampleStartDate</code> and <code>time.max=sampleStopDate</code> if both given in <code>/info</code> response, otherwise the required <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> from <code>/info</code> are used.
 		</p>
 		<p>
-		Not tested:
-			<ul>
-				<li><code>/info</code> response for all parameters individually (only response for first non-time parameter is tested).</li>
-				<li>Binary data response</li>
-				<li>JSON data response</li>
-				<li>Headers for data response with <code>include=header</code></li>
-				<li>Data response for all parameters or combinations of parameters (only <code>/data</code> responses for requests for a single parameter are tested).</li>
-			</ul>
+		A list of things that are not tested are given in the TODO section for the project <a href='https://github.com/hapi-server/verifier-nodejs/blob/master/README.md'>README</a>.
 		</p>	
 		<p>
 			Examples
 			<ul>
 				<li>
-					<a href='?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10&id=dataset1&parameter=scalar'>?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10&id=dataset1&amp;parameter=scalar</a>
+					Test everything: <a href='?url=http://mag.gmu.edu/TestData/hapi'>?url=http://mag.gmu.edu/TestData/hapi</a>
 				</li>
 				<li>
-					<a href='?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10&id=dataset1'>?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10&id=dataset1</a>
+					Test only <code>dataset1</code>: <a href='?url=http://mag.gmu.edu/TestData/hapi&id=dataset1'>?url=http://mag.gmu.edu/TestData/hapi&id=dataset1</a>
 				</li>
 				<li>
-					<a href='?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10'>?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01&time.max=1970-01-01T00:00:10</a>
+					Test <code>parameter1</code> in <code>dataset1</code>: <a href='?url=http://mag.gmu.edu/TestData/hapi&id=dataset1&parameter=scalar'>?url=http://mag.gmu.edu/TestData/hapi&id=dataset1&amp;parameter=scalar</a>
 				</li>
 				<li>
-					<a href='?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01'>?url=http://mag.gmu.edu/TestData/hapi&time.min=1970-01-01</a>
-				</li>
-				<li>
-					<a href='?url=http://mag.gmu.edu/TestData/hapi'>?url=http://mag.gmu.edu/TestData/hapi</a>
+					Test <code>parameter1</code> in <code>dataset1</code> in a given timerange: <a href='?url=http://mag.gmu.edu/TestData/hapi&id=dataset1&parameter=scalar&time.min=1970-01-01&time.max=1970-01-01T00:00:10'>?url=http://mag.gmu.edu/TestData/hapi&id=dataset1&amp;parameter=scalar&time.min=1970-01-01&time.max=1970-01-01T00:00:10</a>
 				</li>
 			</ul>
 		</p>

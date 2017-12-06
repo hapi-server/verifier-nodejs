@@ -22,16 +22,16 @@ for (var i = 0;i < tests.length; i++) {
 	var tmp = tests[i].split(",");
 	var isostr = tmp[0]; 		// String to test
 	var expect = tmp[1]; 		// Expected result is second column of file
+	expect = expect === "1" ? true: false; // Convert to boolean
 	var reason = tmp[2] || "";  // Explanation for passing/failing
 
 	if (!/^\d/.test(isostr)) {continue;} // Ignore lines that dont start with digit
 
 	if (reason) {reason = " ("+reason+")"}
-	expect = expect === "1" ? true: false; // Convert to boolean
 
 	test_hapi = HAPITime(isostr,schemaregexes);
 
-	var errmsg = (test_hapi != expect) ? "??? Error: HAPITime code got wrong answer.": "";
+	var errmsg = (test_hapi.error == expect) ? "??? Error: HAPITime code got wrong answer.": "";
 	console.log(isostr + ": " + (test_hapi ? "Pass": "Fail")
 				+ " Expected: " + (expect ? "Pass": "Fail")
 				+ reason + " " + clc.red(errmsg));

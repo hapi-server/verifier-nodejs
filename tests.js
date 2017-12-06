@@ -16,16 +16,18 @@ for (var i = 0;i < tmp.length;i++) {
 	schemaregexes[i] = tmp[i].pattern;
 }
 
+var ip = require("ip");
+
 function timeout(what,when) {
 
 	var obj = {
-		"datapreviousfail":{"timeout":5000,"when":"A previous request for data failed. Will try again."},
+		"datapreviousfail":{"timeout":5000,"when":"a previous request for data failed or timed out."},
 		"datasampledefault":{"timeout":10000,"when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."},
 		"datasample10xcadence":{"timeout":1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
 		"datasamplesuggested":{"timeout":1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
 		"datasamplechosen":{"timeout":1000,"when":"time.min/max given to validator"},
-		"default":{"timeout":200,"when":"Request is for metadata. Will try again."},
-		"defaultpreviousfail":{"timeout":5000,"when":"A previous request for metadata timed out."}
+		"default":{"timeout":200,"when":"Request is for metadata."},
+		"defaultpreviousfail":{"timeout":5000,"when":"a previous request for metadata failed or timed out."}
 	};
 
 	if (!when) {
@@ -253,7 +255,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 		url = ROOT + "/capabilities";
 		report(url);
-		request({"url":url,"timeout": timeout(timeoutFor)}, 
+		console.log(ip.address())
+		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()} }, 
 			function (err,res,body) {
 				if (err) {
 					if (capabilities.tries == 0) {
@@ -300,7 +303,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 		var url = ROOT + "/catalog";
 		report(url);
-		request({"url":url,"timeout": timeout(timeoutFor)}, 
+		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}}, 
 			function (err,res,body) {
 
 				if (err) {
@@ -342,7 +345,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					return;
 				}
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
-				report(url,is.CORSAvailable(res.headers),{"warn":true});
 				report(url,is.ErrorCorrect(res.statusCode,404,"httpcode"));
 				report(url,is.ErrorInformative(res.statusMessage,1406,"httpmessage"),{"warn":true});
 				if (report(url,is.JSONparsable(body),{"stop":true})) {
@@ -389,7 +391,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		}
 
 		report(url);
-		request({"url":url,"timeout": timeout(timeoutFor)}, 
+		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}}, 
 			function (err,res,body) {
 
 				if (err) {
@@ -421,9 +423,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				}
 
 				report(url,is.TimeFirstParameter(header),{"warn":true});
-				//TODO:
-				//report(url,is.ISO8601(header,"{start,stop}Date"));
-				//report(url,is.ISO8601(header,"sample{Start,Stop}Date"));
 				report(url,is.TimeIncreasing(header,"{start,stop}Date"));
 				report(url,is.TimeIncreasing(header,"sample{Start,Stop}Date"));
 								
@@ -441,7 +440,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					}
 
 					report(url,is.LengthAppropriate(len,type,name));
-					report(url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
+					//report(url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
 					report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
 				}
 				if (PARAMETER !== "") {
@@ -514,7 +513,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		var url = ROOT + '/info' + "?id=" + datasets[0].id + '&parameters=' + header.parameters[1].name;
 
 		report(url);
-		request({"url":url,"timeout": timeout(timeoutFor)}, 
+		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}}, 
 			function (err,res,body) {
 				if (err) {
 					if (infor.tries[datasets.length] == 0) {
@@ -577,7 +576,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		var url = ROOT + '/data?id='+ datasets[0].id + '&parameters=' + parameter + '&time.min=' + start + '&time.max=' + stop;
 
 		report(url);
-		request({"url":url,"time":true,"gzip":true,"timeout": timeout(useTimeoutFor)}, 
+		request({"url":url,"time":true,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}}, 
 			function (err,res,body) {
 
 				if (err) {
@@ -609,14 +608,16 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				report(url,is.FileOK(body,"numlines"));
 
 				var lines = body.split("\n");
-				line1 = lines[0].split(",");
-				time1 = line1[0].trim();
+				var line1 = lines[0].split(",");
+				var time1 = line1[0].trim();
 				if (lines[1]) {
-					line2 = lines[1].split(",");
-					time2 = lines[1].trim();
+					var line2 = lines[1].split(",")[0];
+					var time2 = line2.trim();
 				} else {
-					time2 = null;
+					var time2 = null;
 				}
+				//console.log("time1 = " + time1)
+				//console.log("time2 = " + time2)
 				report(url,is.CadenceOK(header["cadence"],time1,time2,"consecsample"),{"warn":true});
 
 				timeLength = header.parameters[0].length;
@@ -626,10 +627,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				report(url,is.TimeIncreasing(lines,"CSV"));
 				report(url,is.TimeInBounds(lines,start,stop));
 
-				len  = header.parameters[pn]["length"];
-				type = header.parameters[pn]["type"];
-				name = header.parameters[pn]["name"];
-				size = header.parameters[pn]["size"];
+				var len  = header.parameters[pn]["length"];
+				var type = header.parameters[pn]["type"];
+				var name = header.parameters[pn]["name"];
+				var size = header.parameters[pn]["size"];
 
 				if (pn == 0) {
 					// Time was requested parameter, no more columns to check

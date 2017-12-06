@@ -41,13 +41,16 @@ Default is to check all datasets and all parameters and use `timemin=sampleStart
 ```
 node verify.js
 ```
-The default port is 9999.
+The default port is 9999. See http://localhost:9999/ for documentation.
 
 # TODO
 
 1. Add tests for HAPI Binary and JSON format (only first set of lines of CSV are tested).
 2. Check response when no parameters or all parameters are given (`/info` and `/data` tests are for one parameter at a time).  This can catch some errors where the ordering in the response from `/info` is not consistent ordering of data in output file (only when at least one parameter has a different type than others). Will need to compare actual numbers when one parameter is requested and all to catch all ordering errors, however.
 3. Try data request with different but equivalent representations of time and verify that response does not change.
+4. Check that size of `bin.centers` and `bin.ranges` arrays are consistent with `size`.
+5. Handle leap seconds.
+6. Allow parameters `dataTimeout` and `metadataTimeout`.
 
 # Contact
 

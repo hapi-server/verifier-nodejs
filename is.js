@@ -22,8 +22,10 @@ exports.CadenceValid = CadenceValid;
 function CadenceOK(cadence,start,stop,what) {
 	if (!cadence) return; // Don't do test; no cadence given.
 	if (!stop) return {"description":"Need more than two lines to do cadence comparison with consecutive samples.","error":true,"got":"One line."}
-	var startms = new Date(start).valueOf();
-	var stopms = new Date(stop).valueOf();
+	//console.log(start)
+	//console.log(stop)
+	var startms = moment(start).valueOf();
+	var stopms = moment(stop).valueOf();
 	var md = moment.duration(cadence);
 	var R = (stopms-startms)/md._milliseconds;
 	if (what === "start/stop") {
@@ -258,9 +260,8 @@ function TimeInBounds(lines,start,stop) {
 	// Remove Z from all times so Date().getTime() gives local timezone time for all.
 	// Javascript Date assumes all date/times are in local timezone.
 
-	// TODO: Need to deal with file lines in different format (metadata uses YYYY-MM-DD and data is in YYYY-DOY)
-	start = start.trim().replace(/Z$/,"");
-	stop = stop.trim().replace(/Z$/,"");
+	var start = start.trim().replace(/Z$/,"");
+	var stop = stop.trim().replace(/Z$/,"");
 
 	var firstTime = lines[0].split(",").shift().trim().replace(/Z$/,"");
 	var lastTime = firstTime;
@@ -272,7 +273,8 @@ function TimeInBounds(lines,start,stop) {
 		}
 	}
 	var got = "First time = " + firstTime + "; LastTime = " + lastTime;
-	var t = new Date(firstTime).getTime() >=  new Date(start).getTime() && new Date(lastTime).getTime() <  new Date(stop).getTime();
+	//var t = new Date(firstTime).getTime() >=  new Date(start).getTime() && new Date(lastTime).getTime() <  new Date(stop).getTime();
+	var t = moment(firstTime).valueOf() >=  moment(start).valueOf() && moment(lastTime).valueOf() <  moment(stop).valueOf();
 	return {"description": "is.TimeInBounds(): Expect first time in CSV >= " + start + " and last time in CSV < " + stop + " (only checks to ms)","error": t != true,"got":got};
 }
 exports.TimeInBounds = TimeInBounds;
@@ -285,7 +287,10 @@ function TimeIncreasing(header,what) {
 		for (i = 0;i < header.length-2;i++) {// -2 instead of -1 b/c split will place an '' for a line that is only \n.
 			var line = header[i].split(",");
 			var linenext = header[i+1].split(",");
-			var t = new Date(linenext[0].trim()).getTime() > new Date(line[0].trim()).getTime();
+			//var t = new Date(linenext[0].trim()).getTime() > new Date(line[0].trim()).getTime();
+			var t = moment(linenext[0].trim()).valueOf() > moment(line[0].trim()).valueOf();
+			//console.log(linenext[0].trim())
+			//console.log(moment.valueOf(linenext[0].trim()))
 			if (!t) {
 				var ts = "Time(line="+(i+1)+") > Time(line="+i+")";
 				var got = "line " + (i+1) + " = "+ linenext[0] + "; line " + (i) + " = " + line[0];
@@ -302,7 +307,8 @@ function TimeIncreasing(header,what) {
 		var start = header.startDate;
 		var stop  = header.stopDate;
 		var ts = "info.startDate < info.stopDate";
-		var t = new Date(start).getTime() < new Date(stop).getTime();
+		//var t = new Date(start).getTime() < new Date(stop).getTime();
+		var t = moment(start).valueOf() < moment(stop).valueOf();
 		var got = "startDate = " + start + "; stopDate = " + stop;
 	}
 	if (what === "sample{Start,Stop}Date") {
@@ -310,7 +316,8 @@ function TimeIncreasing(header,what) {
 		var stop  = header.sampleStopDate;
 		if (!start && !stop) return false;
 		if (start && stop) {
-			var t = new Date(start).getTime() < new Date(stop).getTime();
+			//var t = new Date(start).getTime() < new Date(stop).getTime();
+			var t = moment(start).valueOf() < moment(stop).valueOf();
 			var ts = "info.sampleStartDate < info.sampleStopDate";
 			var got = "sampleStartDate = " + start + "; sampleStopDate = " + stop;
 		} else {
@@ -345,15 +352,17 @@ exports.ISO8601 = ISO8601;
 function HAPITime(isostr,schemaregexes) {
 
 	// schemaregexes come from list in a schema file in ./schemas.
-	var t,got,str;
+	var got,str,result;
+	var t = true;
 	if (typeof(isostr) === 'object') {
 		var starttest = new Date().getTime();
 		got = "Valid HAPI Time format";
 		for (var i = 0; i < isostr.length; i++) {
-			if (isostr === '') {break};
+			if (isostr[i] === '') {break};
 			str = isostr[i].split(",")[0];
-			t = HAPITime(str,schemaregexes);
-			if (t.error == true) {
+			result = HAPITime(str,schemaregexes);
+			if (result.error == true) {
+				t = false;
 				got = str + " is not a valid HAPI Time string.";
 				break;
 			}
@@ -362,6 +371,7 @@ function HAPITime(isostr,schemaregexes) {
 				got = got + " in first " + (i+1) + " lines.";
 				break;
 			}
+			//console.log(isostr[i] + " " + t)
 		}
 		return {"description":"is.HAPITime(): Expect time column to contain valid HAPI time strings.","error":t != true,"got":got};
 	}
@@ -428,6 +438,7 @@ function HAPITime(isostr,schemaregexes) {
 	}
 
 	var t = regex_pass && semantic_pass;
+	//if (t==false) {console.log("x" + isostr)}
 	return {"description":"is.HAPITime(): Expect time value to be a valid HAPI time string.","error":t != true,"got":"Invalid string."};
 
 }
@@ -505,16 +516,16 @@ exports.TooLong = TooLong;
 function CORSAvailable(head){
 	var ahead = "Access-Control-Allow-Origin";
 	var bhead = "Access-Control-Allow-Methods";
-	var chead = "Access-Control-Allow-Headers";
+	//var chead = "Access-Control-Allow-Headers";
 	var astr = head[ahead.toLowerCase()];
 	var bstr = head[bhead.toLowerCase()];
-	var cstr = head[chead.toLowerCase()];
+	//var cstr = head[chead.toLowerCase()];
 	var a = /\*/.test(astr);
 	var b = /GET/.test(bstr);
-	var c = /Content-Type/.test(cstr);
-	var want = "Access-Control-Allow-{Origin,Methods,Headers} = " + "{*, GET, Content-Type}";
-	var got = "Access-Control-Allow-{Origin,Methods,Headers} = {" + astr + ", " + bstr + ", " + cstr + "}";
-	t = a && b && c;
+	//var c = /Content-Type/.test(cstr);
+	var want = "Access-Control-Allow-{Origin,Methods} = " + "{*, GET}";
+	var got = "Access-Control-Allow-{Origin,Methods} = {" + astr + ", " + bstr + "}";
+	t = a && b;
 	return {"description":"is.CORSAvailable(): To enable AJAX clients, want CORS HTTP Headers " + want,"error":t != true,"got":got};
 }
 exports.CORSAvailable = CORSAvailable;
@@ -523,7 +534,7 @@ function CompressionAvailable(headers){
 	var available = false;
 	// Note: request module used for http requests only allows gzip to be specified in Accept-Encoding,
 	// so error here may be misleading if server can use compress or deflate compression algorithms but not gzip (should be a rare occurence).
-	got = "No gzip in Content-Encoding header. Compression will usually speed up transfer speed of data."
+	got = "No gzip in Content-Encoding header. Compression will usually speed up transfer of data."
 	var re = /gzip/;
 	if (headers["content-encoding"]) {
 		available = re.test(headers["content-encoding"]);
@@ -553,21 +564,26 @@ exports.JSONparsable = JSONparsable;
 
 function HAPIJSON(text,schema,part){
 	var json = JSON.parse(text);
-	//console.log(JSON.stringify(json,null,4))
+	
 	var v = new Validator();
-	v.addSchema(schema, '/HAPI');
-	v.addSchema(schema, '/HAPIDateTime');
-	v.addSchema(schema, '/HAPIStatus');
+	v.addSchema(schema["HAPI"], '/HAPI');
+	v.addSchema(schema["HAPIDateTime"], '/HAPIDateTime');
+	v.addSchema(schema["HAPIStatus"], '/HAPIStatus');
+	version = schema["HAPI"].pattern.replace("^","").replace("$","");
 	vr = v.validate(json, schema[part]);
+	//console.log(JSON.stringify(vr,null,4))
 	ve = vr.errors;
 	var got = "is valid"
+	//console.log(ve)
 	if (ve.length != 0) {
 		var err = [];
 		for (var i = 0;i< ve.length;i++) {
-			err[i] = ve[i].property.replace("instance","object") + " " + ve[i].message.replace(/\"/g,"'");
+			//err[i] = ve[i].property.replace("instance","object") + " " + ve[i].message.replace(/\"/g,"'");
+			err[i] = ve[i].property.replace("instance.","") + " " + ve[i].message.replace(/\"/g,"'");
 		}
 		got = "\n\t" + JSON.stringify(err,null,4).replace(/\n/g,"\n\t")
 	}
-	return {"description":"is.HAPIJSON(): Expect body to be valid " + part + " schema","error":ve.length != 0,"got":got};
+	var url = "https://github.com/hapi-server/verifier-nodejs/tree/master/schemas/HAPI-data-access-schema-"+version+".json";
+	return {"description":"is.HAPIJSON(): Expect body to be valid <a href='"+url+"'>" + part + " schema</a>","error":ve.length != 0,"got":got};
 }
 exports.HAPIJSON = HAPIJSON;

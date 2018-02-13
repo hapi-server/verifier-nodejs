@@ -2,8 +2,9 @@
   "name": "hapi-server-verifier",
   "version": "0.1.0",
   "license": "MIT",
+  "engine-strict": true,
   "engines": {
-    "node": ">=4"
+    "node": ">=6"
   },
   "people": {
     "name": "Bob Weigel",
@@ -17,10 +18,11 @@
   "dependencies": {
     "cli-color": "^1.2.0",
     "express": "^4.15.3",
+    "ip": "1.1.5",
     "jsonschema": "^1.1.1",
     "moment": "^2.18.1",
     "request": "^2.81.0",
-    "ip": "1.1.5",
+    "semver": "^5.5.0",
     "yargs": "^8.0.2"
   },
   "scripts": {

@@ -13,8 +13,8 @@ Installation is only required if you do not want to test a server using http://t
 ```
 # Install Node Version Manager (NVM)
 curl https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
-# Install node.js 4
-nvm install 4
+# Install node.js 6
+nvm install 6
 # Clone repository
 git clone https://github.com/hapi-server/verifier-nodejs.git
 # Install required Node packages

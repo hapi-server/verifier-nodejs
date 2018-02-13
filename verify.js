@@ -1,5 +1,6 @@
 var fs   = require('fs');
 var clc  = require('cli-color');
+var sver = require('semver');
 var argv = require('yargs')
 				.default({
 					"port": 9999,
@@ -13,6 +14,10 @@ var argv = require('yargs')
 
 var tests = require('./tests.js'); // Test runner
 
+if (!sver.gte(process.version,'6.0.0')) {
+	console.log(clc.red("node.js version >= 6 required. node.js -v returns " + process.version + ". See README for instructions on upgrading using nvm."));
+	process.exit(1);
+}
 if (argv.url !== "") {
 	// Command-line mode
 	tests.run(argv.url,argv.id,argv.parameter,argv["timemin"],argv["timemax"]);

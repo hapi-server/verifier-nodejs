@@ -255,7 +255,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 		url = ROOT + "/capabilities";
 		report(url);
-		console.log(ip.address())
+		//console.log(ip.address())
 		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()} }, 
 			function (err,res,body) {
 				if (err) {

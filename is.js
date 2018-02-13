@@ -5,6 +5,13 @@ var Validator = require('jsonschema').Validator;
 // Note that for reporting to have correct line numbers, must start functions with
 // function FNAME( and start description with 'is.FNAME()'.
 
+function trailingZfix(str) {
+	// moment.js does not consider date only with trailing Z to be valid ISO8601
+	if (/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]Z$|^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9]Z$/.test(str)) {
+		str = str.slice(0, -1);
+	} 
+	return str;
+}
 function isinteger(str) {
 	return (parseInt(str) < 2^31 - 1 || parseInt(str) > -2^31) && parseInt(str) == parseFloat(str);
 }
@@ -24,6 +31,8 @@ function CadenceOK(cadence,start,stop,what) {
 	if (!stop) return {"description":"Need more than two lines to do cadence comparison with consecutive samples.","error":true,"got":"One line."}
 	//console.log(start)
 	//console.log(stop)
+	start = trailingZfix(start);
+	stop = trailingZfix(stop);
 	var startms = moment(start).valueOf();
 	var stopms = moment(stop).valueOf();
 	var md = moment.duration(cadence);
@@ -288,7 +297,7 @@ function TimeIncreasing(header,what) {
 			var line = header[i].split(",");
 			var linenext = header[i+1].split(",");
 			//var t = new Date(linenext[0].trim()).getTime() > new Date(line[0].trim()).getTime();
-			var t = moment(linenext[0].trim()).valueOf() > moment(line[0].trim()).valueOf();
+			var t = moment( trailingZfix(linenext[0].trim()) ).valueOf() > moment( trailingZfix(line[0].trim()) ).valueOf();
 			//console.log(linenext[0].trim())
 			//console.log(moment.valueOf(linenext[0].trim()))
 			if (!t) {
@@ -304,16 +313,16 @@ function TimeIncreasing(header,what) {
 		}
 	}
 	if (what === "{start,stop}Date") {
-		var start = header.startDate;
-		var stop  = header.stopDate;
+		var start = trailingZfix(header.startDate);
+		var stop  = trailingZfix(header.stopDate);
 		var ts = "info.startDate < info.stopDate";
 		//var t = new Date(start).getTime() < new Date(stop).getTime();
 		var t = moment(start).valueOf() < moment(stop).valueOf();
 		var got = "startDate = " + start + "; stopDate = " + stop;
 	}
 	if (what === "sample{Start,Stop}Date") {
-		var start = header.sampleStartDate;
-		var stop  = header.sampleStopDate;
+		var start = trailingZfix(header.sampleStartDate);
+		var stop  = trailingZfix(header.sampleStopDate);
 		if (!start && !stop) return false;
 		if (start && stop) {
 			//var t = new Date(start).getTime() < new Date(stop).getTime();
@@ -343,9 +352,9 @@ function ISO8601(str,extra) {
 	// TODO: Change to HAPIISO8601.
 	// https://github.com/hapi-server/data-specification/issues/54
 	var extra = extra || ""
-	var t  = moment(str,moment.ISO_8601).isValid();
-	var ts = "moment('" + str + "',moment.ISO_8601).isValid() == true"+extra;
-	return {"description":"is.ISO8601(): Expect " + ts,"error":t != true,"got":"moment(" + str + ",moment.ISO_8601).isValid() = " + t};
+	var t  = moment(trailingZfix(str),moment.ISO_8601).isValid();
+	var ts = "moment('" + trailingZfix(str) + "',moment.ISO_8601).isValid() == true"+extra;
+	return {"description":"is.ISO8601(): Expect " + ts,"error":t != true,"got":"moment(" + trailingZfix(str) + ",moment.ISO_8601).isValid() = " + t};
 }
 exports.ISO8601 = ISO8601;
 

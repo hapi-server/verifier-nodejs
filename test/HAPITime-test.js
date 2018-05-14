@@ -28,11 +28,10 @@ for (var i = 0;i < tests.length; i++) {
 	if (!/^\d/.test(isostr)) {continue;} // Ignore lines that dont start with digit
 
 	if (reason) {reason = " ("+reason+")"}
-
 	test_hapi = HAPITime(isostr,schemaregexes);
-
+	//console.log(test_hapi)
 	var errmsg = (test_hapi.error == expect) ? "??? Error: HAPITime code got wrong answer.": "";
-	console.log(isostr + ": " + (test_hapi ? "Pass": "Fail")
+	console.log(isostr + ": " + (!test_hapi.error ? "Pass": "Fail")
 				+ " Expected: " + (expect ? "Pass": "Fail")
 				+ reason + " " + clc.red(errmsg));
 

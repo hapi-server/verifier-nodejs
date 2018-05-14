@@ -369,7 +369,7 @@ function HAPITime(isostr,schemaregexes) {
 		got = "Valid HAPI Time format";
 		for (var i = 0; i < isostr.length; i++) {
 			if (isostr[i] === '') {break};
-			str = isostr[i].split(",")[0];
+			str = isostr[i].split(",")[0].trim();
 			result = HAPITime(str,schemaregexes);
 			if (result.error == true) {
 				t = false;
@@ -449,7 +449,7 @@ function HAPITime(isostr,schemaregexes) {
 
 	var t = regex_pass && semantic_pass;
 	//if (t==false) {console.log("x" + isostr)}
-	return {"description":"is.HAPITime(): Expect time value to be a valid HAPI time string.","error":t != true,"got":"Invalid string."};
+	return {"description":"is.HAPITime(): Expect time value to be a valid HAPI time string.","error":t != true,"got":got};
 
 }
 exports.HAPITime = HAPITime;

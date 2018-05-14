@@ -76,7 +76,8 @@ function ErrorInformative(message,wanted,what) {
 	if (what === "httpmessage") {
 		var re = new RegExp(wanted+"");
 		var t = /HAPI/.test(message) && re.test(message);
-		return {"description":"Want HTTP message to match 'HAPI' and '" + wanted + "'' for clients who do not have access to response body for HTTP 400-level errors","error": t != true,"got": message};
+		var l = "<a href='https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#user-content-HTTPStatusExample'>spec.</a>";
+		return {"description":"Want HTTP message to match 'HAPI' and '" + wanted + "'' for clients who do not have access to response body for HTTP 400-level errors. See "+l,"error": t != true,"got": message};
 	}
 
 	if (what === "hapimessage") {

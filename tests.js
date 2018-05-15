@@ -77,10 +77,16 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 		if (!url) {
 			// Print summary when report() called.
-			if (RES) RES.write("<p>End of validation tests.</p><p>Summary: <font style='color:black;background:green'>Passes</font>:&nbsp;" + report.passes.length + ". <font style='color:black;background:yellow'>Warnings</font>:&nbsp;" + report.warns.length + ". <font style='background:red;color:black'>Failures</font>:&nbsp;" + report.fails.length + ". Warnings and failures repeated below.</p>");
+			if (RES) RES.write("<p>End of validation tests.</p><p>Summary: <font style='color:black;background:green'>Passes</font>:&nbsp;" + report.passes.length + ". <font style='color:black;background:yellow'>Warnings</font>:&nbsp;" + report.warns.length + ". <font style='background:red;color:black'>Failures</font>:&nbsp;" + report.fails.length + ".");
+			if (RES && (report.warns.length + report.fails.length > 0)) {
+				RES.write("Warnings and failures repeated below.</p>");
+			} else {
+				RES.write("</p>");
+			}
 			if (!RES) console.log("\nEnd of validation tests.");
 			if (!RES) console.log("************************************************************************************");
-			if (!RES) console.log("Summary: " + clc.green.inverse('Passes') + ": " + report.passes.length + ". " + clc.yellowBright.inverse('Warnings') + ": " + report.warns.length + ". " + clc.inverse.red('Failures') + ": " + report.fails.length + ". Warnings and failures repeated below.");
+			if (!RES) console.log("Summary: " + clc.green.inverse('Passes') + ": " + report.passes.length + ". " + clc.yellowBright.inverse('Warnings') + ": " + report.warns.length + ". " + clc.inverse.red('Failures') + ": " + report.fails.length + ".");
+			if (!RES && (report.warns.length + report.fails.length > 0)) console.log("Warnings and failures repeated below.");
 			if (!RES) console.log("************************************************************************************");
 			for (var i = 0;i<report.warns.length;i++) {
 				if (RES) RES.write("<br><a href='" + report.warns[i].url.replace(/\&parameters/,"&amp;parameters") + "'>" + report.warns[i].url.replace(/\&parameters/,"&amp;parameters") + "</a><br>")
@@ -94,7 +100,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:red'>Fail</font>&nbsp;" + report.fails[i].description + "; Got: <b>" + report.fails[i].got.toString().replace(/\n/g,"<br>").replace(/\s/g,"&nbsp;") + "</b><br>");
 				if (!RES) console.log("|  " + clc.red.inverse("Fail") + " " + report.fails[i].description + "; Got: " + clc.bold(report.fails[i].got));
 			}
-			if (RES) RES.end("<br>End of validation summary.</body></html>");
+			if (RES) RES.end("End of validation summary.</body></html>");
 		
 			if (!RES) {
 				console.log("\nEnd of validation summary.");

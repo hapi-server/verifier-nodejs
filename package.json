@@ -9,11 +9,11 @@
   "people": {
     "name": "Bob Weigel",
     "email": "rweigel@gmu.edu",
-    "url": "http://bobweigel.info/"
+    "url": "http://github.com/rweigel"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hapi-server/nodejs-server-verifier.git"
+    "url": "https://github.com/hapi-server/verifier-nodejs.git"
   },
   "dependencies": {
     "cli-color": "^1.2.0",

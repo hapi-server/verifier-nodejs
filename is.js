@@ -8,7 +8,7 @@ var Validator = require('jsonschema').Validator;
 function trailingZfix(str) {
 	// moment.js does not consider date only with trailing Z to be valid ISO8601
 	if (/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]Z$|^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9]Z$/.test(str)) {
-		str = str.slice(0, -1);
+		str = str.slice(0, -1) + "T00Z";
 	} 
 	return str;
 }
@@ -45,7 +45,7 @@ function CadenceOK(cadence,start,stop,what) {
 	if (what === "sampleStart/sampleStop") {
 		t = R > 10;
 		var got = "(sampleStartDate-sampleStopDate)/cadence = " + (stopms-startms)/md._milliseconds;
-		return {"description":"is.CadenceOK(): Expect (sampleStartDate-sampleStopDate)/cadence > 10","error":t != true,"got":got}
+		return {"description":"is.CadenceOK(): Expect (sampleStopDate-sampleStartDate)/cadence > 10","error":t != true,"got":got}
 	}
 	if (what === "consecsamples") {
 		t = R > 10;

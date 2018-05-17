@@ -479,14 +479,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 						var moment = require('moment');
 						var md = moment.duration(header["cadence"]);
 						var stop = new Date(start).valueOf() + 10*md._milliseconds;
-						var stop = new Date(stop).toISOString().slice(0,-1);
+						var stop = new Date(stop).toISOString();
 						var useTimeoutFor = "datasample10xcadence";
 					} else {
 						var useTimeoutFor = "datasampledefault";
 						// Check one day
 						report(url,{"description":"Not enough information to compute time.max to use.  Using time.min = startDate and time.max = startDate + P1D.","error":true,"got":"No cadence and no sampleStartDate and sampleStopDate."},{"warn":true});
 						var stop  = new Date(start).valueOf() + 86400*1000;
-						var stop = new Date(stop).toISOString().slice(0,-1);
+						var stop = new Date(stop).toISOString();
 					}
 				}
 				

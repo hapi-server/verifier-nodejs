@@ -28,21 +28,17 @@ for (var i = 0;i < tests.length; i++) {
 	if (!/^\d/.test(isostr)) {continue;} // Ignore lines that dont start with digit
 
 	if (reason) {reason = " ("+reason+")"}
-	test_hapi = HAPITime(isostr,schemaregexes);
-	//console.log(test_hapi)
-	var errmsg = (test_hapi.error == expect) ? "??? Error: HAPITime code got wrong answer.": "";
-	console.log(isostr + ": " + (!test_hapi.error ? "Pass": "Fail")
-				+ " Expected: " + (expect ? "Pass": "Fail")
-				+ reason + " " + clc.red(errmsg));
+	test_hapi   = HAPITime(isostr,schemaregexes);
+	test_moment = moment(isostr.replace(/Z$/,""),moment.ISO_8601).isValid();
 
-	if (false) {
-		test_moment = moment(isostr,moment.ISO_8601).isValid();
-		if (test_moment) {
-			console.log("Moment ISO_8601: Pass " + isostr);
-		} else {
-			console.log("Moment ISO_8601: Fail " + isostr);
-		}
-	}
+	//console.log(test_hapi)
+	var errmsg  = (test_hapi.error == expect) ? "??? Error: HAPITime code got wrong answer.": "";
+	var warnmsg = (!test_hapi.error != test_moment) ? "Warning: HAPITime result differs from moment.js.": "";
+	console.log(isostr + ": " + (!test_hapi.error ? "Pass": "Fail")
+				+ ". Expected:  " + (expect ? "Pass": "Fail")
+				+ ". moment.js: " + (test_moment ? "Pass": "Fail")
+				+ reason + " " + clc.red(warnmsg) + clc.red(errmsg));
+
 
 }
 console.log("--")

@@ -573,7 +573,12 @@ function JSONparsable(text) {
 exports.JSONparsable = JSONparsable;
 
 function HAPIJSON(text,schema,part){
-	var json = JSON.parse(text);
+
+	if (typeof(text) === "object") {
+		var json = text;
+	} else {
+		var json = JSON.parse(text);
+	}
 	
 	var v = new Validator();
 	v.addSchema(schema["HAPI"], '/HAPI');

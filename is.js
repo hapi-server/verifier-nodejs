@@ -206,7 +206,11 @@ function SizeCorrect(nc,nf,header) {
 		var extra = "product of elements in size array " + JSON.stringify(header.size);
 		var got = nc + " commas and " + extra + " = " + nf;
 	} else {
-		var extra = "1 because no size given."
+		if (nf == 0) {
+			var extra = "0 because only Time requestd."
+		} else {
+			var extra = "1 because no size given."
+		}
 		var got = nc + " commas";
 	}
 	return {"description":"is.SizeCorrect(): Expect number of commas on first line to be " + extra,"error":t !=true,"got": got};

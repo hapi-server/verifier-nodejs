@@ -640,6 +640,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 				if (pn == 0) {
 					// Time was requested parameter, no more columns to check
+
+					report(url,is.SizeCorrect(line1.length-1,0,header.parameters[pn]),{"warn":false});
+
 					data(datasets,header,start,stop,useTimeoutFor,++pn); // Check next parameter
 					return;
 				}

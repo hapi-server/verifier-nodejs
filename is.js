@@ -162,17 +162,17 @@ function FillOK(fill,type,len,name,what) {
 		}
 	}
 	if (what === "isotime") {
-		desc = "is.FillOK(): Expect length of fill value for a isotime parameter to be equal to length of the string parameter - 1";
-		if (len < fill.length && name !== "Time") {
+		desc = "is.FillOK(): Expect length of fill value for a isotime parameter to be equal to length of the string parameter";
+		if (len === fill.length && name !== "Time") {
 			t = true;
 			got  = got;
 		}
 	}
 	if (what === "string") {
-		desc = "is.FillOK(): Expect length of fill value for a string parameter to be < length of the string parameter";
-		if (len < fill.length) {
+		desc = "is.FillOK(): Expect length of fill value for a string parameter to be <= length of the string parameter";
+		if (len > fill.length) {
 			t = true;
-			got  = got;
+			got  = got + " string length = " + len + "; fill length = " + fill.length;
 		}
 	}
 	if (what === "stringparse") {

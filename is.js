@@ -13,7 +13,7 @@ function trailingZfix(str) {
 	return str;
 }
 function isinteger(str) {
-	return (parseInt(str) < 2^31 - 1 || parseInt(str) > -2^31) && parseInt(str) == parseFloat(str);
+	return parseInt(str) < 2^31 - 1 && parseInt(str) > -2^31 && parseInt(str) == parseFloat(str) && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim());
 }
 function isfloat(str) {
 	return Math.abs(parseFloat(str)) < Number.MAX_VALUE && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
@@ -21,14 +21,19 @@ function isfloat(str) {
 
 function CadenceValid(cadence) {
 	var md = moment.duration(cadence);
-	t = md._isValid;
-	return {"description":"Expect cadence to be a valid ISO8601 duration","error": t != true,"got": cadence};
+	var t = md._isValid;
+	// moment.duration("PT720") gives md._isValid = true and
+	// md._milliseconds = 0. (Need H, M, S at end)
+	if (md._milliseconds == 0) {
+		t = false;
+	}
+	return {"description":"is.CadenceValid(): Expect cadence to be a valid ISO8601 duration","error": t == false,"got": cadence};
 }
 exports.CadenceValid = CadenceValid;
 
 function CadenceOK(cadence,start,stop,what) {
 	if (!cadence) return; // Don't do test; no cadence given.
-	if (!stop) return {"description":"Need more than two lines to do cadence comparison with consecutive samples.","error":true,"got":"One line."}
+	if (!stop) return {"description":"is.CadenceOK(): Need more than two lines to do cadence comparison with consecutive samples.","error":true,"got":"One line."}
 	//console.log(start)
 	//console.log(stop)
 	start = trailingZfix(start);

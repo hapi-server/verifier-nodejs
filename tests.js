@@ -460,8 +460,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 				var validCadence = false;
 				if (header["cadence"]) {
-					validCadence = report(url,is.CadenceValid(header["cadence"]));
+					report(url,is.CadenceValid(header["cadence"]));
+					var obj = is.CadenceValid(header["cadence"]);
+					validCadence = !obj.error;
 				}
+
 				if (START && STOP) {
 					var start = START;
 					var stop  = STOP;

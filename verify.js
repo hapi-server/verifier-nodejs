@@ -20,6 +20,17 @@ if (!sver.gte(process.version,'6.0.0')) {
 }
 if (argv.url !== "") {
 	// Command-line mode
+
+	// Allow 
+	//   --url=http://server/hapi?id=abc
+	// and treat as equivalent to 
+	//   --url=http://server/hapi --id=abc
+	if (/\?id=/.test(argv['url'])) {
+		argv['id'] = argv['url'].split("?")[1].replace("id=","");
+		argv['url'] = argv['url'].split("?")[0];
+	}
+	argv.parameter = argv.parameter || argv.parameters || "";
+
 	tests.run(argv.url,argv.id,argv.parameter,argv["timemin"],argv["timemax"]);
 } else {
 	// Server mode
@@ -37,24 +48,34 @@ if (argv.url !== "") {
 		var addr = req.headers['x-forwarded-for'] || req.connection.remoteAddress
 		console.log(new Date().toISOString() + " Request from " + addr + ": " + req.originalUrl)
 		
-		var url = req.query.url
-		if (!url) { // Send html page if no url given in query string
+		if (!req.query.url) { // Send html page if no url given in query string
 			res.contentType("text/html");
 			fs.readFile(__dirname + "/verify.html",function (err,html) {res.end(html);});
 			return;
 		}
 
-		// TODO: Test that these make sense and check for unknown query parameters.
-		var allowed = ["url","id","parameter","time.min","time.max"];
+		var allowed = ["url","id","parameter","parameters","time.min","time.max"];
 		for (var key in req.query) {
 			if (!allowed.includes(key)) {
 				res.end("Only allowed parameters are " + allowed.join(",") + " (not "+key+").");
+				return;
 			}
 		}
-		var start = req.query["time.min"] || ""
-		var stop  = req.query["time.max"] || ""
-		var id    = req.query["id"] || ""
-		var param = req.query["parameter"] || ""
+
+		// Allow 
+		//   ?url=http://server/hapi?id=abc
+		// and treat as equivalent to 
+		//   ?url=http://server/hapi&id=abc
+		if (/\?id=/.test(req.query['url'])) {
+			req.query['id'] = req.query['url'].split("?")[1].replace("id=","");
+			req.query['url'] = req.query['url'].split("?")[0];
+		}
+
+		var url   = req.query["url"]       || ""
+		var id    = req.query["id"]        || ""
+		var param = req.query["parameter"] || req.query["parameters"] || ""
+		var start = req.query["time.min"]  || ""
+		var stop  = req.query["time.max"]  || ""
 		if (param) {
 			if (param.split(",").length > 1) {
 				res.end("Only one parameter may be specified.");
@@ -63,6 +84,7 @@ if (argv.url !== "") {
 		tests.run(url,id,param,start,stop,res);
 
 	})
+
 	app.listen(argv.port)
 	console.log("Listening on port " + argv.port + ". See http://localhost:" + argv.port + "/")
 }

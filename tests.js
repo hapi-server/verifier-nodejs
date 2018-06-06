@@ -347,15 +347,31 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 
 	function infoerr(datasets) {
+
+		if (typeof(infoerr.tries) === "undefined") {
+			infoerr.tries = 0
+			var timeoutFor = "default";
+		} else {
+			infoerr.tries += 1;
+			var timeoutFor = "defaultpreviousfail";			
+		};
+
 		var url = ROOT + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
 		report(url);
 		request({"url":url,"timeout": timeout("default")}, 
 			function (err,res,body) {
+
 				if (err) {
-					requesterr(url,err,'default',{"stop":true});
-					info(datasets);
+					if (infoerr.tries == 0) {
+						requesterr(url,err,timeoutFor,{"warn":true});
+						infoerr(datasets); // Try again
+					} else {
+						requesterr(url,err,timeoutFor,{"abort":false});
+						info(datasets);
+					}
 					return;
 				}
+
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				report(url,is.ErrorCorrect(res.statusCode,404,"httpcode"));
 				report(url,is.ErrorInformative(res.statusMessage,1406,"httpmessage"),{"warn":true});

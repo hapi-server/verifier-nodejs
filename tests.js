@@ -77,13 +77,19 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 		if (!url) {
 			// Print summary when report() called.
-			if (RES) RES.write("<p>End of validation tests.</p><p>Summary: <font style='color:black;background:green'>Passes</font>:&nbsp;" + report.passes.length + ". <font style='color:black;background:yellow'>Warnings</font>:&nbsp;" + report.warns.length + ". <font style='background:red;color:black'>Failures</font>:&nbsp;" + report.fails.length + ".");
-			if (RES && (report.warns.length + report.fails.length > 0)) {
-				RES.write("Warnings and failures repeated below.</p>");
+			if (RES) {
+				RES.write("<p>End of validation tests.</p><p>Summary: <font style='color:black;background:green'>Passes</font>:&nbsp;" + report.passes.length + ". <font style='color:black;background:yellow'>Warnings</font>:&nbsp;" + report.warns.length + ". <font style='background:red;color:black'>Failures</font>:&nbsp;" + report.fails.length + ".");
 			} else {
-				RES.write("</p>");
+				console.log("End of validation tests.");
 			}
-			if (!RES) console.log("\nEnd of validation tests.");
+			if (report.warns.length + report.fails.length > 0) {
+				if (RES) {
+					RES.write("Warnings and failures repeated below.</p>");
+				} else {
+					console.log("\nWarnings and failures repeated below.");
+				}
+			}
+
 			if (!RES) console.log("************************************************************************************");
 			if (!RES) console.log("Summary: " + clc.green.inverse('Passes') + ": " + report.passes.length + ". " + clc.yellowBright.inverse('Warnings') + ": " + report.warns.length + ". " + clc.inverse.red('Failures') + ": " + report.fails.length + ".");
 			if (!RES && (report.warns.length + report.fails.length > 0)) console.log("Warnings and failures repeated below.");
@@ -453,8 +459,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					var Time = header.parameters[0];
 					header.parameters = selectOne(header.parameters,'name',PARAMETER);
 					header.parameters.unshift(Time);
-					if (header.parameters.length == 0) {
-						if (!report(url,{"description": "Parameter " + PARAMETER + " is not in parameter array","error":true,"got": "To abort"},{"abort":true})) return;
+					if (header.parameters.length == 1) {
+						if (!report(url,{"description": "Parameter " + PARAMETER + " given in URL or on command line is not in parameter array returned by " + url,"error":true,"got": "To abort"},{"abort":true})) return;
 					}
 				}
 

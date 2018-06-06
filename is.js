@@ -212,7 +212,7 @@ function SizeCorrect(nc,nf,header) {
 		var got = nc + " commas and " + extra + " = " + nf;
 	} else {
 		if (nf == 0) {
-			var extra = "0 because only Time requestd."
+			var extra = "0 because only Time requested."
 		} else {
 			var extra = "1 because no size given."
 		}

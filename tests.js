@@ -217,7 +217,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		} else if (err.code === "ECONNREFUSED") {
 			report(url,{"description":"Expect connection to not be refused by server","error": true,"got": "ECONNREFUSED"},obj)
 		} else {
-			report(url,{"description":"Probably URL is malformed.","error":true,"got":err},{"stop":true});
+			report(url,{"description":"Probably URL is malformed.","error":true,"got":err},obj);
 		}
 	}
 

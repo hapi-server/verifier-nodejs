@@ -42,8 +42,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	// Catch uncaught execeptions.
 	process.on('uncaughtException', function(err) {
 		console.log(err.stack);
-		if (RES) RES.end('Problem with verification server (Uncaught Exception). Aborting.\nPlease report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.');	
-		if (!RES) console.log('Problem with verification server (Uncaught Exception). Aborting.');	
+		if (RES) RES.end('<br><br><div style="border:2px solid black"><b><font style="color:red"><b>Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.</b></font></div>');	
+		if (!RES) console.log(clc.red('Problem with verification server (Uncaught Exception). Aborting.'));
 		if (!RES) process.exit(1);
 		if (!RES) console.log(err.stack);
 	});
@@ -59,9 +59,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		if (obj == false) return false; // Case where test was not appropriate.
 
 		if (opts) {
-			var warn  = opts["warn"]  || false; // Warn message on error
+			var warn  = opts["warn"]  || false; // Warn not fail message on error
 			var stop  = opts["stop"]  || false; // Need to stop tests on current URL
-			var abort = opts["abort"] || false; // Stop and send abort message on error
+			var abort = opts["abort"] || false; // Stop and send abort all processing
 			var shush = opts["shush"] || false; // Don't print unless warning, error, or url changed
 		} else {
 			var warn  = false;
@@ -106,7 +106,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:red'>Fail</font>&nbsp;" + report.fails[i].description + "; Got: <b>" + report.fails[i].got.toString().replace(/\n/g,"<br>").replace(/\s/g,"&nbsp;") + "</b><br>");
 				if (!RES) console.log("|  " + clc.red.inverse("Fail") + " " + report.fails[i].description + "; Got: " + clc.bold(report.fails[i].got));
 			}
-			if (RES) RES.end("End of validation summary.</body></html>");
+			if (RES) RES.end("<br><br>End of validation summary.</body></html>");
 		
 			if (!RES) {
 				console.log("\nEnd of validation summary.");
@@ -389,17 +389,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function info(datasets) {
 
-		var timeoutFor = "default";
-		if (typeof(info.tries) === "undefined") {
-			info.tries = [];
-		}
-		if (typeof(info.tries[datasets.length]) === "undefined") {
-			info.tries[datasets.length] = 0;
-		} else {
-			info.tries[datasets.length] += 1;
-			timeoutFor = "defaultpreviousfail";			
-		};
-
 		if (datasets.length == 0) { // All datsets have been checked.
 			report();
 			return;
@@ -416,6 +405,17 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					return;
 				}
 			}
+		}
+
+		var timeoutFor = "default";
+		if (typeof(info.tries) === "undefined") {
+			info.tries = [];
+		}
+		if (typeof(info.tries[datasets.length]) === "undefined") {
+			info.tries[datasets.length] = 0;
+		} else {
+			info.tries[datasets.length] += 1;
+			timeoutFor = "defaultpreviousfail";			
 		}
 
 		report(url);
@@ -472,10 +472,16 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
 				}
 				if (PARAMETER !== "") {
-					var Time = header.parameters[0];
-					header.parameters = selectOne(header.parameters,'name',PARAMETER);
-					header.parameters.unshift(Time);
-					if (header.parameters.length == 1) {
+					if (0) {
+						var Time = header.parameters[0];
+						header.parameters = selectOne(header.parameters,'name',PARAMETER);
+						header.parameters.unshift(Time);
+						if (header.parameters.length == 1) {
+							if (!report(url,{"description": "Parameter " + PARAMETER + " given in URL or on command line is not in parameter array returned by " + url,"error":true,"got": "To abort"},{"abort":true})) return;
+						}
+					}
+					var tmp = selectOne(header.parameters,'name',PARAMETER);
+					if (tmp.length != 1) {
 						if (!report(url,{"description": "Parameter " + PARAMETER + " given in URL or on command line is not in parameter array returned by " + url,"error":true,"got": "To abort"},{"abort":true})) return;
 					}
 				}
@@ -514,14 +520,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 						var stop = new Date(stop).toISOString();
 					}
 				}
-				
 				infor(datasets,header,start,stop,useTimeoutFor);
 			})
 	}
 
 	function infor(datasets,header,start,stop,useTimeoutFor) {
 		
-		// Check if JSON has two parameter objects when only one parameter is requested.
+		// Check if JSON response has two parameter objects when only one parameter is requested.
 		// Checks only the second parameter (first parameter after Time).
 
 		var timeoutFor = "default";
@@ -536,12 +541,21 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		};
 
 		if (header.parameters.length == 1) {
-			// Time is only parameter; can't do request for two parameters.
-			data(datasets,header,start,stop,useTimeoutFor,0);
+			// Time is only parameter; can't do request for second parameter.
+			data(datasets,header,start,stop,useTimeoutFor);
 			return;
 		}
 
-		var url = ROOT + '/info' + "?id=" + datasets[0].id + '&parameters=' + header.parameters[1].name;
+		parameter = header.parameters[1].name;
+		if (PARAMETER !== "") {
+			for (var i=0;i < header.parameters.length;i++) {
+				if (header.parameters[i].name === PARAMETER) {
+					parameter = header.parameters[i].name;
+					break;
+				}
+			}
+		}
+		var url = ROOT + '/info' + "?id=" + datasets[0].id + '&parameters=' + parameter;
 
 		report(url);
 		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}}, 
@@ -552,18 +566,18 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 						infor(datasets,header,start,stop,useTimeoutFor); // Try again
 					} else {
 						requesterr(url,err,'default',{"stop":true});
-						data(datasets,header,start,stop,useTimeoutFor,0);
+						data(datasets,header,start,stop,useTimeoutFor);
 					}
 					return;
 				}
 
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					data(datasets,header,start,stop,useTimeoutFor,0);
+					data(datasets,header,start,stop,useTimeoutFor);
 					return;
 				}
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				if (!report(url,is.JSONparsable(body),{"stop":true})) {
-					data(datasets,header,start,stop,useTimeoutFor,0);
+					data(datasets,header,start,stop,useTimeoutFor);
 					return;
 				}
 				var headerReduced = JSON.parse(body); // Reduced header
@@ -580,13 +594,72 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				} else {
 					report(url,{"description":"Expect # parameters in JSON to be 2 when one non-time parameter is requested","error": headerReduced.parameters.length != 2,"got": headerReduced.parameters.length + " parameters."});
 				}
-				data(datasets,header,start,stop,useTimeoutFor,0);
+				var equivalent = isEquivalent(header,headerReduced,headerReduced.parameters[1],true);
+				report(url,{"description":"Expect info response for one parameter to match content in response for all parameters","error": !equivalent, "got": (equivalent ? "Match." : "Mismatch.")});
+				data(datasets,header,start,stop,useTimeoutFor);
 			})
 	}
 
-	function data(datasets,header,start,stop,useTimeoutFor,pn) {
+	function data(datasets,header,start,stop,useTimeoutFor) {
 
-		if (header.parameters.length == pn) {
+		if (!start || !stop) {
+			report(url,{"description":"Need at least startDate and stopDate or sampleStartDate and sampleStopDate to continue.","error":true,"got":"To abort"},{"abort":true});
+		}
+
+		var url = ROOT + '/data?id='+ datasets[0].id + '&time.min=' + start + '&time.max=' + stop;
+		report(url);
+		request({"url":url,"time":true,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}}, 
+			function (err,res,body) {
+
+				if (err) {
+					if (useTimeoutFor === "datapreviousfail") {
+						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
+						// Start on individual parameters
+						datar(datasets,header,start,stop,useTimeoutFor,0,null);
+					} else {
+						requesterr(url,err,useTimeoutFor,{"warn":true});
+						// Try again
+						data(datasets,header,start,stop,"datapreviousfail");
+					}
+					return;
+				}
+				if (!report(url,is.HTTP200(res),{"stop":true})) {
+					datar(datasets,header,start,stop,useTimeoutFor,0); // Check next parameter
+					return;
+				}
+				report(url,is.CompressionAvailable(res.headers),{"warn":true});
+				report(url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
+				report(url,is.CORSAvailable(res.headers),{"warn":true});
+
+				report(url,is.FileOK(body,"firstchar"));
+				report(url,is.FileOK(body,"lastchar"));
+				report(url,is.FileOK(body,"extranewline"));
+				report(url,is.FileOK(body,"numlines"));
+
+				var linesAll = body.split("\n");
+
+				report(url,is.FileDataOK(header,body.split("\n"),null,null,'Ncolumns'));
+
+				datar(datasets,header,start,stop,useTimeoutFor,0,linesAll);
+		})
+	}
+
+	function datar(datasets,header,start,stop,useTimeoutFor,pn,linesAll) {
+
+		// TODO:
+		// This is contorted logic to check only one parameter. Need
+		// to rewrite. Also allow PARAMETER to be list of parameters.
+		var i = NaN;
+		if (PARAMETER !== "") {
+			for (var i=0;i < header.parameters.length;i++) {
+				if (header.parameters[i].name === PARAMETER) {
+					pn = i;
+					break;
+				}
+			}	
+		}
+
+		if (pn == i+1 || header.parameters.length == pn) {
 			datasets.shift(); // Remove first element
 			info(datasets); // Start next dataset
 			return; // All parameters for dataset have been checked.
@@ -596,7 +669,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 		if (!parameter) {
 			report(url,{"description":"Parameter #" + pn + " does not have a name.","error":true,"got":"No name."},{"stop":true});
-			data(datasets,header,++pn); // Check next parameter
+			datar(datasets,header,++pn); // Check next parameter
 			return;
 		}
 
@@ -614,16 +687,16 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					if (useTimeoutFor === "datapreviousfail") {
 						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
 						// Start on next parameter
-						data(datasets,header,start,stop,"datapreviousfail",++pn);
+						datar(datasets,header,start,stop,"datapreviousfail",++pn);
 					} else {
 						requesterr(url,err,useTimeoutFor,{"warn":true});
 						// Try again
-						data(datasets,header,start,stop,"datapreviousfail",pn);
+						datar(datasets,header,start,stop,"datapreviousfail",pn);
 					}
 					return;
 				}
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					data(datasets,header,start,stop,useTimeoutFor,++pn); // Check next parameter
+					datar(datasets,header,start,stop,useTimeoutFor,++pn); // Check next parameter
 					return;
 				}
 				if (pn == 0) {
@@ -633,7 +706,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				}
 
 				report(url,is.FileOK(body,"firstchar"));
-
 				report(url,is.FileOK(body,"lastchar"));
 				report(url,is.FileOK(body,"extranewline"));
 				report(url,is.FileOK(body,"numlines"));
@@ -647,63 +719,63 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				} else {
 					var time2 = null;
 				}
-				//console.log("time1 = " + time1)
-				//console.log("time2 = " + time2)
 				report(url,is.CadenceOK(header["cadence"],time1,time2,"consecsample"),{"warn":true});
 
-				timeLength = header.parameters[0].length;
+				var timeLength = header.parameters[0].length;
 				
 				report(url,is.CorrectLength(time1,timeLength,"Time","",false),{"warn":true});
 				report(url,is.HAPITime(lines,schemaregexes));
 				report(url,is.TimeIncreasing(lines,"CSV"));
 				report(url,is.TimeInBounds(lines,start,stop));
 
+				if (pn == 0) {
+					// Time was requested parameter, no more columns to check
+					report(url,is.SizeCorrect(line1.length-1,0,header.parameters[pn]),{"warn":false});
+					datar(datasets,header,start,stop,useTimeoutFor,++pn,linesAll); // Check next parameter
+					return;
+				}
+
 				var len  = header.parameters[pn]["length"];
 				var type = header.parameters[pn]["type"];
 				var name = header.parameters[pn]["name"];
 				var size = header.parameters[pn]["size"];
 
-				if (pn == 0) {
-					// Time was requested parameter, no more columns to check
-
-					report(url,is.SizeCorrect(line1.length-1,0,header.parameters[pn]),{"warn":false});
-
-					data(datasets,header,start,stop,useTimeoutFor,++pn); // Check next parameter
-					return;
-				}
-
 				var nf = 1; // Number of fields (columns) counter (start at 1 since time checked already)
-
-				if (!header.parameters[pn]["size"]) {
+				if (!size) {
 					nf = nf + 1; // Width of field (number of columns of field)
 				} else {
-					nf = nf + prod(header.parameters[pn]["size"])
+					nf = nf + prod(size);
 				}
 
-				// Note line.length - 1 = because split() add extra empty element at end.
-				report(url,is.SizeCorrect(line1.length-1,nf-1,header.parameters[pn]),{"warn":true});
-
+				// TODO: Check all lines?
 				for (var j=1;j < nf;j++) {
 					if (j == 1 || j == nf-1) {var shush = false} else {shush = true}
 					var extra = ' in column ' + j + ' on first line.'
-					if (header.parameters[pn]["type"] == "string") {
-						report(url,is.CorrectLength(line1[j],len,name,extra),{"warn":true});
+					if (type === "string") {
+						report(url,is.CorrectLength(line1[j],len,name,extra),{"warn":true,"shush":shush});
 					}
-					if (header.parameters[pn]["type"] == "isotime") {
+					if (type === "isotime") {
 						report(url,is.ISO8601(line1[j].trim(),extra));
-						report(url,is.CorrectLength(line1[j],len,name,extra),{"warn":true});
+						report(url,is.CorrectLength(line1[j],len,name,extra),{"warn":true,"shush":shush});
 					}
-					if (header.parameters[pn]["type"] == "integer") {
+					if (type === "integer") {
 						report(url,is.Integer(line1[j],extra),{"shush":shush});
 					}
-					if (header.parameters[pn]["type"] == "double") {
+					if (type === "double") {
 						report(url,is.Float(line1[j],extra),{"shush":shush});
 					}
 				}
 
-				report(url,{"description":'Expect (# of columns in first line of CSV) - (# computed from length and size metadata) should be zero.',"error":nf != line1.length,"got":"(" + nf + ")" + " - (" + line1.length + ")"});
+				// Note line.length - 1 = because split() adds extra empty element at end.
+				report(url,is.SizeCorrect(line1.length-1,nf-1,header.parameters[pn]),{"warn":true});
+				
+				if (linesAll) {
+					report(url,is.FileDataOK(header,lines,linesAll,pn,'Ncolumns'));
+					report(url,is.FileDataOK(header,lines,linesAll,pn));
+				}
 
-				data(datasets,header,start,stop,useTimeoutFor,++pn); // Check next parameter
+				// Check next parameter
+				datar(datasets,header,start,stop,useTimeoutFor,++pn,linesAll);
 			})
 	}
 }
@@ -729,6 +801,32 @@ function errors(num) {
 		};
 
 	return errs[num+""];	
+}
+
+function isEquivalent(Full, Reduced, parameter, checkparameter) {
+
+    var FullProperties = Object.getOwnPropertyNames(Full);
+    var ReducedProperties = Object.getOwnPropertyNames(Reduced);
+
+    if (checkparameter == false) {
+    	// Check top-level of object
+	    if (FullProperties.length != ReducedProperties.length) {
+	        return false;
+	    }
+	}
+
+    for (var i = 0; i < ReducedProperties.length; i++) {
+        var key = ReducedProperties[i];
+        if (FullProperties[key] !== ReducedProperties[key]) {        	
+            return false;
+        }
+    }
+
+	if (typeof(checkparameter) === "undefined") {
+	    return isEquivalent(Full.parameters,Reduced.parameters,parameter,true);
+	}
+
+    return true;
 }
 
 function prod(arr) {
@@ -760,6 +858,7 @@ function selectOne(arr,key,value) {
 	// the given value.
 	// TODO: Allow value to be an array.
 
+	var arr = JSON.parse(JSON.stringify(arr)); // Deep copy.
 	var found = false;
 	var ids = [];
 	var k = 0;

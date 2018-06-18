@@ -64,13 +64,13 @@ exports.CadenceOK = CadenceOK;
 function ErrorCorrect(code,wanted,what) {
 
 	if (what === "httpcode") {
-		return {"description":"Expect HTTP code to be " + wanted,"error": code != wanted,"got": code};
+		return {"description":"is.ErrorCorrect(): Expect HTTP code to be " + wanted,"error": code != wanted,"got": code};
 	}
 	if (what === "hapicode") {
 		t = code == wanted
 		var got = code;
 		if (t != true) {got = code + ". Consider using https://github.com/hapi-server/verifier-nodejs/blob/master/schema/1.1/errors.json"}
-		return {"description":"Expect HAPI code to be " + wanted,"error":t != true,"got": got};
+		return {"description":"is.ErrorCorrect(): Expect HAPI code to be " + wanted,"error":t != true,"got": got};
 	}
 
 }
@@ -82,7 +82,7 @@ function ErrorInformative(message,wanted,what) {
 		var re = new RegExp(wanted+"");
 		var t = /HAPI/.test(message) && re.test(message);
 		var l = "<a href='https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#user-content-HTTPStatusExample'>spec.</a>";
-		return {"description":"Want HTTP message to match 'HAPI' and '" + wanted + "'' for clients who do not have access to response body for HTTP 400-level errors. See "+l,"error": t != true,"got": message};
+		return {"description":"is.ErrorInformative(): Want HTTP message to match 'HAPI' and '" + wanted + "'' for clients who do not have access to response body for HTTP 400-level errors. See "+l,"error": t != true,"got": message};
 	}
 
 	if (what === "hapimessage") {
@@ -90,11 +90,124 @@ function ErrorInformative(message,wanted,what) {
 		var t = re.test(wanted);
 		var got = message;
 		if (t != true) {got = message + ". Consider using https://github.com/hapi-server/verifier-nodejs/blob/master/errors/1.1/errors.json"}
-		return {"description":"Want HTTP message to contain the string '" + wanted + "' (default HAPI error message)","error": t != true,"got": message};
+		return {"description":"is.ErrorInformative(): Want HTTP message to contain the string '" + wanted + "' (default HAPI error message)","error": t != true,"got": message};
 	}
 
 }
 exports.ErrorInformative = ErrorInformative;
+
+function FileDataOK(header,lines,linesAll,pn,what) {
+
+	function prod(arr) {
+		// Compute product of array elements.
+		return arr.reduce(function(a,b){return a*b;})
+	}
+
+	if (pn !== null) {
+		// One parametersi
+		var nf = 1; // Number of fields (columns) counter (start at 1 since time checked already)
+		if (!header.parameters[pn]["size"]) {
+			nf = nf + 1; // Width of field (number of columns of field)
+		} else {
+			nf = nf + prod(header.parameters[pn]["size"]);
+		}
+	} else {
+		// All parameters
+		var nf = 0; // Number of fields (columns) counter
+		for (var i = 0;i < header.parameters.length;i++) {
+			if (!header.parameters[i]["size"]) {
+				nf = nf + 1; // Width of field (number of columns of field)
+			} else {
+				nf = nf + prod(header.parameters[i]["size"]);
+			}		
+		}
+	}
+
+	// TODO: Check all lines?
+	if (what === "Ncolumns") {
+		var line1 = lines[0].split(",");
+		var t = false;
+		var got = "(" + nf + ")" + " - (" + line1.length + ")";
+		for (var i = 0;i<lines.length-1;i++) {
+			var line = lines[i].split(",");
+			t = nf != line.length;
+			if (t) {
+				got = got + " on line " + (i+1);
+				break;
+			}
+		}
+		return {"description":'is.FileDataOK(): Expect (# of columns in CSV) - (# computed from length and size metadata) = 0.',"error":t,"got":got};
+	}
+
+	var desc = "Expect data from one parameter request to match data from all parameter request.";
+	var t = false;
+	var got = "Match";
+
+	var fc = 0; // First column of parameter.
+	for (var i = 0;i < header.parameters.length;i++) {
+		if (header.parameters[i]["name"] === header.parameters[pn]["name"]) {
+			break;
+		}
+		if (!header.parameters[i]["size"]) {
+			fc = fc + 1;
+		} else {
+			fc = fc + prod(header.parameters[i]["size"]);
+		}
+	}
+
+	var desc = "Expect number of rows from one parameter request to match data from all parameter request.";
+	var t = lines.length != linesAll.length;
+	var got = "Match";
+	if (t) {
+		got = " # rows in single parameter request = " + lines.length + " # in all parameter request = " + linesAll.length;
+		return {"description":"is.FileDataOK(): " + desc,"error":t,"got":got};
+	}
+
+	var desc = "Expect content from one parameter request to match content from all parameter request.";
+	t = false;
+
+	var line = "";
+	var lineAll = "";
+	for (var i=0;i<lines.length-1;i++) {
+	//for (var i=0;i<1;i++) {
+		line = lines[i].split(",");
+		lineAll = linesAll[i].split(",");
+		// Time
+		if (line[0].trim() !== lineAll[0].trim()) {
+			t = true;
+			got = "Time column for parameter " + name + " does not match at time " + line[0] + ": Single parameter request: " + line[1] + "; All parameter request: " + lineAll[0] + ".";
+		}
+
+		var desc = "Expect number of columns from one parameter request to be equal to or less than number of columns in all parameter request.";
+		var t = line.length > lineAll.length;
+		got = " # columns in single parameter request = " + line.length + " # in all parameter request = " + lineAll.length;
+		if (t) {
+			return {"description":"is.FileDataOK(): " + desc,"error":t,"got":got};
+		}
+
+		var desc = "Expect data from one parameter request to match data from all parameter request.";
+		got = "Match";
+		t = false;
+		// Parameter
+		for (var j=0;j<nf-1;j++) {
+			if (line[1+j].trim() !== lineAll[fc+j].trim()) {
+				if (header.parameters[pn].name) {
+					var name = "'" + header.parameters[pn].name + "'";
+				} else {
+					var name = "#" + header.parameters[pn].name;
+				}
+				if (nf == 2) {
+					t = true;
+					got = got + ". Parameter " + name + " does not match at time " + line[0] + ": Single parameter request: " + line[1] + "; All parameter request: " + lineAll[fc+j] + ".";
+				} else {
+					got = got + ". Parameter " + name + " field #" + j + " does not match at time " + line[0] + ": Single parameter request: " + line[1+j] + "; All parameter request: " + lineAll[fc+j] + ".";
+				}
+			}
+		}
+	}
+	return {"description":"is.FileDataOK(): " + desc,"error":t,"got":got};
+}
+exports.FileDataOK = FileDataOK;
 
 function FileOK(body,what) {
 	
@@ -107,15 +220,25 @@ function FileOK(body,what) {
 	}
 
 	if (what === "lastchar") {
-		desc = "Expect last character of CSV response be a newline."
-		t = !/\n$/.test(body.slice(-1))
+		desc = "Expect last character of CSV response be a newline.";
+		t = !/\n$/.test(body.slice(-1));
 		got = body.slice(-1).replace(/\n/g,"\\n");
+		if (t) {
+			got = "The character " + got;
+		} else {
+			got = "A newline.";
+		}
 	}
 
 	if (what === "extranewline") {	
 		desc = "Expect last two characters of CSV response to not be newlines.";
 		t    = /\n\n$/.test(body.slice(-2));
-		got  = body.slice(-2).replace(/\n/g,"\\n")
+		got  = body.slice(-2).replace(/\n/g,"\\n");
+		if (t) {
+			got = "Two newlines.";
+		} else {
+			got = "The characters " + got;
+		}
 	}
 
 	if (what === "numlines") {
@@ -130,7 +253,7 @@ function FileOK(body,what) {
 		t = lines.length == 0
 	}
 
-	return {"description":"isFileOK(): " + desc,"error":t,"got":got};
+	return {"description":"is.FileOK(): " + desc,"error":t,"got":got};
 
 }
 exports.FileOK = FileOK;
@@ -155,6 +278,7 @@ function TimeFirstParameter(header) {
 exports.TimeFirstParameter = TimeFirstParameter;
 
 function FillOK(fill,type,len,name,what) {
+
 	if (!fill) return; // No fill or fill=null
 	var t = false;
 	var got = "fill = " + fill + " for parameter " + name + ".";

@@ -27,7 +27,7 @@ if (argv.url !== "") {
 	//   --url=http://server/hapi --id=abc
 	if (/\?id=/.test(argv['url'])) {
 		argv['id'] = argv['url'].split("?")[1].replace("id=","");
-		argv['url'] = argv['url'].split("?")[0];
+		argv['url'] = argv['url'].split("?")[0].replace(/\/info|\/data|\/catalog/,"");
 	}
 	argv.parameter = argv.parameter || argv.parameters || "";
 
@@ -66,9 +66,10 @@ if (argv.url !== "") {
 		//   ?url=http://server/hapi?id=abc
 		// and treat as equivalent to 
 		//   ?url=http://server/hapi&id=abc
+		// Caution: Code is duplicated in command line mode.
 		if (/\?id=/.test(req.query['url'])) {
 			req.query['id'] = req.query['url'].split("?")[1].replace("id=","");
-			req.query['url'] = req.query['url'].split("?")[0];
+			req.query['url'] = req.query['url'].split("?")[0].replace(/\/info|\/data|\/catalog/,"");
 		}
 
 		var url   = req.query["url"]       || ""

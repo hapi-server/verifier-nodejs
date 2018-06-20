@@ -623,10 +623,22 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					}
 					return;
 				}
+
+				var linesAll = body.split("\n");
+
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					datar(datasets,header,start,stop,useTimeoutFor,0); // Check next parameter
+					datar(datasets,header,start,stop,useTimeoutFor,0,linesAll);
 					return;
 				}
+				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
+					datar(datasets,header,start,stop,useTimeoutFor,0,linesAll);
+					return;
+				}
+				if (!body || body.length === 0) {
+					datar(datasets,header,start,stop,useTimeoutFor,0,linesAll);
+					return;					
+				}
+
 				report(url,is.CompressionAvailable(res.headers),{"warn":true});
 				report(url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
@@ -635,8 +647,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				report(url,is.FileOK(body,"lastchar"));
 				report(url,is.FileOK(body,"extranewline"));
 				report(url,is.FileOK(body,"numlines"));
-
-				var linesAll = body.split("\n");
 
 				report(url,is.FileDataOK(header,body.split("\n"),null,null,'Ncolumns'));
 
@@ -699,18 +709,31 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					datar(datasets,header,start,stop,useTimeoutFor,++pn); // Check next parameter
 					return;
 				}
-				if (pn == 0) {
-					report(url,is.CompressionAvailable(res.headers),{"warn":true});
-					report(url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
-					report(url,is.CORSAvailable(res.headers),{"warn":true});
+
+				var lines = body.split("\n");
+
+				report(url,is.FileOK(body,"emptyconsistent",linesAll.join("\n")));
+				
+				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
+					// Check next parameter
+					datar(datasets,header,start,stop,useTimeoutFor,++pn,linesAll);
+					return;
 				}
+				if (!body || body.length === 0) {
+					// Check next parameter
+					datar(datasets,header,start,stop,useTimeoutFor,++pn,linesAll);
+					return;					
+				}
+
+				report(url,is.CompressionAvailable(res.headers),{"warn":true});
+				report(url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
+				report(url,is.CORSAvailable(res.headers),{"warn":true});
 
 				report(url,is.FileOK(body,"firstchar"));
 				report(url,is.FileOK(body,"lastchar"));
 				report(url,is.FileOK(body,"extranewline"));
 				report(url,is.FileOK(body,"numlines"));
 
-				var lines = body.split("\n");
 				var line1 = lines[0].split(",");
 				var time1 = line1[0].trim();
 				if (lines[1]) {

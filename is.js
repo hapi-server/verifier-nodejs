@@ -79,10 +79,11 @@ exports.ErrorCorrect = ErrorCorrect;
 function ErrorInformative(message,wanted,what) {
 
 	if (what === "httpmessage") {
-		var re = new RegExp(wanted+"");
-		var t = /HAPI/.test(message) && re.test(message);
+		var wanted = "HAPI " + wanted;
+		var re = new RegExp(wanted);
+		var t = re.test(message);
 		var l = "<a href='https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#user-content-HTTPStatusExample'>spec.</a>";
-		return {"description":"is.ErrorInformative(): Want HTTP message to match 'HAPI' and '" + wanted + "'' for clients who do not have access to response body for HTTP 400-level errors. See "+l,"error": t != true,"got": message};
+		return {"description":"is.ErrorInformative(): Want HTTP message to match '" + wanted + "' for clients who do not have access to response body for HTTP 400-level errors. See "+l,"error": t != true,"got": "'" + message + "'"};
 	}
 
 	if (what === "hapimessage") {
@@ -90,7 +91,7 @@ function ErrorInformative(message,wanted,what) {
 		var t = re.test(wanted);
 		var got = message;
 		if (t != true) {got = message + ". Consider using https://github.com/hapi-server/verifier-nodejs/blob/master/errors/1.1/errors.json"}
-		return {"description":"is.ErrorInformative(): Want HTTP message to contain the string '" + wanted + "' (default HAPI error message)","error": t != true,"got": message};
+		return {"description":"is.ErrorInformative(): Want HTTP message to contain the string '" + wanted + "' (default HAPI error message)","error": t != true,"got": "'" + message + "'"};
 	}
 
 }
@@ -104,7 +105,7 @@ function FileDataOK(header,lines,linesAll,pn,what) {
 	}
 
 	if (pn !== null) {
-		// One parametersi
+		// One parameter
 		var nf = 1; // Number of fields (columns) counter (start at 1 since time checked already)
 		if (!header.parameters[pn]["size"]) {
 			nf = nf + 1; // Width of field (number of columns of field)
@@ -123,20 +124,24 @@ function FileDataOK(header,lines,linesAll,pn,what) {
 		}
 	}
 
-	// TODO: Check all lines?
+
 	if (what === "Ncolumns") {
-		var line1 = lines[0].split(",");
-		var t = false;
-		var got = "(" + nf + ")" + " - (" + line1.length + ")";
-		for (var i = 0;i<lines.length-1;i++) {
-			var line = lines[i].split(",");
-			t = nf != line.length;
-			if (t) {
-				got = got + " on line " + (i+1);
-				break;
+			var t = false;
+			if (lines.length == 0) {
+				var got = "(0)" + " - (" + nf + ")";
+			} else {
+				var got = "(" + nf + ")" + " - (" + nf + ")";
 			}
-		}
-		return {"description":'is.FileDataOK(): Expect (# of columns in CSV) - (# computed from length and size metadata) = 0.',"error":t,"got":got};
+			for (var i = 0;i<lines.length-1;i++) {
+				var line = lines[i].split(",");
+				t = nf != line.length;
+				if (t) {
+					got = "(" + line.length + ")" + " - (" + nf + ")";
+					got = got + " on line " + (i+1);
+					break;
+				}
+			}
+			return {"description":'is.FileDataOK(): Expect (# of columns in CSV) - (# computed from length and size metadata) = 0.',"error":t,"got":got};
 	}
 
 	var desc = "Expect data from one parameter request to match data from all parameter request.";
@@ -169,9 +174,15 @@ function FileDataOK(header,lines,linesAll,pn,what) {
 	var line = "";
 	var lineAll = "";
 	for (var i=0;i<lines.length-1;i++) {
-	//for (var i=0;i<1;i++) {
+
 		line = lines[i].split(",");
 		lineAll = linesAll[i].split(",");
+
+		if (line.length != lineAll.length) {
+			// This error will be caught by Ncolumns test.
+			return;
+		}
+
 		// Time
 		if (line[0].trim() !== lineAll[0].trim()) {
 			t = true;
@@ -209,9 +220,34 @@ function FileDataOK(header,lines,linesAll,pn,what) {
 }
 exports.FileDataOK = FileDataOK;
 
-function FileOK(body,what) {
+function FileOK(body,what,other) {
 	
 	var desc,t,got
+
+	if (what === "emptyconsistent") {
+		if (body.length == 0 || other.length == 0) {
+			if (body.length == 0 && other.length != 0) {
+				return {"description":'is.FileOK(): If empty response for single parameter, expect empty response for all parameters.',"error":true,"got": "Single parameter body: " + body.length + " bytes. All parameter body: " + other.length + " bytes."};
+			} else {
+				return {"description":'is.FileOK(): If empty response for single parameter, expect empty response for all parameters.',"error":false,"got": "Both empty."};
+			}
+		} else {
+			return;
+		}	
+	}
+
+	if (what === "empty") {
+
+		var emptyExpected = /HAPI 1201/.test(other);
+		if ( (!body || body.length === 0) && emptyExpected) {
+			return {"description":'is.FileOK(): Expect file to be empty if HAPI 1201 in first HTTP header line.',"error":false,"got": "Empty body and HTTP 1201."};
+		}
+		if (!body || body.length === 0) {
+			return {"description":'is.FileOK(): Expect file to not be empty unless HAPI 1201 in first HTTP header line.',"error":true,"got":body.length + " bytes."};
+		} else {
+			return {"description":'is.FileOK(): Expect file to not be empty',"error":false,"got":body.length + " bytes."};			
+		}
+	}
 
 	if (what === "firstchar") {
 		desc = "Expect first character of CSV response to be an integer.";
@@ -224,7 +260,7 @@ function FileOK(body,what) {
 		t = !/\n$/.test(body.slice(-1));
 		got = body.slice(-1).replace(/\n/g,"\\n");
 		if (t) {
-			got = "The character " + got;
+			got = "The character '" + got + "'";
 		} else {
 			got = "A newline.";
 		}
@@ -237,7 +273,7 @@ function FileOK(body,what) {
 		if (t) {
 			got = "Two newlines.";
 		} else {
-			got = "The characters " + got;
+			got = "The characters '" + got + "'";
 		}
 	}
 
@@ -281,7 +317,11 @@ function FillOK(fill,type,len,name,what) {
 
 	if (!fill) return; // No fill or fill=null
 	var t = false;
-	var got = "fill = " + fill + " for parameter " + name + ".";
+	if (typeof(fill) === 'string') {
+		var got = "fill = '" + fill + "'' for parameter " + name + ".";
+	} else {
+		var got = "fill = " + fill + " for parameter " + name + ".";
+	}
 	var desc = "";
 	if (what === "nullstring") {
 		desc = "is.FillOK(): Expect fill value to not be the string 'null'.";
@@ -507,6 +547,9 @@ function HAPITime(isostr,schemaregexes) {
 			if (result.error == true) {
 				t = false;
 				got = str + " is not a valid HAPI Time string.";
+				if (/Z$/.test(str)) {
+					got = got + " (Missing trailing Z.)";
+				}
 				break;
 			}
 			if (new Date().getTime() - starttest > 10) {

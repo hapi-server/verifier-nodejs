@@ -27,7 +27,7 @@ function CadenceValid(cadence) {
 	if (md._milliseconds == 0) {
 		t = false;
 	}
-	return {"description":"is.CadenceValid(): Expect cadence to be a valid ISO8601 duration","error": t == false,"got": cadence};
+	return {"description": "is.CadenceValid(): Expect cadence to be a valid ISO8601 duration", "error": t == false, "got": cadence};
 }
 exports.CadenceValid = CadenceValid;
 
@@ -64,13 +64,13 @@ exports.CadenceOK = CadenceOK;
 function ErrorCorrect(code,wanted,what) {
 
 	if (what === "httpcode") {
-		return {"description":"is.ErrorCorrect(): Expect HTTP code to be " + wanted,"error": code != wanted,"got": code};
+		return {"description": "is.ErrorCorrect(): Expect HTTP code to be " + wanted, "error": code != wanted, "got": code};
 	}
 	if (what === "hapicode") {
 		t = code == wanted
 		var got = code;
 		if (t != true) {got = code + ". Consider using https://github.com/hapi-server/verifier-nodejs/blob/master/schema/1.1/errors.json"}
-		return {"description":"is.ErrorCorrect(): Expect HAPI code to be " + wanted,"error":t != true,"got": got};
+		return {"description": "is.ErrorCorrect(): Expect HAPI code to be " + wanted, "error": t != true, "got": got};
 	}
 
 }
@@ -83,7 +83,7 @@ function ErrorInformative(message,wanted,what) {
 		var re = new RegExp(wanted);
 		var t = re.test(message);
 		var l = "<a href='https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#user-content-HTTPStatusExample'>spec.</a>";
-		return {"description":"is.ErrorInformative(): Want HTTP message to match '" + wanted + "' for clients who do not have access to response body for HTTP 400-level errors. See "+l,"error": t != true,"got": "'" + message + "'"};
+		return {"description": "is.ErrorInformative(): Want HTTP message to match '" + wanted + "' for clients who do not have access to response body for HTTP 400-level errors. See "+l, "error": t != true, "got": "'" + message + "'"};
 	}
 
 	if (what === "hapimessage") {
@@ -91,13 +91,13 @@ function ErrorInformative(message,wanted,what) {
 		var t = re.test(wanted);
 		var got = message;
 		if (t != true) {got = message + ". Consider using https://github.com/hapi-server/verifier-nodejs/blob/master/errors/1.1/errors.json"}
-		return {"description":"is.ErrorInformative(): Want HTTP message to contain the string '" + wanted + "' (default HAPI error message)","error": t != true,"got": "'" + message + "'"};
+		return {"description": "is.ErrorInformative(): Want HTTP message to contain the string '" + wanted + "' (default HAPI error message)", "error": t != true, "got": "'" + message + "'"};
 	}
 
 }
 exports.ErrorInformative = ErrorInformative;
 
-function FileDataOK(header,lines,linesAll,pn,what) {
+function FileDataOK(header,body,bodyAll,pn,what) {
 
 	function prod(arr) {
 		// Compute product of array elements.
@@ -124,6 +124,7 @@ function FileDataOK(header,lines,linesAll,pn,what) {
 		}
 	}
 
+	var lines = body.split("\n");
 
 	if (what === "Ncolumns") {
 			var t = false;
@@ -143,6 +144,8 @@ function FileDataOK(header,lines,linesAll,pn,what) {
 			}
 			return {"description":'is.FileDataOK(): Expect (# of columns in CSV) - (# computed from length and size metadata) = 0.',"error":t,"got":got};
 	}
+
+	var linesAll = bodyAll.split("\n");
 
 	var desc = "Expect data from one parameter request to match data from all parameter request.";
 	var t = false;
@@ -216,15 +219,18 @@ function FileDataOK(header,lines,linesAll,pn,what) {
 			}
 		}
 	}
-	return {"description":"is.FileDataOK(): " + desc,"error":t,"got":got};
+	return {"description": "is.FileDataOK(): " + desc, "error": t,"got": got};
 }
 exports.FileDataOK = FileDataOK;
 
 function FileOK(body,what,other) {
 	
-	var desc,t,got
+	var desc,t,got;
 
 	if (what === "emptyconsistent") {
+		if (body === null || other === null) {
+			return; // Can't do test due to previous failure.
+		}
 		if (body.length == 0 || other.length == 0) {
 			if (body.length == 0 && other.length != 0) {
 				return {"description":'is.FileOK(): If empty response for single parameter, expect empty response for all parameters.',"error":true,"got": "Single parameter body: " + body.length + " bytes. All parameter body: " + other.length + " bytes."};
@@ -232,7 +238,7 @@ function FileOK(body,what,other) {
 				return {"description":'is.FileOK(): If empty response for single parameter, expect empty response for all parameters.',"error":false,"got": "Both empty."};
 			}
 		} else {
-			return;
+			return; // Test is not relevant.
 		}	
 	}
 
@@ -289,7 +295,7 @@ function FileOK(body,what,other) {
 		t = lines.length == 0
 	}
 
-	return {"description":"is.FileOK(): " + desc,"error":t,"got":got};
+	return {"description": "is.FileOK(): " + desc, "error": t,"got": got};
 
 }
 exports.FileOK = FileOK;
@@ -297,11 +303,11 @@ exports.FileOK = FileOK;
 function LengthAppropriate(len,type,name) {
 	var got = "Type = " + type + " and length = " + len + " for parameter " + name;
 	if (/isotime|string/.test(type) && !len) {
-		obj = {"description":"If type = string or isotime, length must not be given","error":true,"got": got};
+		obj = {"description": "If type = string or isotime, length must not be given", "error":true, "got": got};
 	} else if (!/isotime|string/.test(type) && len) {
-		obj = {"description":"If type = string or isotime, length must be given","error":true,"got": got};
+		obj = {"description": "If type = string or isotime, length must be given", "error":true, "got": got};
 	} else {
-		obj = {"description":"Length may only be given for types string and isotime","error":false,"got": got};
+		obj = {"description": "Length may only be given for types string and isotime", "error":false, "got": got};
 	}
 	obj["description"] = "is.LengthAppropriate(): " + obj["description"];
 	return obj;
@@ -309,13 +315,13 @@ function LengthAppropriate(len,type,name) {
 exports.LengthAppropriate = LengthAppropriate;
 
 function TimeFirstParameter(header) {
-	return {"description":"is.TimeFirstParameter(): First parameter should (not must) be named 'Time' b/c clients will likely label first parameter name 'Time' when plotting to protect against first parameter names that are not sensible.","error":header.parameters[0].name !== "Time","got":header.parameters[0].name}
+	return {"description": "is.TimeFirstParameter(): First parameter should (not must) be named 'Time' b/c clients will likely label first parameter as 'Time' on plot to protect against first parameter names that are not sensible.", "error": header.parameters[0].name !== "Time", "got": header.parameters[0].name};
 }
 exports.TimeFirstParameter = TimeFirstParameter;
 
 function FillOK(fill,type,len,name,what) {
 
-	if (!fill) return; // No fill or fill=null
+	if (!fill) {return;} // No fill or fill=null so no test needed.
 	var t = false;
 	if (typeof(fill) === 'string') {
 		var got = "fill = '" + fill + "'' for parameter " + name + ".";
@@ -365,7 +371,7 @@ function FillOK(fill,type,len,name,what) {
 			got  = got + " This is uncommon and was probably not intended.";
 		}
 	}
-	return {"description":desc,"error":t,"got":got};
+	return {"description": desc, "error": t,"got": got};
 }
 exports.FillOK = FillOK;
 
@@ -376,18 +382,18 @@ function SizeCorrect(nc,nf,header) {
 		var got = nc + " commas and " + extra + " = " + nf;
 	} else {
 		if (nf == 0) {
-			var extra = "0 because only Time requested."
+			var extra = "0 because only Time requested.";
 		} else {
-			var extra = "1 because no size given."
+			var extra = "1 because no size given.";
 		}
 		var got = nc + " commas";
 	}
-	return {"description":"is.SizeCorrect(): Expect number of commas on first line to be " + extra,"error":t !=true,"got": got};
+	return {"description": "is.SizeCorrect(): Expect number of commas on first line to be " + extra, "error": t !=true,"got": got};
 }
 exports.SizeCorrect = SizeCorrect;
 
 function SizeAppropriate(size,name,what) {
-	if (!size) return; // No test.
+	if (!size) return; // Test not appropriate.
 	if (what === "needed") {
 		// Test if all elements of size are 1.
 		t = 0;
@@ -395,7 +401,7 @@ function SizeAppropriate(size,name,what) {
 			t = t + size[i];
 		}
 		t = t == size.length;
-		return {"description":"is.SizeAppropriate(): Size is not needed if all elements are 1.","error":t,"got": "size = " + JSON.stringify(size) + " for parameter " + name}
+		return {"description": "is.SizeAppropriate(): Size is not needed if all elements are 1.", "error": t, "got": "size = " + JSON.stringify(size) + " for parameter " + name};
 	}
 	if (what === "2D+") {
 		// Test size array has 2 or more elements.
@@ -403,7 +409,7 @@ function SizeAppropriate(size,name,what) {
 		if (size) {
 			t = (size.length > 1)
 		}
-		return {"description":"is.SizeAppropriate(): Size arrays with more than one element are experimental.","error":t,"got": "size = " + JSON.stringify(size) + " for parameter " + name}
+		return {"description": "is.SizeAppropriate(): Size arrays with more than one element are experimental.", "error": t, "got": "size = " + JSON.stringify(size) + " for parameter " + name};
 	}
 }
 exports.SizeAppropriate = SizeAppropriate;
@@ -423,7 +429,7 @@ function HTTP200(res){
 			var body = "";
 		}
 	}
-	return {"description":"is.HTTP200(): Expect HTTP status code to be 200","error":200 != res.statusCode,"got": "HTTP status " + res.statusCode + body};
+	return {"description": "is.HTTP200(): Expect HTTP status code to be 200", "error": 200 != res.statusCode, "got": "HTTP status " + res.statusCode + body};
 }
 exports.HTTP200 = HTTP200;
 
@@ -435,7 +441,7 @@ function CorrectLength(str,len,name,extra,required) {
 	if (t && !required) {
 		got = got + extra + " Not an error for CSV, but may cause error in binary."
 	}
-	return {"description":'is.CorrectLength(): Expect (trimmed length of ' + name + ' string parameter in CSV) - (parameters.'+ name + '.length) = 0.',"error":t,"got":got}
+	return {"description": 'is.CorrectLength(): Expect (trimmed length of ' + name + ' string parameter in CSV) - (parameters.'+ name + '.length) = 0.', "error": t, "got": got}
 }
 exports.CorrectLength = CorrectLength;
 
@@ -456,7 +462,6 @@ function TimeInBounds(lines,start,stop) {
 		}
 	}
 	var got = "First time = " + firstTime + "; LastTime = " + lastTime;
-	//var t = new Date(firstTime).getTime() >=  new Date(start).getTime() && new Date(lastTime).getTime() <  new Date(stop).getTime();
 	var t = moment(firstTime).valueOf() >=  moment(start).valueOf() && moment(lastTime).valueOf() <  moment(stop).valueOf();
 	return {"description": "is.TimeInBounds(): Expect first time in CSV >= " + start + " and last time in CSV < " + stop + " (only checks to ms)","error": t != true,"got":got};
 }
@@ -518,7 +523,7 @@ function TimeIncreasing(header,what) {
 	if (t) {
 		got = got.replace(">","<");
 	}
-	return {"description":"is.TimeIncreasing(): Expect " + ts,"error":t != true,"got":got};
+	return {"description": "is.TimeIncreasing(): Expect " + ts, "error": t != true, "got":got};
 }
 exports.TimeIncreasing = TimeIncreasing;
 
@@ -623,9 +628,9 @@ function HAPITime(isostr,schemaregexes) {
 		}
 	}
 
-	var t = regex_pass && semantic_pass;
+	var e = !(regex_pass && semantic_pass);
 	//if (t==false) {console.log("x" + isostr)}
-	return {"description":"is.HAPITime(): Expect time value to be a valid HAPI time string.","error":t != true,"got":got};
+	return {"description":"is.HAPITime(): Expect time value to be a valid HAPI time string.", "error": e, "got": got};
 
 }
 exports.HAPITime = HAPITime;
@@ -634,7 +639,7 @@ function Integer(str,extra) {
 	var extra = extra || ""
 	var t  = isinteger(str);
 	var ts = "(parseInt('"+str+"') < 2^31 - 1 || parseInt('"+str+"') > -2^31) && parseInt(" + str + ") == parseFloat(" + str + ")"+extra;
-	return {"description":"is.Integer(): Expect " + ts,"error":t != true,"got":"parseInt(" + str + ") = " + parseInt(str) + " and " + "parseFloat(" + str + ") = " + parseFloat(str)};
+	return {"description":"is.Integer(): Expect " + ts, "error":t != true, "got":"parseInt(" + str + ") = " + parseInt(str) + " and " + "parseFloat(" + str + ") = " + parseFloat(str)};
 }
 exports.Integer = Integer;
 
@@ -642,7 +647,7 @@ function Float(str,extra) {
 	var extra = extra || ""
 	var t  = isfloat(str);
 	var ts = "Math.abs(parseFloat('"+str+"')) < " + Number.MAX_VALUE + " && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('"+str+"'.trim()) == true"+extra;
-	return {"description":"is.Float(): Expect " + ts,"error":t != true,"got":"/^-?\d*(\.\d+)?$/.test('"+str+"'.trim()) = "+t};
+	return {"description":"is.Float(): Expect " + ts, "error":t != true, "got":"/^-?\d*(\.\d+)?$/.test('"+str+"'.trim()) = "+t};
 }
 exports.Float = Float;
 
@@ -670,13 +675,13 @@ function Unique(arr,arrstr,idstr){
 	}
 	var uids = Array.from(new Set(ids)); // Unique values
 	
-	var t = !(uids.length == ids.length);
-	if (t) {
+	var e = !(uids.length == ids.length);
+	if (e) {
 		var got ="Repeated at least once: " + rids.join(",");
 	} else {
 		var got ="All unique.";
 	}
- 	return {"description":"is.Unique(): Expect all '" + idstr + "' values in objects in " + arrstr + " array to be unique","error":t,"got": got};
+ 	return {"description":"is.Unique(): Expect all '" + idstr + "' values in objects in " + arrstr + " array to be unique","error":e,"got": got};
 }
 exports.Unique = Unique;
 
@@ -699,20 +704,19 @@ function TooLong(arr,arrstr,idstr,elstr,N){
 }
 exports.TooLong = TooLong;
 
-function CORSAvailable(head){
+function CORSAvailable(head) {
 	var ahead = "Access-Control-Allow-Origin";
+	var astr  = head[ahead.toLowerCase()];
+	var a     = /\*/.test(astr);
+
 	var bhead = "Access-Control-Allow-Methods";
-	//var chead = "Access-Control-Allow-Headers";
-	var astr = head[ahead.toLowerCase()];
-	var bstr = head[bhead.toLowerCase()];
-	//var cstr = head[chead.toLowerCase()];
-	var a = /\*/.test(astr);
-	var b = /GET/.test(bstr);
-	//var c = /Content-Type/.test(cstr);
+	var bstr  = head[bhead.toLowerCase()];
+	var b     = /GET/.test(bstr);
+
 	var want = "Access-Control-Allow-{Origin,Methods} = " + "{*, GET}";
-	var got = "Access-Control-Allow-{Origin,Methods} = {" + astr + ", " + bstr + "}";
-	t = a && b;
-	return {"description":"is.CORSAvailable(): To enable AJAX clients, want CORS HTTP Headers " + want,"error":t != true,"got":got};
+	var got  = "Access-Control-Allow-{Origin,Methods} = {" + astr + ", " + bstr + "}";
+	var e = !(a && b);
+	return {"description":"is.CORSAvailable(): To enable AJAX clients, want CORS HTTP Headers: " + want,"error":e,"got":got};
 }
 exports.CORSAvailable = CORSAvailable;
 
@@ -720,13 +724,13 @@ function CompressionAvailable(headers){
 	var available = false;
 	// Note: request module used for http requests only allows gzip to be specified in Accept-Encoding,
 	// so error here may be misleading if server can use compress or deflate compression algorithms but not gzip (should be a rare occurence).
-	got = "No gzip in Content-Encoding header. Compression will usually speed up transfer of data."
+	var got = "No gzip in Content-Encoding header. Compression will usually speed up transfer of data."
 	var re = /gzip/;
 	if (headers["content-encoding"]) {
-		available = re.test(headers["content-encoding"]);
+		var available = re.test(headers["content-encoding"]);
 		if (available) {got = headers["content-encoding"]}
 	}
-	return {"description":"is.CompressionAvailable(): Expect HTTP Accept-Encoding to match " + re + ". (Note, only compression tested for is gzip.)","error":!available,"got":got};
+	return {"description":"is.CompressionAvailable(): Expect HTTP Accept-Encoding to match " + re + ". (Note, only compression tested for is gzip.)", "error": !available, "got": got};
 }
 exports.CompressionAvailable = CompressionAvailable;
 
@@ -736,7 +740,7 @@ function ContentType(re,given){
 exports.ContentType = ContentType;
 
 function JSONparsable(text) {
-	ret = {"description":"is.JSONparsable(): Expect JSON.parse(response) to not throw error","error":false,"got":"no error"};
+	var ret = {"description":"is.JSONparsable(): Expect JSON.parse(response) to not throw error","error":false,"got":"no error"};
 	try {
 		JSON.parse(text);
 		return ret;
@@ -760,10 +764,10 @@ function HAPIJSON(text,schema,part){
 	v.addSchema(schema["HAPI"], '/HAPI');
 	v.addSchema(schema["HAPIDateTime"], '/HAPIDateTime');
 	v.addSchema(schema["HAPIStatus"], '/HAPIStatus');
-	version = schema["HAPI"].pattern.replace("^","").replace("$","");
-	vr = v.validate(json, schema[part]);
+	var version = schema["HAPI"].pattern.replace("^","").replace("$","");
+	var vr = v.validate(json, schema[part]);
 	//console.log(JSON.stringify(vr,null,4))
-	ve = vr.errors;
+	var ve = vr.errors;
 	var got = "is valid"
 	//console.log(ve)
 	if (ve.length != 0) {

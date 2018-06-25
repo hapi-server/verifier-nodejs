@@ -1,6 +1,7 @@
 var fs      = require('fs');
 var request = require('request');
 var clc     = require('cli-color');
+var moment  = require('moment');
 var is      = require('./is.js'); // Test library
 
 //var schema = fs.readFileSync(__dirname + "/schemas/HAPI-data-access-schema-1.1.json");
@@ -17,25 +18,6 @@ for (var i = 0;i < tmp.length;i++) {
 }
 
 var ip = require("ip");
-
-function timeout(what,when) {
-
-	var obj = {
-		"datapreviousfail":{"timeout":5000,"when":"a previous request for data failed or timed out."},
-		"datasampledefault":{"timeout":10000,"when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."},
-		"datasample10xcadence":{"timeout":1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
-		"datasamplesuggested":{"timeout":1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
-		"datasamplechosen":{"timeout":1000,"when":"time.min/max given to validator"},
-		"default":{"timeout":200,"when":"Request is for metadata."},
-		"defaultpreviousfail":{"timeout":5000,"when":"a previous request for metadata failed or timed out."}
-	};
-
-	if (!when) {
-		return obj[what]["timeout"];
-	} else {
-		return obj[what]["when"];
-	}
-}
 
 function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
@@ -609,12 +591,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		var url = ROOT + '/data?id='+ datasets[0].id + '&time.min=' + start + '&time.max=' + stop;
 		report(url);
 		request({"url":url,"time":true,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}}, 
-			function (err,res,body) {
+			function (err,res,bodyAll) {
 
 				if (err) {
 					if (useTimeoutFor === "datapreviousfail") {
 						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
-						// Start on individual parameters
+						// Start checking individual parameters. Skip test
+						// using different time format (data2())
 						datar(datasets,header,start,stop,useTimeoutFor,0,null);
 					} else {
 						requesterr(url,err,useTimeoutFor,{"warn":true});
@@ -624,18 +607,16 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					return;
 				}
 
-				var linesAll = body.split("\n");
-
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					datar(datasets,header,start,stop,useTimeoutFor,0,linesAll);
+					data2(datasets,header,start,stop,useTimeoutFor,bodyAll);
 					return;
 				}
-				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
-					datar(datasets,header,start,stop,useTimeoutFor,0,linesAll);
+				if (!report(url,is.FileOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
+					data2(datasets,header,start,stop,useTimeoutFor,bodyAll);					
 					return;
 				}
-				if (!body || body.length === 0) {
-					datar(datasets,header,start,stop,useTimeoutFor,0,linesAll);
+				if (!bodyAll || bodyAll.length === 0) {
+					data2(datasets,header,start,stop,useTimeoutFor,bodyAll);
 					return;					
 				}
 
@@ -643,18 +624,67 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				report(url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 
-				report(url,is.FileOK(body,"firstchar"));
-				report(url,is.FileOK(body,"lastchar"));
-				report(url,is.FileOK(body,"extranewline"));
-				report(url,is.FileOK(body,"numlines"));
+				report(url,is.FileOK(bodyAll,"firstchar"));
+				report(url,is.FileOK(bodyAll,"lastchar"));
+				report(url,is.FileOK(bodyAll,"extranewline"));
+				report(url,is.FileOK(bodyAll,"numlines"));
 
-				report(url,is.FileDataOK(header,body.split("\n"),null,null,'Ncolumns'));
+				report(url,is.FileDataOK(header,bodyAll,null,null,'Ncolumns'));
 
-				datar(datasets,header,start,stop,useTimeoutFor,0,linesAll);
+				data2(datasets,header,start,stop,useTimeoutFor,bodyAll);
 		})
 	}
 
-	function datar(datasets,header,start,stop,useTimeoutFor,pn,linesAll) {
+	function data2(datasets,header,start,stop,useTimeoutFor,bodyAll) {
+
+		var startnew = md2doy(start);
+		var stopnew = md2doy(stop);
+
+		if (startnew === start && stopnew === stop) {
+			// No check to perform.
+			datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+			return;
+		}
+
+		var url = ROOT + '/data?id='+ datasets[0].id + '&time.min=' + startnew + '&time.max=' + stopnew;
+
+		request({"url":url,"time":true,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}}, 
+			function (err,res,body) {
+				if (err) {return;}
+				var e = false;
+				var got = "Match";
+				if (bodyAll !== body) {
+					var e = true;
+					got = "Difference";
+				}
+				report(url,{"description":"Expect response to be same as previous request given different time format is used in this request.","error":e,"got":got});
+				datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+			});		
+
+		function md2doy(timestr) {
+			//console.log("Original: " + timestr);
+			var timestrnew = timestr;
+			if (/[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(timestr)) {
+				timestrnew = moment(timestr.substring(0,10)).format("YYYY-DDDD");
+				if (timestrnew === "Invalid date") {
+					return timestrnew;
+				} else {
+					timestrnew = timestrnew + timestr.replace(/[0-9]{4}-[0-9]{2}-[0-9]{2}/,"");
+				}
+			} else if (/[0-9]{4}-[0-9]{3}/.test(timestr)) {
+				timestrnew = moment(timestr.substring(0,10)).format("YYYY-DDDD");
+				if (timestrnew === "Invalid date") {
+					return "";
+				} else {
+					timestrnew = timestrnew + timestr.replace(/[0-9]{4}-[0-9]{2}-[0-9]{2}/,"");
+				}
+			}
+			//console.log("Modified: " + timestrnew);
+			return timestrnew;
+		}
+	}
+
+	function datar(datasets,header,start,stop,useTimeoutFor,pn,bodyAll) {
 
 		// TODO:
 		// This is contorted logic to check only one parameter. Need
@@ -679,7 +709,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 		if (!parameter) {
 			report(url,{"description":"Parameter #" + pn + " does not have a name.","error":true,"got":"No name."},{"stop":true});
-			datar(datasets,header,++pn); // Check next parameter
+			// Check next parameter
+			datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll);
 			return;
 		}
 
@@ -688,7 +719,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		}
 
 		var url = ROOT + '/data?id='+ datasets[0].id + '&parameters=' + parameter + '&time.min=' + start + '&time.max=' + stop;
-
 		report(url);
 		request({"url":url,"time":true,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}}, 
 			function (err,res,body) {
@@ -697,31 +727,31 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					if (useTimeoutFor === "datapreviousfail") {
 						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
 						// Start on next parameter
-						datar(datasets,header,start,stop,"datapreviousfail",++pn);
+						datar(datasets,header,start,stop,"datapreviousfail",++pn,bodyAll);
 					} else {
 						requesterr(url,err,useTimeoutFor,{"warn":true});
 						// Try again
-						datar(datasets,header,start,stop,"datapreviousfail",pn);
+						datar(datasets,header,start,stop,"datapreviousfail",pn,bodyAll);
 					}
 					return;
 				}
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					datar(datasets,header,start,stop,useTimeoutFor,++pn); // Check next parameter
+					datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll); // Check next parameter
 					return;
 				}
 
 				var lines = body.split("\n");
-
-				report(url,is.FileOK(body,"emptyconsistent",linesAll.join("\n")));
 				
+				report(url,is.FileOK(body,"emptyconsistent",bodyAll));
+
 				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
 					// Check next parameter
-					datar(datasets,header,start,stop,useTimeoutFor,++pn,linesAll);
+					datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll);
 					return;
 				}
 				if (!body || body.length === 0) {
 					// Check next parameter
-					datar(datasets,header,start,stop,useTimeoutFor,++pn,linesAll);
+					datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll);
 					return;					
 				}
 
@@ -754,7 +784,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				if (pn == 0) {
 					// Time was requested parameter, no more columns to check
 					report(url,is.SizeCorrect(line1.length-1,0,header.parameters[pn]),{"warn":false});
-					datar(datasets,header,start,stop,useTimeoutFor,++pn,linesAll); // Check next parameter
+					datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll); // Check next parameter
 					return;
 				}
 
@@ -771,6 +801,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				}
 
 				// TODO: Check all lines?
+				// Move this look into is.FileOK?
 				for (var j=1;j < nf;j++) {
 					if (j == 1 || j == nf-1) {var shush = false} else {shush = true}
 					var extra = ' in column ' + j + ' on first line.'
@@ -789,20 +820,39 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					}
 				}
 
-				// Note line.length - 1 = because split() adds extra empty element at end.
+				// Note line.length - 1 = because split() adds extra empty element at end if trailing newline.
 				report(url,is.SizeCorrect(line1.length-1,nf-1,header.parameters[pn]),{"warn":true});
 				
-				if (linesAll) {
-					report(url,is.FileDataOK(header,lines,linesAll,pn,'Ncolumns'));
-					report(url,is.FileDataOK(header,lines,linesAll,pn));
+				if (bodyAll) {
+					report(url,is.FileDataOK(header,body,bodyAll,pn,'Ncolumns'));
+					report(url,is.FileDataOK(header,body,bodyAll,pn));
 				}
 
 				// Check next parameter
-				datar(datasets,header,start,stop,useTimeoutFor,++pn,linesAll);
+				datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll);
 			})
 	}
 }
 exports.run = run;
+
+function timeout(what,when) {
+
+	var obj = {
+		"datapreviousfail":{"timeout":5000,"when":"a previous request for data failed or timed out."},
+		"datasampledefault":{"timeout":10000,"when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."},
+		"datasample10xcadence":{"timeout":1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
+		"datasamplesuggested":{"timeout":1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
+		"datasamplechosen":{"timeout":1000,"when":"time.min/max given to validator"},
+		"default":{"timeout":200,"when":"Request is for metadata."},
+		"defaultpreviousfail":{"timeout":5000,"when":"a previous request for metadata failed or timed out."}
+	};
+
+	if (!when) {
+		return obj[what]["timeout"];
+	} else {
+		return obj[what]["when"];
+	}
+}
 
 function errors(num) {
 

@@ -127,25 +127,73 @@ function FileDataOK(header,body,bodyAll,pn,what) {
 	var lines = body.split("\n");
 
 	if (what === "Ncolumns") {
-			var t = false;
-			if (lines.length == 0) {
-				var got = "(0)" + " - (" + nf + ")";
-			} else {
-				var got = "(" + nf + ")" + " - (" + nf + ")";
+		var t = false;
+		if (lines.length == 0) {
+			var got = "(0)" + " - (" + nf + ")";
+		} else {
+			var got = "(" + nf + ")" + " - (" + nf + ")";
+		}
+		for (var i = 0;i<lines.length-1;i++) {
+			var line = lines[i].split(",");
+			t = nf != line.length;
+			if (t) {
+				got = "(" + line.length + ")" + " - (" + nf + ")";
+				got = got + " on line " + (i+1);
+				break;
 			}
-			for (var i = 0;i<lines.length-1;i++) {
-				var line = lines[i].split(",");
-				t = nf != line.length;
-				if (t) {
-					got = "(" + line.length + ")" + " - (" + nf + ")";
-					got = got + " on line " + (i+1);
-					break;
-				}
-			}
-			return {"description":'is.FileDataOK(): Expect (# of columns in CSV) - (# computed from length and size metadata) = 0.',"error":t,"got":got};
+		}
+		return {"description":'is.FileDataOK(): Expect (# of columns in CSV) - (# computed from length and size metadata) = 0.',"error":t,"got":got};
 	}
 
 	var linesAll = bodyAll.split("\n");
+
+	if (what === "contentsame") {
+		var e = false;
+		var got = "Match";
+		if (bodyAll !== body) { // byte equivalent
+
+			if (lines.length != linesAll.length) { // # lines same.
+				e = true;
+				got = lines.length + " rows vs. " + linesAll.length + " rows.";
+				return {"description":"Expect response to be same as previous request given different time format is used in this request (checks byte equivalence not content equivalence).", "error": e, "got": got};		
+			}
+
+			// Look for location of difference.
+			var line = "";
+			var lineAll = "";
+			var e1 = false;
+			var e2 = false;
+			for (var i=0;i<lines.length-1;i++) {
+
+				line = lines[i].split(",");
+				lineAll = linesAll[i].split(",");
+
+				if (line.length != lineAll.length) {
+					e1 = true;
+					break;
+				}
+
+				for (var j=0;j<line.length-1;j++) {
+					if (line[j].trim() !== lineAll[j].trim()) {
+						e2 = true;
+						break;
+					}
+				}
+				if (e2) {break;}
+			}
+			if (e1) {
+				got = line.length + " columns vs. " + lineAll.length + " columns on line " + (i+1) + ".";
+				e = true;
+				return {"description":"Expect response to be same as previous request given different time format is used in this request (checks byte equivalence not content equivalence).", "error": e, "got": got};		
+			}
+			if (e2) {
+				got = "Difference on line " + (i+1) + " column " + (nf+1) + ".";
+				e = true;
+				return {"description":"Expect response to be same as previous request given different time format is used in this request (checks byte equivalence not content equivalence).", "error": e, "got": got};		
+			}
+		}
+		return {"description":"Expect response to be same as previous request given different time format is used in this request (checks byte equivalence not content equivalence).", "error": e, "got": got};		
+	}
 
 	var desc = "Expect data from one parameter request to match data from all parameter request.";
 	var t = false;

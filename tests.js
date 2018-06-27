@@ -409,7 +409,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 						requesterr(url,err,timeoutFor,{"warn":true});
 						info(datasets); // Try again
 					} else {
-						requesterr(url,err,timeoutFor,{"abort":true});
+						requesterr(url,err,timeoutFor);
+						datasets.shift(); // Remove first element
+						info(datasets); // Start next dataset
 					}
 					return;
 				}
@@ -584,6 +586,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function data(datasets,header,start,stop,useTimeoutFor) {
 
+		// Request all parameters.
+
 		if (!start || !stop) {
 			report(url,{"description":"Need at least startDate and stopDate or sampleStartDate and sampleStopDate to continue.","error":true,"got":"To abort"},{"abort":true});
 		}
@@ -637,6 +641,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function data2(datasets,header,start,stop,useTimeoutFor,bodyAll) {
 
+		// Same request as data() but with different time format.
 		var startnew = md2doy(start);
 		var stopnew = md2doy(stop);
 
@@ -657,6 +662,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 					var e = true;
 					got = "Difference";
 				}
+				// TODO: Move this to is.js and check for content equivalence.
+				// (This checks for byte equivalence.)
 				report(url,{"description":"Expect response to be same as previous request given different time format is used in this request.","error":e,"got":got});
 				datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
 			});		
@@ -685,6 +692,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 
 	function datar(datasets,header,start,stop,useTimeoutFor,pn,bodyAll) {
+		// Reduced data request. Request one parameter at a time.
 
 		// TODO:
 		// This is contorted logic to check only one parameter. Need
@@ -741,7 +749,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 				}
 
 				var lines = body.split("\n");
-				
+
 				report(url,is.FileOK(body,"emptyconsistent",bodyAll));
 
 				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {

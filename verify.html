@@ -1,12 +1,18 @@
 <html>
+	<head>
+		<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+		<title>HAPI Validator</title>
+		<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+		<link rel="icon" href="/favicon.ico" type="image/x-icon">
+	</head>
   	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
 	<script>
 	var testURLs = [
-		"url=http://mag.gmu.edu/hapi-server/data/TestData/hapi",
-		"url=http://mag.gmu.edu/hapi-server/data/TestData/hapi&id=dataset1&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
-		"url=http://mag.gmu.edu/hapi-server/data/TestDataBad/hapi",
-		"url=http://mag.gmu.edu/hapi-server/data/TestDataBad/hapi&id=dataset0&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
-		"url=http://mag.gmu.edu/hapi-server/data/SSCWeb/hapi&id=ace",
+		"url=http://hapi-server.org/servers/TestData/hapi",
+		"url=http://hapi-server.org/servers/TestData/hapi&id=dataset1&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
+		"url=http://hapi-server.org/servers/TestDataBad/hapi",
+		"url=http://hapi-server.org/servers/TestDataBad/hapi&id=dataset0&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
+		"url=http://hapi-server.org/servers/SSCWeb/hapi&id=ace",
 		"url=http://jfaden.net/HapiServerDemo/hapi",
 		"url=http://tsds.org/get/SSCWeb/hapi&id=ace",
 		"url=https://iswa.gsfc.nasa.gov/IswaSystemWebApp/hapi",

@@ -27,7 +27,7 @@
 			var li = $('<li/>').appendTo(list);
 			var a  = $('<a/>')
 						.attr("href","?" + testURLs[i])
-						.text(testURLs[i])
+						.text("?" + testURLs[i])
 						.appendTo(li);
 		});
 	})
@@ -37,39 +37,46 @@
 			<a href="https://github.com/hapi-server/data-specification/">HAPI 2.0</a> server verifier.  See <a href="https://github.com/hapi-server/verifier-nodejs">verifier-nodejs</a> for source code for tests.
 		</p>
 		<p>
-			Usage: <code>?url=URL&id=ID&amp;parameter=PARAMETER&time.min=ISO8601&time.max=ISO8601</code>.
+			Usage: 
+			<ul>
+				<li>
+					<code>?url=URL</code>
+				</li>
+				<li>
+					<code>?url=URL&id=ID</code>
+				</li>
+				<li>
+					<code>?url=URL&id=ID&amp;parameter=PARAMETER</code>
+				</li>
+				<li>
+					<code>?url=URL&id=ID&amp;parameter=PARAMETER&time.min=HAPITIME&time.max=HAPITIME</code>
+				</li>
+			</ul>
+		<p>
+			Only a <code>URL</code> that ends in <code>/hapi</code> is required.  Only one <code>ID</code> and one <code>PARAMETER</code> may be specified (a comma-separated list is not supported).
 		</p>
 		<p>
-			Alternative usage: <code>?url=http://server/hapi?id=ID&amp;parameter=PARAMETER&time.min=ISO8601&time.max=ISO8601</code>.
+			When only a <code>URL</code> is provided, all datasets and all parameters are checked. For data requests, <code>time.min=sampleStartDate</code> and <code>time.max=sampleStopDate</code> are used if both are given in a datasets <code>/info</code> response, otherwise <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> from the <code>/info</code> response are used.
 		</p>
-		<p>
-			Only a <code>URL</code> that ends in <code>/hapi</code> is required.  Only one <code>ID</code> and one <code>PARAMETER</code> may be specified (comma-separated list not supported).
-		</p>
-		<p>
-			Only URL is required. Default is to check all datasets and all parameters and use <code>time.min=sampleStartDate</code> and <code>time.max=sampleStopDate</code> if both given in <code>/info</code> response, otherwise the required <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> from <code>/info</code> are used.
-		</p>
-		<p>
-		A list of things that are not tested are given in the TODO section for the project <a href='https://github.com/hapi-server/verifier-nodejs/blob/master/README.md'>README</a>.
-		</p>	
 		<p>
 			Usage Examples:
 			<ul>
 				<li>
-					Test everything: <a href='?url=http://mag.gmu.edu/TestData/hapi'>?url=http://mag.gmu.edu/TestData/hapi</a>
+					Test all datasets and all parameters: <a href='?url=http://hapi-server.org/servers/TestData/hapi'>?url=http://hapi-server.org/servers/TestData/hapi</a>
 				</li>
 				<li>
-					Test only <code>dataset1</code>: <a href='?url=http://mag.gmu.edu/TestData/hapi&id=dataset1'>?url=http://mag.gmu.edu/TestData/hapi&id=dataset1</a>
+					Test all parameters in <code>dataset1</code> only: <a href='?url=http://hapi-server.org/servers/TestData/hapi&id=dataset1'>?url=http://hapi-server.org/servers/TestData/hapi&id=dataset1</a>
 				</li>
 				<li>
-					Test parameter <code>scalar</code> in <code>dataset1</code>: <a href='?url=http://mag.gmu.edu/TestData/hapi&id=dataset1&parameter=scalar'>?url=http://mag.gmu.edu/TestData/hapi&id=dataset1&amp;parameter=scalar</a>
+					Test only parameter <code>scalar</code> in <code>dataset1</code>: <a href='?url=http://hapi-server.org/servers/TestData/hapi&id=dataset1&parameter=scalar'>?url=http://hapi-server.org/servers/TestData/hapi&id=dataset1&amp;parameter=scalar</a>
 				</li>
 				<li>
-					Test parameter <code>scalar</code> in <code>dataset1</code> in a given timerange: <a href='?url=http://mag.gmu.edu/TestData/hapi&id=dataset1&parameter=scalar&time.min=1970-01-01&time.max=1970-01-01T00:00:10'>?url=http://mag.gmu.edu/TestData/hapi&id=dataset1&amp;parameter=scalar&time.min=1970-01-01&time.max=1970-01-01T00:00:10</a>
+					Test only parameter <code>scalar</code> in <code>dataset1</code> and use a given timerange for data requests: <a href='?url=http://hapi-server.org/servers/TestData/hapi&id=dataset1&parameter=scalar&time.min=1970-01-01&time.max=1970-01-01T00:00:10'>?url=http://hapi-server.org/servers/TestData/hapi&id=dataset1&amp;parameter=scalar&time.min=1970-01-01&time.max=1970-01-01T00:00:10</a>
 				</li>
 			</ul>
 		</p>
 		<p>
-			The following URLs are tested when the verifier is updated:
+			The following URLs are tested when the verifier is updated.
 			<ul id="tests">
 			</ul>
 		</p>

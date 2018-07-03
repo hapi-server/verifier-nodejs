@@ -2,13 +2,13 @@
 
 Runs a suite of tests on a HAPI server via a web interface or the command line. The tests involve a combination of [JSON schema](https://github.com/hapi-server/verifier-nodejs/tree/master/schemas) validation and ad-hoc code.
 
-A running instance and example output is available at http://tsds.org/verify-hapi
+A running instance, documentation, and example output is available at http://hapi-server.org/verify
 
-To run tests from the command line or to run a server, see the below.
+To run tests from the command line or to run a local server, see the below.
 
 # Installation
 
-Installation is only required if you do not want to test a server using http://tsds.org/verify-hapi
+Installation is only required if you do not want to test a server using http://hapi-server.org/verify
 
 ```
 # Install Node Version Manager (NVM)
@@ -26,20 +26,21 @@ cd verifier-nodejs; npm install
 ```
 node verify.js 
 	--url URL 
-	--id DATASETID 
+	[--id DATASETID 
 	--parameter PARAMETERNAME 
 	--timemin HAPITIME 
-	--timemax HAPITIME
+	--timemax HAPITIME]
 ```
 
-If no arguments are provided, a web server is started on port 9999, which can be accessed at "http://localhost:9999/".  If `--url URL` is provided, then output goes to stdout and a web server is not started. See `verify.html` for documentation.
+If `--url URL` is provided, then output goes to stdout and a web server is not started. See `verify.html` for documentation.
 
 # Server Usage
 
 ```
 node verify.js [--port PORT]
 ```
-The default port is 9999. See http://localhost:9999/ for documentation.
+
+If no arguments are provided, a web server is started on port `9999`. See http://localhost:9999/ for documentation.
 
 # TODO
 
@@ -47,7 +48,8 @@ The default port is 9999. See http://localhost:9999/ for documentation.
 2. Check that size of `bin.centers` and `bin.ranges` arrays are consistent with `size`.
 3. Handle leap seconds.
 4. Allow parameters `dataTimeout` and `metadataTimeout`?
-5. Add stress test.
+5. Plot data in sample time range.
+6. Add stress test.
 
 # Contact
 

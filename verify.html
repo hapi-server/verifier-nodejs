@@ -36,8 +36,8 @@
 		<p>
 			<a href="https://github.com/hapi-server/data-specification/">HAPI 2.0</a> server verifier.  See <a href="https://github.com/hapi-server/verifier-nodejs">verifier-nodejs</a> for source code for tests.
 		</p>
+		<h3>Usage</h3>
 		<p>
-			Usage: 
 			<ul>
 				<li>
 					<code>?url=URL</code>
@@ -58,8 +58,8 @@
 		<p>
 			When only a <code>URL</code> is provided, all datasets and all parameters are checked. For data requests, <code>time.min=sampleStartDate</code> and <code>time.max=sampleStopDate</code> are used if both are given in a datasets <code>/info</code> response, otherwise <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> from the <code>/info</code> response are used.
 		</p>
+		<h3>Usage Examples</h3>
 		<p>
-			Usage Examples:
 			<ul>
 				<li>
 					Test all datasets and all parameters: <a href='?url=http://hapi-server.org/servers/TestData/hapi'>?url=http://hapi-server.org/servers/TestData/hapi</a>
@@ -75,6 +75,7 @@
 				</li>
 			</ul>
 		</p>
+		<h3>Test URLs</h3>
 		<p>
 			The following URLs are tested when the verifier is updated.
 			<ul id="tests">

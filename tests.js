@@ -19,7 +19,12 @@ for (var i = 0;i < tmp.length;i++) {
 
 var ip = require("ip");
 
-function run(ROOT,ID,PARAMETER,START,STOP,RES) {
+function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
+
+	var CLOSED = false;
+    REQ.connection.on('close',function(){    
+       CLOSED = true;
+    });
 
 	// Catch uncaught execeptions.
 	process.on('uncaughtException', function(err) {
@@ -239,6 +244,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function capabilities() {
 
+		if (CLOSED) {return;}
+
 		if (typeof(capabilities.tries) === "undefined") {
 			capabilities.tries = 0
 			var timeoutFor = "default";
@@ -287,6 +294,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function catalog() {
 
+		if (CLOSED) {return;}
+
 		if (typeof(catalog.tries) === "undefined") {
 			catalog.tries = 0
 			var timeoutFor = "default";
@@ -330,6 +339,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function infoerr(datasets) {
 
+		if (CLOSED) {return;}
+
 		if (typeof(infoerr.tries) === "undefined") {
 			infoerr.tries = 0
 			var timeoutFor = "default";
@@ -370,6 +381,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 
 	function info(datasets) {
+
+		if (CLOSED) {return;}
 
 		if (datasets.length == 0) { // All datsets have been checked.
 			report();
@@ -510,6 +523,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function infor(datasets,header,start,stop,useTimeoutFor) {
 		
+		if (CLOSED) {return;}
+
 		// Check if JSON response has two parameter objects when only one parameter is requested.
 		// Checks only the second parameter (first parameter after Time).
 
@@ -586,6 +601,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function data(datasets,header,start,stop,useTimeoutFor) {
 
+		if (CLOSED) {return;}
+
 		// Request all parameters.
 
 		if (!start || !stop) {
@@ -641,6 +658,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 
 	function data2(datasets,header,start,stop,useTimeoutFor,bodyAll) {
 
+		if (CLOSED) {return;}
+
 		// Same request as data() but with different time format.
 		var startnew = md2doy(start);
 		var stopnew = md2doy(stop);
@@ -656,15 +675,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 		request({"url":url,"time":true,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}}, 
 			function (err,res,body) {
 				if (err) {return;}
-				var e = false;
-				var got = "Match";
-				if (bodyAll !== body) {
-					var e = true;
-					got = "Difference";
-				}
-				// TODO: Move this to is.js and check for content equivalence.
-				// (This checks for byte equivalence.)
-				report(url,{"description":"Expect response to be same as previous request given different time format is used in this request.","error":e,"got":got});
+				report(url,is.FileDataOK(header,body,bodyAll,null,"contentsame"));
 				datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
 			});		
 
@@ -692,6 +703,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,RES) {
 	}
 
 	function datar(datasets,header,start,stop,useTimeoutFor,pn,bodyAll) {
+
+		if (CLOSED) {return;}
+
 		// Reduced data request. Request one parameter at a time.
 
 		// TODO:

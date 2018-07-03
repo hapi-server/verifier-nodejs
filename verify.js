@@ -82,7 +82,7 @@ if (argv.url !== "") {
 				res.end("Only one parameter may be specified.");
 			}
 		}
-		tests.run(url,id,param,start,stop,res);
+		tests.run(url,id,param,start,stop,req,res);
 
 	})
 

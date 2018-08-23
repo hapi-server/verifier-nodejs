@@ -520,7 +520,12 @@ function TimeIncreasing(header,what) {
 		var got = "Monotonically increasing time in CSV"
 		var starttest = new Date().getTime();
 		var ts = got;
-		for (i = 0;i < header.length-2;i++) {// -2 instead of -1 b/c split will place an '' for a line that is only \n.
+		// Remove blanks (caused by extra newlines)
+		header = header.filter(function(n){ return n != '' });
+		// Don't run test if only one record.
+		if (header.length == 1) {return;} 
+		
+		for (i = 0;i < header.length-1;i++) {
 			var line = header[i].split(",");
 			var linenext = header[i+1].split(",");
 			//var t = new Date(linenext[0].trim()).getTime() > new Date(line[0].trim()).getTime();

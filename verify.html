@@ -12,9 +12,9 @@
 		"url=http://hapi-server.org/servers/TestData/hapi&id=dataset1&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
 		"url=http://hapi-server.org/servers/TestDataBad/hapi",
 		"url=http://hapi-server.org/servers/TestDataBad/hapi&id=dataset0&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
+		"url=http://tsds.org/get/SSCWeb/hapi&id=ace",
 		"url=http://hapi-server.org/servers/SSCWeb/hapi&id=ace",
 		"url=http://jfaden.net/HapiServerDemo/hapi",
-		"url=http://tsds.org/get/SSCWeb/hapi&id=ace",
 		"url=https://iswa.gsfc.nasa.gov/IswaSystemWebApp/hapi",
 		"url=http://proto.hapistream.org/hapi&id=AC_H0_MFI&time.min=2013-04-13T07:00:00&time.max=2013-04-14T11:00:00",	
 		"url=http://datashop.elasticbeanstalk.com/hapi&id=WEYGAND_GEOTAIL_MAG_GSM",
@@ -56,7 +56,7 @@
 			Only a <code>URL</code> that ends in <code>/hapi</code> is required.  Only one <code>ID</code> and one <code>PARAMETER</code> may be specified (a comma-separated list is not supported).
 		</p>
 		<p>
-			When only a <code>URL</code> is provided, all datasets and all parameters are checked. For data requests, <code>time.min=sampleStartDate</code> and <code>time.max=sampleStopDate</code> are used if both are given in a datasets <code>/info</code> response, otherwise <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> from the <code>/info</code> response are used.
+			When only a <code>URL</code> is provided, all datasets and all parameters are checked. For data requests, <code>time.min=sampleStartDate</code> and <code>time.max=sampleStopDate</code> are used if both are given in a dataset's <code>/info</code> response; otherwise <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> from the <code>/info</code> response are used.
 		</p>
 		<h3>Usage Examples</h3>
 		<p>

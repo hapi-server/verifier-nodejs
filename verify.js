@@ -43,6 +43,11 @@ if (argv.url !== "") {
   		res.end('Application error.');
 	});
 
+	app.get('/favicon.ico', function (req, res, next) {
+		res.setHeader('Content-Type', 'image/x-icon');
+		fs.readFile(__dirname + "/favicon.ico",function (err,data) {res.end(data);});
+	});
+
 	app.get('/', function (req, res, next) {
 
 		var addr = req.headers['x-forwarded-for'] || req.connection.remoteAddress
@@ -86,7 +91,7 @@ if (argv.url !== "") {
 
 	})
 
-	app.listen(argv.port)
+	app.listen(argv.port);
 	console.log("Listening on port " + argv.port + ". See http://localhost:" + argv.port + "/")
 }
 

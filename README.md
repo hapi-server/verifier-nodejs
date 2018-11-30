@@ -42,15 +42,6 @@ node verify.js [--port PORT]
 
 If no arguments are provided, a web server is started on port `9999`. See http://localhost:9999/ for documentation.
 
-# TODO
-
-1. Add tests for HAPI Binary and HAPI JSON output formats (currently, only the first set of lines of CSV are tested).
-2. Check that size of `bin.centers` and `bin.ranges` arrays are consistent with `size`.
-3. Handle leap seconds.
-4. Allow parameters `dataTimeout` and `metadataTimeout`?
-5. Plot data in sample time range.
-6. Add stress test.
-
 # Contact
 
 Bob Weigel <rweigel@gmu.edu>

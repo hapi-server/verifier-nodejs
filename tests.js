@@ -21,10 +21,10 @@ var ip = require("ip");
 
 function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
 
-	var CLOSED = false;
-    REQ.connection.on('close',function(){    
-       CLOSED = true;
-    });
+	if (REQ) {
+		var CLOSED = false;
+		REQ.connection.on('close',function() {CLOSED = true;});
+	}
 
 	// Catch uncaught execeptions.
 	process.on('uncaughtException', function(err) {

@@ -51,7 +51,7 @@ if (argv.url !== "") {
 	app.get('/', function (req, res, next) {
 
 		var addr = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-		console.log(new Date().toISOString() + " Request from " + addr + ": " + req.originalUrl)
+		console.log(new Date().toISOString() + " [verifier] Request from " + addr + ": " + req.originalUrl)
 		
 		if (!req.query.url) { // Send html page if no url given in query string
 			res.contentType("text/html");
@@ -92,7 +92,7 @@ if (argv.url !== "") {
 	})
 
 	app.listen(argv.port);
-	console.log("Listening on port " + argv.port + ". See http://localhost:" + argv.port + "/")
+	console.log(new Date().toISOString() + " [verifier] HAPI verifier listening on port " + argv.port + ". See http://localhost:" + argv.port + "/")
 }
 
 process.on('uncaughtException', function(err) {

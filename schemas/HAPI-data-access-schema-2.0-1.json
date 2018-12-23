@@ -33,9 +33,6 @@
 		"description": "Request status",
 		"type": "object",
 		"properties": {
-			"required": ["HAPI","status"],
-			"patternProperties": {"x_.*": {}},
-			"additionalProperties": false,
 			"HAPI": {"$ref": "/HAPI"},
 			"status": {
 				"description": "Request status",
@@ -73,7 +70,7 @@
 				"items": {
 					"type": "string",
 					"enum": ["csv","binary","json"]
-					},
+				},
 				"minItems": 1,
 				"additionalItems": true,
 				"uniqueItems": true
@@ -84,7 +81,7 @@
 		"title": "catalog",
 		"description": "Server /catalog response",
 		"type": "object",
-		"required": ["HAPI","status","catalog"],	
+		"required": ["HAPI","status","catalog"],
 		"patternProperties": {"x_.*": {}},
 		"additionalProperties": false,
 		"properties": {
@@ -97,10 +94,10 @@
 				"additionalItems": true,
 				"uniqueItems": true,
 				"items": {
-					"type": "object",
+					"type": "object", 
 					"required": ["id"],
 					"patternProperties": {"x_.*": {}},
-					"additionalProperties": false,					
+					"additionalProperties": false,
 					"properties": {
 						"id": {
 							"description": "Dataset ID",

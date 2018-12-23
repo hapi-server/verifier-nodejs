@@ -2,24 +2,11 @@ var fs      = require('fs');
 var request = require('request');
 var clc     = require('cli-color');
 var moment  = require('moment');
-var is      = require('./is.js'); // Test library
+var ip      = require("ip");
 
-//var schema = fs.readFileSync(__dirname + "/schemas/HAPI-data-access-schema-1.1.json");
-var schema = fs.readFileSync(__dirname + "/schemas/HAPI-data-access-schema-2.0.json");
-var schema = JSON.parse(schema);
+var is = require('./is.js'); // Test library
 
-// Get HAPI time regular expressions from schema
-var schema = fs.readFileSync(__dirname + '/schemas/HAPI-data-access-schema-2.0.json');
-schema = JSON.parse(schema);
-var tmp = schema.HAPIDateTime.anyOf;
-var schemaregexes = [];
-for (var i = 0;i < tmp.length;i++) {
-	schemaregexes[i] = tmp[i].pattern;
-}
-
-var ip = require("ip");
-
-function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
+function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 	if (REQ) {
 		var CLOSED = false;
@@ -106,6 +93,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
 			// First call to report(); initialize and attach arrays
 			// to report object.
 			if (RES) {RES.write("<html><body>");}
+			if (RES) {
+				var linkopen = "<a href='https://github.com/hapi-server/verifier-nodejs/tree/master/schemas/HAPI-data-access-schema-"+VERSION+".json'>";
+				RES.write("Using " + linkopen + "HAPI schema version " + VERSION + "</a><br/>");
+			} else {
+				console.log("Using HAPI schema version " + VERSION);
+			}
 			report.fails = [];  // Initalize failure array
 			report.passes = []; // Initalize passes array			
 			report.warns = [];  // Initalize warning array	
@@ -279,7 +272,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
 					catalog();
 					return;
 				}
-				if (!report(url,is.HAPIJSON(body,schema,'capabilities'),{"stop":true})) {
+				if (!report(url,is.HAPIJSON(body,VERSION,'capabilities'),{"stop":true})) {
 					catalog();
 					return;
 				}
@@ -323,7 +316,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				if (!report(url,is.JSONparsable(body),{"abort":true})) return;
-				report(url,is.HAPIJSON(body,schema,'catalog'));
+				report(url,is.HAPIJSON(body,VERSION,'catalog'));
 				var datasets = JSON.parse(body).catalog;
 				if (datasets) {
 					report(url,is.Unique(datasets,"datasets","id"));
@@ -370,7 +363,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
 				report(url,is.ErrorInformative(res.statusMessage,1406,"httpmessage"),{"warn":true});
 				if (report(url,is.JSONparsable(body),{"stop":true})) {
 					var json = JSON.parse(body);
-					if (report(url,is.HAPIJSON(body,schema,'HAPIStatus'),{"stop":true})) {
+					if (report(url,is.HAPIJSON(body,VERSION,'HAPIStatus'),{"stop":true})) {
 						report(url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
 						var err1406 = errors(1406);
 						report(url,is.ErrorInformative(json.status.message,err1406.status.message,"hapimessage"),{"warn":true});
@@ -432,7 +425,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				if (!report(url,is.JSONparsable(body),{"abort":true})) return;
-				report(url,is.HAPIJSON(body,schema,'info'));
+				report(url,is.HAPIJSON(body,VERSION,'info'));
 				var header = JSON.parse(body);
 				if (header.parameters) {
 					if (header.parameters[0].name) {
@@ -580,7 +573,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
 					return;
 				}
 				var headerReduced = JSON.parse(body); // Reduced header
-				if (!report(url,is.HAPIJSON(body,schema,'info'))) {
+				if (!report(url,is.HAPIJSON(body,VERSION,'info'))) {
 					if (headerReduced.parameters) {
 						if (headerReduced.parameters[0]) {
 							report(url,{"description":"Expect # parameters in JSON to be 2 when one non-time parameter is requested","error": headerReduced.parameters.length != 2,"got": headerReduced.parameters.length + " parameters."});
@@ -680,7 +673,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
 			});		
 
 		function md2doy(timestr) {
-			//console.log("Original: " + timestr);
+			//console.log("Original: " + timestr.substring(0,10));
 			var timestrnew = timestr;
 			if (/[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(timestr)) {
 				timestrnew = moment(timestr.substring(0,10)).format("YYYY-DDDD");
@@ -690,11 +683,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
 					timestrnew = timestrnew + timestr.replace(/[0-9]{4}-[0-9]{2}-[0-9]{2}/,"");
 				}
 			} else if (/[0-9]{4}-[0-9]{3}/.test(timestr)) {
-				timestrnew = moment(timestr.substring(0,10)).format("YYYY-DDDD");
+				timestrnew = moment(timestr.substring(0,8)).format("YYYY-MM-DD");
 				if (timestrnew === "Invalid date") {
 					return "";
 				} else {
-					timestrnew = timestrnew + timestr.replace(/[0-9]{4}-[0-9]{2}-[0-9]{2}/,"");
+					timestrnew = timestrnew + timestr.replace(/[0-9]{4}-[0-9]{3}/,"");
 				}
 			}
 			//console.log("Modified: " + timestrnew);
@@ -799,7 +792,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,REQ,RES) {
 				var timeLength = header.parameters[0].length;
 				
 				report(url,is.CorrectLength(time1,timeLength,"Time","",false),{"warn":true});
-				report(url,is.HAPITime(lines,schemaregexes));
+				report(url,is.HAPITime(lines,VERSION));
 				report(url,is.TimeIncreasing(lines,"CSV"));
 				report(url,is.TimeInBounds(lines,start,stop));
 

@@ -8,11 +8,13 @@ var argv = require('yargs')
 					"id": "",
 					"parameter": "",
 					"timemax": "",
-					"timemin": ""
+					"timemin": "",
+					"version": "2.0-1"
 				})
 				.argv
 
 var tests = require('./tests.js'); // Test runner
+var versions = require('./is.js').versions;
 
 if (!sver.gte(process.version,'6.0.0')) {
 	console.log(clc.red("node.js version >= 6 required. node.js -v returns " + process.version + ". See README for instructions on upgrading using nvm."));
@@ -30,8 +32,12 @@ if (argv.url !== "") {
 		argv['url'] = argv['url'].split("?")[0].replace(/\/info|\/data|\/catalog/,"");
 	}
 	argv.parameter = argv.parameter || argv.parameters || "";
+	
+	if (!versions().includes(argv.version)) {
+		console.log("Version must be one of ",versions());
+	}
 
-	tests.run(argv.url,argv.id,argv.parameter,argv["timemin"],argv["timemax"]);
+	tests.run(argv.url,argv.id,argv.parameter,argv["timemin"],argv["timemax"],version);
 } else {
 	// Server mode
 	var express = require('express');
@@ -59,7 +65,7 @@ if (argv.url !== "") {
 			return;
 		}
 
-		var allowed = ["url","id","parameter","parameters","time.min","time.max"];
+		var allowed = ["url","id","parameter","parameters","time.min","time.max","version"];
 		for (var key in req.query) {
 			if (!allowed.includes(key)) {
 				res.end("Only allowed parameters are " + allowed.join(",") + " (not "+key+").");
@@ -67,14 +73,14 @@ if (argv.url !== "") {
 			}
 		}
 
-		// Allow 
-		//   ?url=http://server/hapi?id=abc
+		// Allow typical copy/paste error
+		//   ?url=http://server/hapi/info?id=abc
 		// and treat as equivalent to 
 		//   ?url=http://server/hapi&id=abc
 		// Caution: Code is duplicated in command line mode.
 		if (/\?id=/.test(req.query['url'])) {
-			req.query['id'] = req.query['url'].split("?")[1].replace("id=","");
-			req.query['url'] = req.query['url'].split("?")[0].replace(/\/info|\/data|\/catalog/,"");
+			req.query['id'] = req.query['url'].split("?id=")[1];
+			req.query['url'] = req.query['url'].split("?id=")[0].replace(/\/info$|\/data$|\/catalog$/,"");
 		}
 
 		var url   = req.query["url"]       || ""
@@ -82,12 +88,18 @@ if (argv.url !== "") {
 		var param = req.query["parameter"] || req.query["parameters"] || ""
 		var start = req.query["time.min"]  || ""
 		var stop  = req.query["time.max"]  || ""
+
+		var version = req.query["version"] || argv.version;
+		if (!versions().includes(version)) {
+			console.log("Version must be one of ",versions());
+		}
+
 		if (param) {
 			if (param.split(",").length > 1) {
 				res.end("Only one parameter may be specified.");
 			}
 		}
-		tests.run(url,id,param,start,stop,req,res);
+		tests.run(url,id,param,start,stop,version,req,res);
 
 	})
 

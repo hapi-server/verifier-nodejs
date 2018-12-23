@@ -16,7 +16,7 @@
 		"url=http://hapi-server.org/servers/SSCWeb/hapi&id=ace",
 		"url=http://jfaden.net/HapiServerDemo/hapi",
 		"url=https://iswa.gsfc.nasa.gov/IswaSystemWebApp/hapi",
-		"url=http://proto.hapistream.org/hapi&id=AC_H0_MFI&time.min=2013-04-13T07:00:00&time.max=2013-04-14T11:00:00",	
+		"url=https://cdaweb.gsfc.nasa.gov/hapi&id=AC_H0_MFI&time.min=2013-04-13T07:00:00&time.max=2013-04-14T11:00:00",	
 		"url=http://datashop.elasticbeanstalk.com/hapi/info?id=CASSINI_MAG_HI_RES",
 		"url=https://pds-ppi.igpp.ucla.edu/hapi&id=urn:nasa:pds:maven.anc:data.drf.eps"];
 
@@ -52,6 +52,8 @@
 					<code>?url=URL&id=ID&amp;parameter=PARAMETER&time.min=HAPITIME&time.max=HAPITIME</code>
 				</li>
 			</ul>
+			A version parameter may also be specified, e.g., <code>?url=URL&...&version=VERSION</code>. The allowed values of VERSION are <code>2.0</code> and <code>2.0-1</code>. Verision <code>2.0-1</code> contains schema corrections from the <code>2.0</code> version.
+
 		<p>
 			Only a <code>URL</code> that ends in <code>/hapi</code> is required.  Only one <code>ID</code> and one <code>PARAMETER</code> may be specified (a comma-separated list is not supported).
 		</p>

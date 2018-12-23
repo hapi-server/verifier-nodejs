@@ -5,6 +5,44 @@ var Validator = require('jsonschema').Validator;
 // Note that for reporting to have correct line numbers, must start functions with
 // function FNAME( and start description with 'is.FNAME()'.
 
+var schemas = {};
+schemas["1.1"] = require("./schemas/HAPI-data-access-schema-1.1.json");
+schemas["2.0"] = require("./schemas/HAPI-data-access-schema-2.0.json");
+schemas["2.0-1"] = require("./schemas/HAPI-data-access-schema-2.0-1.json");
+
+function versions() {
+	arr = [];
+	for (key in schemas) {
+		arr.push(key);
+	}
+	return arr;
+}
+exports.versions = versions;
+
+function schema(version) {
+	var json = schemas[version];
+	if (!json) {
+		return false;
+	} else {
+		return schemas[version];
+	}
+}
+exports.schema = schema;
+
+function timeregexes(version) {
+	json = schemas[version];
+	if (!json) {
+		return false;
+	}
+	var tmp = json.HAPIDateTime.anyOf;
+	var regexes = [];
+	for (var i = 0;i < tmp.length;i++) {
+		regexes[i] = tmp[i].pattern;
+	}
+	return regexes;
+}
+exports.timeregexes = timeregexes;
+
 function trailingZfix(str) {
 	// moment.js does not consider date only with trailing Z to be valid ISO8601
 	if (/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]Z$|^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9]Z$/.test(str)) {
@@ -69,7 +107,7 @@ function ErrorCorrect(code,wanted,what) {
 	if (what === "hapicode") {
 		t = code == wanted
 		var got = code;
-		if (t != true) {got = code + ". Consider using https://github.com/hapi-server/verifier-nodejs/blob/master/schema/1.1/errors.json"}
+		if (t != true) {got = code + "."}
 		return {"description": "is.ErrorCorrect(): Expect HAPI code to be " + wanted, "error": t != true, "got": got};
 	}
 
@@ -90,7 +128,7 @@ function ErrorInformative(message,wanted,what) {
 		var re = new RegExp(wanted);
 		var t = re.test(wanted);
 		var got = message;
-		if (t != true) {got = message + ". Consider using https://github.com/hapi-server/verifier-nodejs/blob/master/errors/1.1/errors.json"}
+		if (t != true) {got = message + "."}
 		return {"description": "is.ErrorInformative(): Want HTTP message to contain the string '" + wanted + "' (default HAPI error message)", "error": t != true, "got": "'" + message + "'"};
 	}
 
@@ -590,8 +628,9 @@ function ISO8601(str,extra) {
 }
 exports.ISO8601 = ISO8601;
 
-function HAPITime(isostr,schemaregexes) {
+function HAPITime(isostr,version) {
 
+	schemaregexes = timeregexes(version);
 	// schemaregexes come from list in a schema file in ./schemas.
 	var got,str,result;
 	var t = true;
@@ -601,11 +640,11 @@ function HAPITime(isostr,schemaregexes) {
 		for (var i = 0; i < isostr.length; i++) {
 			if (isostr[i] === '') {break};
 			str = isostr[i].split(",")[0].trim();
-			result = HAPITime(str,schemaregexes);
+			result = HAPITime(str,version);
 			if (result.error == true) {
 				t = false;
 				got = str + " is not a valid HAPI Time string.";
-				if (/Z$/.test(str)) {
+				if (!/Z$/.test(str)) {
 					got = got + " (Missing trailing Z.)";
 				}
 				break;
@@ -805,7 +844,9 @@ function JSONparsable(text) {
 }
 exports.JSONparsable = JSONparsable;
 
-function HAPIJSON(text,schema,part){
+function HAPIJSON(text,version,part){
+
+	s = schema(version);
 
 	if (typeof(text) === "object") {
 		var json = text;
@@ -814,11 +855,11 @@ function HAPIJSON(text,schema,part){
 	}
 	
 	var v = new Validator();
-	v.addSchema(schema["HAPI"], '/HAPI');
-	v.addSchema(schema["HAPIDateTime"], '/HAPIDateTime');
-	v.addSchema(schema["HAPIStatus"], '/HAPIStatus');
-	var version = schema["HAPI"].pattern.replace("^","").replace("$","");
-	var vr = v.validate(json, schema[part]);
+	v.addSchema(s["HAPI"], '/HAPI');
+	v.addSchema(s["HAPIDateTime"], '/HAPIDateTime');
+	v.addSchema(s["HAPIStatus"], '/HAPIStatus');
+	var version = s["HAPI"].pattern.replace("^","").replace("$","");
+	var vr = v.validate(json, s[part]);
 	//console.log(JSON.stringify(vr,null,4))
 	var ve = vr.errors;
 	var got = "is valid"

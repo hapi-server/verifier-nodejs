@@ -8,6 +8,10 @@ var is = require('./is.js'); // Test library
 
 function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
+	if (!VERSION) {
+		VERSION = is.versions().pop();
+	}
+
 	if (REQ) {
 		var CLOSED = false;
 		REQ.connection.on('close',function() {CLOSED = true;});
@@ -382,7 +386,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			return;
 		}
 
-		if (ID === "") {
+		if (!ID) {
 			var url = ROOT + '/info?id=' + datasets[0]["id"];
 		} else {
 			var url = ROOT + '/info' + "?id=" + ID;
@@ -461,7 +465,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					//report(url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
 					report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
 				}
-				if (PARAMETER !== "") {
+				if (PARAMETER) {
 					if (0) {
 						var Time = header.parameters[0];
 						header.parameters = selectOne(header.parameters,'name',PARAMETER);

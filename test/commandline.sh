@@ -1,7 +1,7 @@
 #!/bin/bash
 # TODO: Collect exit status as in server.sh
 
-TESTDATA=http://mag.gmu.edu/TestData/hapi
+TESTDATA=http://hapi-server.org/servers/TestData/hapi
 #TESTDATA=http://localhost:8999/hapi
 
 set -x;

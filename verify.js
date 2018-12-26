@@ -37,7 +37,7 @@ if (argv.url !== "") {
 		console.log("Version must be one of ",versions());
 	}
 
-	tests.run(argv.url,argv.id,argv.parameter,argv["timemin"],argv["timemax"],version);
+	tests.run(argv.url,argv.id,argv.parameter,argv["timemin"],argv["timemax"],argv["version"]);
 } else {
 	// Server mode
 	var express = require('express');

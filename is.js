@@ -670,16 +670,16 @@ function HAPITime(isostr,version) {
 
 	var regex_pass = false;
 	var re;
-	var regex_pass;
 	for (var i = 0;i < schemaregexes.length;i++) {
 		re = new RegExp(schemaregexes[i]);
 		regex_pass = re.test(isostr);
 		if (regex_pass) {
-			//console.log('Passing pattern:' + schemaregexes[i])
+			//console.log(' Passing pattern:' + schemaregexes[i])
 			break;
 		}
 	}
 
+	//console.log(" Regex pass: " + regex_pass);
 	var semantic_pass = true;
 	if (regex_pass) { // Only check semantic rules if regular expression test passed.
 
@@ -719,6 +719,7 @@ function HAPITime(isostr,version) {
 			}
 		}
 	}
+	//console.log(" Semantic pass: " + regex_pass);
 
 	var e = !(regex_pass && semantic_pass);
 	//if (t==false) {console.log("x" + isostr)}

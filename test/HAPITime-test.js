@@ -6,17 +6,11 @@ var HAPITime = require('../is.js').HAPITime;
 // Read test file (see header for format)
 var tests = fs.readFileSync('./HAPITime-tests.txt').toString();
 var tests = tests.split(/\n/);
+var VERSION = '2.0-1';
 
-// Get regular expressions from schema
-var schema = fs.readFileSync('../schemas/HAPI-data-access-schema-2.0.json');
-schema = JSON.parse(schema);
-var tmp = schema.HAPIDateTime.anyOf;
-var schemaregexes = [];
-for (var i = 0;i < tmp.length;i++) {
-	schemaregexes[i] = tmp[i].pattern;
-}
+var schemaregexes = require('../is.js').timeregexes(VERSION);
 
-console.log("--")
+console.log("----------------------")
 for (var i = 0;i < tests.length; i++) {
 
 	var tmp = tests[i].split(",");
@@ -28,17 +22,26 @@ for (var i = 0;i < tests.length; i++) {
 	if (!/^\d/.test(isostr)) {continue;} // Ignore lines that dont start with digit
 
 	if (reason) {reason = " ("+reason+")"}
-	test_hapi   = HAPITime(isostr,schemaregexes);
+	hapi = HAPITime(isostr,VERSION);
+	test_hapi = !hapi.error;
 	test_moment = moment(isostr.replace(/Z$/,""),moment.ISO_8601).isValid();
+	//console.log(test_hapi);
+	//console.log(tmp[1]);
+	//console.log(test_moment);
 
 	//console.log(test_hapi)
-	var errmsg  = (test_hapi.error == expect) ? "??? Error: HAPITime code got wrong answer.": "";
-	var warnmsg = (!test_hapi.error != test_moment) ? "Warning: HAPITime result differs from moment.js.": "";
-	console.log(isostr + ": " + (!test_hapi.error ? "Pass": "Fail")
-				+ ". Expected:  " + (expect ? "Pass": "Fail")
-				+ ". moment.js: " + (test_moment ? "Pass": "Fail")
-				+ reason + " " + clc.red(warnmsg) + clc.red(errmsg));
+	var errmsg  = (test_hapi === expect) ? "??? Error: HAPITime code got wrong answer.": "";
+	var warnmsg = (test_hapi != test_moment) ? "Warning: HAPITime result differs from moment.js.": "";
+	if (test_hapi === expect) {
+		var prefix = clc.green.bold("PASS");
+	} else {
+		var prefix = clc.red.bold("FAIL");
+	}
+	console.log(prefix + " " + isostr + ": " + (test_hapi ? "Valid": "Invalid")
+				+ ". Expected: " + (expect ? "Valid": "Invalid")
+				+ ". moment.js: " + (test_moment ? "Valid": "Invalid")
+				+ reason);// + " " + clc.red(warnmsg) + clc.red(errmsg));
 
 
 }
-console.log("--")
+console.log("----------------------")

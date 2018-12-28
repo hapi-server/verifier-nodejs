@@ -1,5 +1,5 @@
 var fs   = require('fs');
-var clc  = require('cli-color');
+var clc  = require('chalk');
 var sver = require('semver');
 var argv = require('yargs')
 				.default({

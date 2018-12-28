@@ -16,12 +16,11 @@
     "url": "https://github.com/hapi-server/verifier-nodejs.git"
   },
   "dependencies": {
-    "cli-color": "^1.2.0",
+    "chalk": "*",
     "express": "^4.15.3",
     "ip": "1.1.5",
     "jsonschema": "^1.1.1",
     "moment": "^2.18.1",
-    "request": "^2.81.0",
     "semver": "^5.5.0",
     "yargs": "^8.0.2"
   },

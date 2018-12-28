@@ -1,12 +1,119 @@
 var fs      = require('fs');
-var request = require('request');
-var clc     = require('cli-color');
+var clc     = require('chalk');
 var moment  = require('moment');
 var ip      = require("ip");
+const zlib  = require('zlib');
+const http  = require('http');
+const url   = require('url');
 
 var is = require('./is.js'); // Test library
 
 function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
+
+	function request(obj, cb) {
+
+		if (0) {
+			// Old method
+			//"request": "^2.81.0",
+			var requestAsync = require('request');
+			requestAsync(obj, function (err, res, body) {
+				cb(err,res,body);
+			});
+		}
+
+		// Remove need for large request library.
+		if (1) {
+			const URLobj = url.parse(obj.url);
+
+			robj = {};
+			robj.protocol = URLobj.protocol;
+			robj.host = URLobj.host.split(":")[0];
+			robj.hostname = URLobj.host.split(":")[0];
+			robj.port = URLobj.port;
+			robj.path = URLobj.path;
+
+			// Timeout not working. See 
+			// https://stackoverflow.com/questions/6214902/how-to-set-a-timeout-on-a-http-request-in-node
+			//robj.timeout = obj.timeout;
+			// Do this manually. See below.
+
+			robj.headers = {};
+			if (obj.gzip) {
+				robj.headers['Accept-Encoding'] = 'gzip';
+			}
+
+			// Time-to-First-Byte timer.
+			ttfbTimer = setTimeout(function () {
+				console.log('ETIMEDOUT');
+				if (!aborted) {
+					aborted = true;
+					var err = new Error('ETIMEDOUT')
+					err.code = 'ETIMEDOUT'
+					err.connect = true
+					req.abort();
+					cb(err,null,null);
+				}
+			},obj.timeout);
+
+			req = http.get(robj, (res) => {
+
+				res.code = res.statusCode;
+				clearTimeout(ttfbTimer);
+
+				var gzip = res.headers['content-encoding'] === 'gzip';
+				if (gzip) {
+					var chunks = [];
+				} else {
+					var chunks = '';
+				}
+
+				res.on('data', (chunk) => {
+					if (gzip) {
+						//console.log('got chunk.')
+						chunks.push(chunk);
+					} else {
+						chunks = chunks + chunk;
+					}
+				});
+				res.on('end', () => {
+					if (gzip) {
+						var buffer = Buffer.concat(chunks);
+						zlib.gunzip(buffer, (err, buffer) => {
+							res.body = buffer && buffer.toString();
+							cb(null,res,res.body);
+						})
+					} else {
+						res.body = chunks;
+						cb(null,res,chunks);
+					}
+				});
+			})
+
+			var aborted = false;
+			req
+				.setTimeout(obj.timeout, function () {
+					// Timeout for time between bytes.
+					console.log('ESOCKETTIMEDOUT');
+					if (!aborted) {
+						aborted = true;
+						console.log('ESOCKETTIMEDOUT');
+						var err = new Error('ESOCKETTIMEDOUT');
+						err.code = 'ESOCKETTIMEDOUT';
+						err.connect = false;
+						req.abort();
+						cb(err,null,null);
+					}
+				})
+				.on("error", (err) => {
+					console.log(err.code);
+					if (!aborted) {
+						aborted = true;
+						req.abort();
+						cb(err,null,null);
+					}
+				});
+		}
+	}
 
 	if (!VERSION) {
 		VERSION = is.versions().pop();
@@ -188,8 +295,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		} else {
 			obj = {"warn":false,"stop":false,"abort":false,"showurl":true};
 		}
+
 		var tout = timeout(what);
 		var when = timeout(what,"when");
+
 		if (err.code === "ETIMEDOUT") {
 			// https://github.com/request/request/blob/master/request.js#L846
 			report(url,{"description":"Expect headers and start of response body in less than " + tout + " ms when " + when,"error": true,"got": "ETIMEDOUT"},obj)
@@ -219,7 +328,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		var url = ROOT;
 		report(url);
-		request({"url": url,"timeout": timeout(timeoutFor)}, 
+		request({"url": url, "timeout": timeout(timeoutFor)},
 			function (err,res,body) {
 
 				if (err) {
@@ -233,9 +342,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					return;
 				}
 				// TODO: if (!body), warn.
+				//console.log(res);
 				report(url,is.HTTP200(res),{"warn":true});
 				report(url,is.ContentType(/^text\/html/,res.headers["content-type"]),{"warn":true});
 				capabilities();
+
 			})
 	}
 
@@ -254,8 +365,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		url = ROOT + "/capabilities";
 		report(url);
 		//console.log(ip.address())
-		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()} }, 
+		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()} },
 			function (err,res,body) {
+
 				if (err) {
 					if (capabilities.tries == 0) {
 						requesterr(url,err,timeoutFor,{"warn":true});
@@ -303,7 +415,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		var url = ROOT + "/catalog";
 		report(url);
-		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}}, 
+		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}},
 			function (err,res,body) {
 
 				if (err) {
@@ -348,7 +460,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		var url = ROOT + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
 		report(url);
-		request({"url":url,"timeout": timeout("default")}, 
+		request({"url":url,"timeout": timeout("default")},
 			function (err,res,body) {
 
 				if (err) {
@@ -411,7 +523,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		}
 
 		report(url);
-		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}}, 
+		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}},
 			function (err,res,body) {
 
 				if (err) {
@@ -554,7 +666,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		var url = ROOT + '/info' + "?id=" + datasets[0].id + '&parameters=' + parameter;
 
 		report(url);
-		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}}, 
+		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}},
 			function (err,res,body) {
 				if (err) {
 					if (infor.tries[datasets.length] == 0) {
@@ -608,7 +720,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		var url = ROOT + '/data?id='+ datasets[0].id + '&time.min=' + start + '&time.max=' + stop;
 		report(url);
-		request({"url":url,"time":true,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}}, 
+		request({"url":url,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}},
 			function (err,res,bodyAll) {
 
 				if (err) {
@@ -669,7 +781,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		var url = ROOT + '/data?id='+ datasets[0].id + '&time.min=' + startnew + '&time.max=' + stopnew;
 
-		request({"url":url,"time":true,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}}, 
+		request({"url":url,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}},
 			function (err,res,body) {
 				if (err) {return;}
 				report(url,is.FileDataOK(header,body,bodyAll,null,"contentsame"));
@@ -709,7 +821,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		// This is contorted logic to check only one parameter. Need
 		// to rewrite. Also allow PARAMETER to be list of parameters.
 		var i = NaN;
-		if (PARAMETER !== "") {
+		if (PARAMETER) {
 			for (var i=0;i < header.parameters.length;i++) {
 				if (header.parameters[i].name === PARAMETER) {
 					pn = i;
@@ -739,7 +851,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		var url = ROOT + '/data?id='+ datasets[0].id + '&parameters=' + parameter + '&time.min=' + start + '&time.max=' + stop;
 		report(url);
-		request({"url":url,"time":true,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}}, 
+		request({"url":url,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}},
 			function (err,res,body) {
 
 				if (err) {
@@ -847,8 +959,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					report(url,is.FileDataOK(header,body,bodyAll,pn));
 				}
 
-				// Check next parameter
-				datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll);
+				if (!PARAMETER) {
+					// Check next parameter
+					datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll);
+				} else {
+					console.log("here;")
+				}
 			})
 	}
 }

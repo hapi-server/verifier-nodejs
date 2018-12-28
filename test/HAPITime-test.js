@@ -1,6 +1,6 @@
 var fs       = require('fs');
 var moment   = require('moment');
-var clc      = require('cli-color');
+var clc      = require('chalk');
 var HAPITime = require('../is.js').HAPITime;
 
 // Read test file (see header for format)

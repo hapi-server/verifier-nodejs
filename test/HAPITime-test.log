@@ -1,67 +1,75 @@
---
-2000-01-01T00:00:00.0: Fail Expected: Fail (No Z) 
-2000-01-01T00:00:00: Fail Expected: Fail (No Z) 
-2000-01-01T00:00: Fail Expected: Fail (No Z) 
-2000-01-01T00: Fail Expected: Fail (No Z) 
-2000-01-01T: Fail Expected: Fail (No Z) 
-2000-01-01: Fail Expected: Fail (No Z) 
-2000-01: Fail Expected: Fail (No Z) 
-2000: Fail Expected: Fail (No Z) 
-2000Z: Pass Expected: Pass 
-200Z: Fail Expected: Fail 
-2000-01Z: Pass Expected: Pass 
-2000-12Z: Pass Expected: Pass 
-2000-00Z: Fail Expected: Fail (Invalid month) 
-2000-13Z: Fail Expected: Fail (Invalid month) 
-2000-01-32Z: Fail Expected: Fail (Invalid day) 
-2000-02-30Z: Fail Expected: Fail (Invalid day) 
-2000-03-31Z: Pass Expected: Pass 
-2000-03-32Z: Fail Expected: Fail (Invalid day) 
-2000-04-31Z: Fail Expected: Fail (Invalid day) 
-2000-02-29Z: Pass Expected: Pass 
-2001-02-29Z: Fail Expected: Fail (Invalid day) 
-2000-0Z: Fail Expected: Fail (Invalid DOY or month) 
-2000-01-01Z: Pass Expected: Pass 
-2000-001Z: Pass Expected: Pass 
-2000-01-01T00Z: Pass Expected: Pass 
-2000-01-01T23Z: Pass Expected: Pass 
-2000-01-01T0Z: Fail Expected: Fail (One-digit hour) 
-2000-01-01T00:Z: Fail Expected: Fail (Trailing :) 
-2000-01-01T00:0Z: Fail Expected: Fail (One-digit minute) 
-2000-01-01T00:00Z: Pass Expected: Pass 
-2000-01-01T23:59Z: Pass Expected: Pass 
-2000-01-01T00:00:0Z: Fail Expected: Fail (One-digit minute) 
-2000-01-01T00:00:00Z: Pass Expected: Pass 
-2000-01-01T23:59:59Z: Pass Expected: Pass 
-2000-01-01T00:00:00.Z: Pass Expected: Pass 
-2000-01-01T00:00:00.0Z: Pass Expected: Pass 
-2000-01-01T00:00:00.000000000Z: Pass Expected: Pass 
-2000-01-01T00:00:00.0000000000Z: Fail Expected: Fail (More than nine digits in subsec) 
-2000-01-01T00:00:00.9999999999Z: Fail Expected: Fail (More than nine digits in subsec) 
-2012-182T23:59:60Z: Pass Expected: Pass (Leap second) 
-2015-06-30T23:59:60Z: Pass Expected: Pass (Possible leap second) 
-2015-181T23:59:60Z: Pass Expected: Pass (Possible leap second) 
-2012-06-30T23:59:60Z: Pass Expected: Pass (Possible leap second) 
-2016-12-31T23:59:60Z: Pass Expected: Pass (Possible leap second) 
-2016-366T23:59:60Z: Pass Expected: Pass (Possible leap second) 
-2011-182T23:59:60Z: Fail Expected: Fail (Not a leap second) 
-2012-182T01:01:60Z: Fail Expected: Fail (Not a leap second) 
-2012-06-30T00:00:60Z: Fail Expected: Fail (Not a leap second) 
-2011-06-30T23:59:60Z: Fail Expected: Fail (Not a leap second) 
-2012-12-31T59:59:60Z: Fail Expected: Fail (Not a leap second) 
-2000-366T24:01:01Z: Fail Expected: Fail (24 allowed only if hr=00) 
-2000-366T24:00:00.01Z: Fail Expected: Fail (24 allowed only if hr=00) 
-2000-12-31T24:01:01Z: Fail Expected: Fail (24 allowed only if hr=00) 
-2000-12-31T24:00:00.01Z: Fail Expected: Fail (24 allowed only if hr=00) 
-2000-12-31T24:00Z: Pass Expected: Pass 
-2000-12-31T24:01Z: Fail Expected: Fail 
-2000-366Z: Pass Expected: Pass 
-2000-367Z: Fail Expected: Fail (Invalid DOY) 
-2001-366T00Z: Fail Expected: Fail (Invalid DOY) 
-2000-366T00Z: Pass Expected: Pass 
-2000-367T00Z: Fail Expected: Fail (Invalid DOY) 
-2001-366T00Z: Fail Expected: Fail (Invalid DOY) 
-1710-01-01T00:00:00Z: Pass Expected: Pass 
-2199-01-01T00:00:00Z: Pass Expected: Pass 
-2199-01-01T24:00:00Z: Pass Expected: Pass 
---
+----------------------
+PASS 2001-01-01T00:00:00.000Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2010-03-15T01:07:05.0Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2004-123T00:00:41.667Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-01-01T00:00:00.0: Invalid. Expected: Invalid. moment.js: Valid (No Z)
+PASS 2000-01-01T00:00:00: Invalid. Expected: Invalid. moment.js: Valid (No Z)
+PASS 2000-01-01T00:00: Invalid. Expected: Invalid. moment.js: Valid (No Z)
+PASS 2000-01-01T00: Invalid. Expected: Invalid. moment.js: Valid (No Z)
+PASS 2000-01-01T: Invalid. Expected: Invalid. moment.js: Invalid (No Z)
+PASS 2000-01-01: Invalid. Expected: Invalid. moment.js: Valid (No Z)
+PASS 2000-01: Invalid. Expected: Invalid. moment.js: Valid (No Z)
+PASS 2000: Invalid. Expected: Invalid. moment.js: Invalid (No Z)
+PASS 2000Z: Valid. Expected: Valid. moment.js: Invalid
+PASS 200Z: Invalid. Expected: Invalid. moment.js: Invalid
+PASS 2000-01Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-12Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-00Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid month)
+PASS 2000-13Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid month)
+PASS 2000-01-32Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid day)
+PASS 2000-02-30Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid day)
+PASS 2000-03-31Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-03-32Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid day)
+PASS 2000-04-31Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid day)
+PASS 2000-02-29Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2001-02-29Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid day)
+PASS 2000-0Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid DOY or month)
+PASS 2000-01-01Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-001Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-01-01T00Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-01-01T23Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-01-01T0Z: Invalid. Expected: Invalid. moment.js: Invalid (One-digit hour)
+PASS 2000-01-01T00:Z: Invalid. Expected: Invalid. moment.js: Invalid (Trailing :)
+PASS 2000-01-01T00:0Z: Invalid. Expected: Invalid. moment.js: Invalid (One-digit minute)
+PASS 2000-01-01T00:00Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-01-01T23:59Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-01-01T00:00:0Z: Invalid. Expected: Invalid. moment.js: Invalid (One-digit minute)
+PASS 2000-01-01T00:00:00Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-01-01T23:59:59Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2010-03-15T01:07:05.0Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-01-01T00:00:00.Z: Valid. Expected: Valid. moment.js: Invalid
+PASS 2000-01-01T00:00:00.0Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-01-01T00:00:00.000000000Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-01-01T00:00:00.0000000000Z: Invalid. Expected: Invalid. moment.js: Valid (More than nine digits in subsec)
+PASS 2000-01-01T00:00:00.9999999999Z: Invalid. Expected: Invalid. moment.js: Valid (More than nine digits in subsec)
+PASS 2012-182T23:59:60Z: Valid. Expected: Valid. moment.js: Invalid (Leap second)
+PASS 2015-06-30T23:59:60Z: Valid. Expected: Valid. moment.js: Invalid (Possible leap second)
+PASS 2015-181T23:59:60Z: Valid. Expected: Valid. moment.js: Invalid (Possible leap second)
+PASS 2012-06-30T23:59:60Z: Valid. Expected: Valid. moment.js: Invalid (Possible leap second)
+PASS 2016-12-31T23:59:60Z: Valid. Expected: Valid. moment.js: Invalid (Possible leap second)
+PASS 2016-366T23:59:60Z: Valid. Expected: Valid. moment.js: Invalid (Possible leap second)
+PASS 2011-182T23:59:60Z: Invalid. Expected: Invalid. moment.js: Invalid (Not a leap second)
+PASS 2012-182T01:01:60Z: Invalid. Expected: Invalid. moment.js: Invalid (Not a leap second)
+PASS 2012-06-30T00:00:60Z: Invalid. Expected: Invalid. moment.js: Invalid (Not a leap second)
+PASS 2011-06-30T23:59:60Z: Invalid. Expected: Invalid. moment.js: Invalid (Not a leap second)
+PASS 2012-12-31T59:59:60Z: Invalid. Expected: Invalid. moment.js: Invalid (Not a leap second)
+PASS 2000-366T24:01:01Z: Invalid. Expected: Invalid. moment.js: Invalid (24 allowed only if hr=00)
+PASS 2000-366T24:00:00.01Z: Invalid. Expected: Invalid. moment.js: Invalid (24 allowed only if hr=00)
+PASS 2000-12-31T24:01:01Z: Invalid. Expected: Invalid. moment.js: Invalid (24 allowed only if hr=00)
+PASS 2000-12-31T24:00:00.01Z: Invalid. Expected: Invalid. moment.js: Invalid (24 allowed only if hr=00)
+PASS 2000-12-31T24:00Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-12-31T24:01Z: Invalid. Expected: Invalid. moment.js: Invalid
+PASS 2000-366Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-367Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid DOY)
+PASS 2001-366T00Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid DOY)
+PASS 2000-366T00Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2000-367T00Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid DOY)
+PASS 2001-366T00Z: Invalid. Expected: Invalid. moment.js: Invalid (Invalid DOY)
+PASS 1710-01-01T00:00:00Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2199-01-01T00:00:00Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2199-01-01T24:00:00Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2001-01-01T00Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2001-001T00Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2001-01-01T00:00Z: Valid. Expected: Valid. moment.js: Valid
+PASS 2001-001T00:00Z: Valid. Expected: Valid. moment.js: Valid
+----------------------

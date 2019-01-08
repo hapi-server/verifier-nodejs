@@ -362,7 +362,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			var timeoutFor = "defaultpreviousfail";			
 		};
 
-		url = ROOT + "/capabilities";
+		var url = ROOT + "/capabilities";
 		report(url);
 		//console.log(ip.address())
 		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()} },

@@ -4,7 +4,7 @@ var moment  = require('moment');
 var ip      = require("ip");
 const zlib  = require('zlib');
 const http  = require('http');
-const url   = require('url');
+const urllib = require('url');
 
 var is = require('./is.js'); // Test library
 
@@ -23,7 +23,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		// Remove need for large request library.
 		if (1) {
-			const URLobj = url.parse(obj.url);
+			const URLobj = urllib.parse(obj.url);
 
 			robj = {};
 			robj.protocol = URLobj.protocol;

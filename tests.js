@@ -4,15 +4,24 @@ var moment  = require('moment');
 var ip      = require("ip");
 const zlib  = require('zlib');
 const http  = require('http');
+const https = require('https');
 const urllib = require('url');
 
 var is = require('./is.js'); // Test library
 
 function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
+	function internalerror(err) {
+		console.log(err.stack);
+		if (RES) RES.end('<br><br><div style="border:2px solid black"><b><font style="color:red"><b>Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.</b></font></div>');	
+		if (!RES) console.log(clc.red('Problem with verification server (Uncaught Exception). Aborting.'));
+		if (!RES) process.exit(1);
+		if (!RES) console.log(err.stack);
+	}
+
 	function request(obj, cb) {
 
-		if (0) {
+		if (1) {
 			// Old method
 			//"request": "^2.81.0",
 			var requestAsync = require('request');
@@ -22,7 +31,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		}
 
 		// Remove need for large request library.
-		if (1) {
+		if (0) {
 			const URLobj = urllib.parse(obj.url);
 
 			robj = {};
@@ -42,20 +51,28 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				robj.headers['Accept-Encoding'] = 'gzip';
 			}
 
+			var aborted = false;
+
 			// Time-to-First-Byte timer.
 			ttfbTimer = setTimeout(function () {
-				console.log('ETIMEDOUT');
+				//console.log('ETIMEDOUT');
 				if (!aborted) {
 					aborted = true;
-					var err = new Error('ETIMEDOUT')
-					err.code = 'ETIMEDOUT'
-					err.connect = true
-					req.abort();
-					cb(err,null,null);
+					var err = new Error('ETIMEDOUT');
+					err.code = 'ETIMEDOUT';
+					err.connect = true;
+					if (typeof(req) !== "undefined") {
+						req.abort()
+						cb(err,null,null);
+					};
 				}
-			},obj.timeout);
+			}, obj.timeout);
 
-			req = http.get(robj, (res) => {
+			var proto = http;
+			if (robj.protocol === "https:") {
+				proto = https;
+			}
+			req = proto.get(robj, (res) => {
 
 				res.code = res.statusCode;
 				clearTimeout(ttfbTimer);
@@ -88,8 +105,15 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					}
 				});
 			})
+			.on("error", (err) => {
+				if (!aborted) {
+					aborted = true;
+					console.log('Request Error:');
+					console.log(err);
+					cb(err,null,null);
+				}
+			});
 
-			var aborted = false;
 			req
 				.setTimeout(obj.timeout, function () {
 					// Timeout for time between bytes.
@@ -100,14 +124,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 						var err = new Error('ESOCKETTIMEDOUT');
 						err.code = 'ESOCKETTIMEDOUT';
 						err.connect = false;
-						req.abort();
-						cb(err,null,null);
-					}
-				})
-				.on("error", (err) => {
-					console.log(err.code);
-					if (!aborted) {
-						aborted = true;
 						req.abort();
 						cb(err,null,null);
 					}
@@ -125,13 +141,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 	}
 
 	// Catch uncaught execeptions.
-	process.on('uncaughtException', function(err) {
-		console.log(err.stack);
-		if (RES) RES.end('<br><br><div style="border:2px solid black"><b><font style="color:red"><b>Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.</b></font></div>');	
-		if (!RES) console.log(clc.red('Problem with verification server (Uncaught Exception). Aborting.'));
-		if (!RES) process.exit(1);
-		if (!RES) console.log(err.stack);
-	});
+	process.on('uncaughtException', internalerror);
 	
 	root();
 	
@@ -330,7 +340,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		report(url);
 		request({"url": url, "timeout": timeout(timeoutFor)},
 			function (err,res,body) {
-
 				if (err) {
 					if (root.tries == 0) {
 						requesterr(url,err,timeoutFor,{"warn":true});

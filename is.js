@@ -120,8 +120,8 @@ function ErrorInformative(message,wanted,what) {
 		var wanted = "HAPI " + wanted;
 		var re = new RegExp(wanted);
 		var t = re.test(message);
-		var l = "<a href='https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#user-content-HTTPStatusExample'>spec.</a>";
-		return {"description": "is.ErrorInformative(): Want HTTP message to match '" + wanted + "' for clients who do not have access to response body for HTTP 400-level errors. See "+l, "error": t != true, "got": "'" + message + "'"};
+		var l = "<a href='https://github.com/hapi-server/verifier-nodejs/issues/19'>Explanation.</a>";
+		return {"description": "is.ErrorInformative(): Want HTTP header status message to match '" + wanted + "'. ("+l+")", "error": t != true, "got": "'" + message + "'"};
 	}
 
 	if (what === "hapimessage") {
@@ -129,7 +129,7 @@ function ErrorInformative(message,wanted,what) {
 		var t = re.test(wanted);
 		var got = message;
 		if (t != true) {got = message + "."}
-		return {"description": "is.ErrorInformative(): Want HTTP message to contain the string '" + wanted + "' (default HAPI error message)", "error": t != true, "got": "'" + message + "'"};
+		return {"description": "is.ErrorInformative(): Want status.message element of response to contain the string '" + wanted + "' (default HAPI error message)", "error": t != true, "got": "'" + message + "'"};
 	}
 
 }

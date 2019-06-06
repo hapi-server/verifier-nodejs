@@ -11,6 +11,10 @@ var is = require('./is.js'); // Test library
 
 function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
+	var PLOTSERVER = 'http://hapi-server.org/plot';
+	//var PLOTSERVER = 'http://localhost:5000/';
+
+	var CATALOG; // Resolved in catalog(); used in report() to print ViViz links.
 	function internalerror(err) {
 		console.log(err.stack);
 		if (RES) RES.end('<br><br><div style="border:2px solid black"><b><font style="color:red"><b>Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.</b></font></div>');	
@@ -201,7 +205,21 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:red'>Fail</font>&nbsp;" + report.fails[i].description + "; Got: <b>" + report.fails[i].got.toString().replace(/\n/g,"<br>").replace(/\s/g,"&nbsp;") + "</b><br>");
 				if (!RES) console.log("|  " + clc.red.inverse("Fail") + " " + report.fails[i].description + "; Got: " + clc.bold(report.fails[i].got));
 			}
-			if (RES) RES.end("<br><br>End of validation summary.</body></html>");
+
+			request({"url": ROOT+"/capabilities"},
+				function (err,res,body) {
+				}
+			)
+
+			if (RES) {
+				RES.write("<br><br>");
+				RES.write("<b>Use the following links for visual checks of data and stress testing server.</b><br><br>")
+				for (var i = 0;i < CATALOG["catalog"].length;i++) {
+					var link = PLOTSERVER + "?server=" + ROOT + "&id=" +CATALOG["catalog"][i]["id"] + "&format=gallery";
+					RES.write("<a target='_blank' href='" + link + "'>" + link + "</a><br>");
+				}
+				RES.end("</body></html>");
+			}
 		
 			if (!RES) {
 				console.log("\nEnd of validation summary.");
@@ -250,7 +268,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			if (!RES) console.log("\n" + indentcons + clc.blue(url));
 		}
 		report.url = url;
-		if (!obj) return; // If report(url) was called, only print URL so user knows it is being requested.
+		if (!obj) {
+			// If report(url) was called, only print URL so user knows it is being requested.
+			return
+		}; 
+
 		obj.url = url;
 		if (RES) {
 			// Get function name from description in obj and replace it
@@ -441,6 +463,17 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				if (!report(url,is.JSONparsable(body),{"abort":true})) return;
+				CATALOG = JSON.parse(body);
+				var cat = CATALOG["catalog"];
+				if (ID) {
+					for (var i = 0;i < cat.length;i++) {
+						if (cat[i]["id"] == ID) {
+							var catr = [cat[i]];
+							break;
+						}
+					}
+					CATALOG["catalog"] = catr;
+				}
 				report(url,is.HAPIJSON(body,VERSION,'catalog'));
 				var datasets = JSON.parse(body).catalog;
 				if (datasets) {
@@ -508,8 +541,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		}
 
 		if (!ID) {
+			var id = datasets[0]["id"];
 			var url = ROOT + '/info?id=' + datasets[0]["id"];
 		} else {
+			var id = ID;
 			var url = ROOT + '/info' + "?id=" + ID;
 			// Only check one dataset with id = ID.
 			datasets = selectOne(datasets,'id',ID);
@@ -532,6 +567,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		}
 
 		report(url);
+
+		var link = PLOTSERVER+"?server=" + ROOT + "&id=" + id + "&format=gallery";
+		var note = "<a target='_blank' href='" + link + "'>Visually check data</a>";
+
+		if (info.tries[datasets.length] == 0) {
+			if (RES) RES.write("&nbsp&nbsp;<font style='color:black;background:#00CED1'>Note</font>:&nbsp" + note + "<br>");
+		}
+
 		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}},
 			function (err,res,body) {
 

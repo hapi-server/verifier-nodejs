@@ -4,7 +4,7 @@ Runs a suite of tests on a HAPI server via a web interface or the command line. 
 
 A running instance, documentation, and example output is available at http://hapi-server.org/verify
 
-To run tests from the command line or to run a local server, see the below.
+To run tests from the command line or to run a local server, see below.
 
 # Installation
 

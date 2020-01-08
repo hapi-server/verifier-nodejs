@@ -120,8 +120,8 @@ function ErrorInformative(message,wanted,what) {
 		var wanted = "HAPI " + wanted;
 		var re = new RegExp(wanted);
 		var t = re.test(message);
-		var l = "<a href='https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#user-content-HTTPStatusExample'>spec.</a>";
-		return {"description": "is.ErrorInformative(): Want HTTP message to match '" + wanted + "' for clients who do not have access to response body for HTTP 400-level errors. See "+l, "error": t != true, "got": "'" + message + "'"};
+		var l = "<a href='https://github.com/hapi-server/verifier-nodejs/issues/19'>Explanation.</a>";
+		return {"description": "is.ErrorInformative(): Want HTTP header status message to match '" + wanted + "'. ("+l+")", "error": t != true, "got": "'" + message + "'"};
 	}
 
 	if (what === "hapimessage") {
@@ -129,7 +129,7 @@ function ErrorInformative(message,wanted,what) {
 		var t = re.test(wanted);
 		var got = message;
 		if (t != true) {got = message + "."}
-		return {"description": "is.ErrorInformative(): Want HTTP message to contain the string '" + wanted + "' (default HAPI error message)", "error": t != true, "got": "'" + message + "'"};
+		return {"description": "is.ErrorInformative(): Want status.message element of response to contain the string '" + wanted + "' (default HAPI error message)", "error": t != true, "got": "'" + message + "'"};
 	}
 
 }
@@ -405,12 +405,24 @@ function TimeFirstParameter(header) {
 }
 exports.TimeFirstParameter = TimeFirstParameter;
 
+function UnitsOK(units,type) {
+
+	if (!units) {return;} // No unit or units=null so no test needed.
+	var t = false;
+	var got = "type = '" + type + "' and units = '" + units + "' for parameter " + name + ".";
+	if (type == "isotime" && units !== "UTC") {
+		t = true;
+	}
+	return {"description": "is.UnitsOK: Expect isotime units to be UTC.", "error": t,"got": got};
+}
+exports.UnitsOK = UnitsOK;
+
 function FillOK(fill,type,len,name,what) {
 
 	if (!fill) {return;} // No fill or fill=null so no test needed.
 	var t = false;
 	if (typeof(fill) === 'string') {
-		var got = "fill = '" + fill + "'' for parameter " + name + ".";
+		var got = "fill = '" + fill + "' for parameter " + name + ".";
 	} else {
 		var got = "fill = " + fill + " for parameter " + name + ".";
 	}

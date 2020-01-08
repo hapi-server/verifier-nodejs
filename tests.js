@@ -4,15 +4,28 @@ var moment  = require('moment');
 var ip      = require("ip");
 const zlib  = require('zlib');
 const http  = require('http');
+const https = require('https');
 const urllib = require('url');
 
 var is = require('./is.js'); // Test library
 
 function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
+	var PLOTSERVER = 'http://hapi-server.org/plot';
+	//var PLOTSERVER = 'http://localhost:5000/';
+
+	var CATALOG; // Resolved in catalog(); used in report() to print ViViz links.
+	function internalerror(err) {
+		console.log(err.stack);
+		if (RES) RES.end('<br><br><div style="border:2px solid black"><b><font style="color:red"><b>Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.</b></font></div>');	
+		if (!RES) console.log(clc.red('Problem with verification server (Uncaught Exception). Aborting.'));
+		if (!RES) process.exit(1);
+		if (!RES) console.log(err.stack);
+	}
+
 	function request(obj, cb) {
 
-		if (0) {
+		if (1) {
 			// Old method
 			//"request": "^2.81.0",
 			var requestAsync = require('request');
@@ -22,7 +35,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		}
 
 		// Remove need for large request library.
-		if (1) {
+		if (0) {
 			const URLobj = urllib.parse(obj.url);
 
 			robj = {};
@@ -42,20 +55,28 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				robj.headers['Accept-Encoding'] = 'gzip';
 			}
 
+			var aborted = false;
+
 			// Time-to-First-Byte timer.
 			ttfbTimer = setTimeout(function () {
-				console.log('ETIMEDOUT');
+				//console.log('ETIMEDOUT');
 				if (!aborted) {
 					aborted = true;
-					var err = new Error('ETIMEDOUT')
-					err.code = 'ETIMEDOUT'
-					err.connect = true
-					req.abort();
-					cb(err,null,null);
+					var err = new Error('ETIMEDOUT');
+					err.code = 'ETIMEDOUT';
+					err.connect = true;
+					if (typeof(req) !== "undefined") {
+						req.abort()
+						cb(err,null,null);
+					};
 				}
-			},obj.timeout);
+			}, obj.timeout);
 
-			req = http.get(robj, (res) => {
+			var proto = http;
+			if (robj.protocol === "https:") {
+				proto = https;
+			}
+			req = proto.get(robj, (res) => {
 
 				res.code = res.statusCode;
 				clearTimeout(ttfbTimer);
@@ -88,8 +109,15 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					}
 				});
 			})
+			.on("error", (err) => {
+				if (!aborted) {
+					aborted = true;
+					console.log('Request Error:');
+					console.log(err);
+					cb(err,null,null);
+				}
+			});
 
-			var aborted = false;
 			req
 				.setTimeout(obj.timeout, function () {
 					// Timeout for time between bytes.
@@ -100,14 +128,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 						var err = new Error('ESOCKETTIMEDOUT');
 						err.code = 'ESOCKETTIMEDOUT';
 						err.connect = false;
-						req.abort();
-						cb(err,null,null);
-					}
-				})
-				.on("error", (err) => {
-					console.log(err.code);
-					if (!aborted) {
-						aborted = true;
 						req.abort();
 						cb(err,null,null);
 					}
@@ -125,16 +145,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 	}
 
 	// Catch uncaught execeptions.
-	process.on('uncaughtException', function(err) {
-		console.log(err.stack);
-		if (RES) RES.end('<br><br><div style="border:2px solid black"><b><font style="color:red"><b>Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.</b></font></div>');	
-		if (!RES) console.log(clc.red('Problem with verification server (Uncaught Exception). Aborting.'));
-		if (!RES) process.exit(1);
-		if (!RES) console.log(err.stack);
-	});
-	
+	process.on('uncaughtException', internalerror);
+
 	root();
-	
+
 	function report(url,obj,opts) {
 
 		// Returns !(obj.error && (stop || abort))
@@ -191,7 +205,21 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:red'>Fail</font>&nbsp;" + report.fails[i].description + "; Got: <b>" + report.fails[i].got.toString().replace(/\n/g,"<br>").replace(/\s/g,"&nbsp;") + "</b><br>");
 				if (!RES) console.log("|  " + clc.red.inverse("Fail") + " " + report.fails[i].description + "; Got: " + clc.bold(report.fails[i].got));
 			}
-			if (RES) RES.end("<br><br>End of validation summary.</body></html>");
+
+			request({"url": ROOT+"/capabilities"},
+				function (err,res,body) {
+				}
+			)
+
+			if (RES) {
+				RES.write("<br><br>");
+				RES.write("<b>Use the following links for visual checks of data and stress testing server.</b><br><br>")
+				for (var i = 0;i < CATALOG["catalog"].length;i++) {
+					var link = PLOTSERVER + "?server=" + ROOT + "&id=" +CATALOG["catalog"][i]["id"] + "&format=gallery";
+					RES.write("<a target='_blank' href='" + link + "'>" + link + "</a><br>");
+				}
+				RES.end("</body></html>");
+			}
 		
 			if (!RES) {
 				console.log("\nEnd of validation summary.");
@@ -240,7 +268,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			if (!RES) console.log("\n" + indentcons + clc.blue(url));
 		}
 		report.url = url;
-		if (!obj) return; // If report(url) was called, only print URL so user knows it is being requested.
+		if (!obj) {
+			// If report(url) was called, only print URL so user knows it is being requested.
+			return
+		}; 
+
 		obj.url = url;
 		if (RES) {
 			// Get function name from description in obj and replace it
@@ -330,7 +362,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		report(url);
 		request({"url": url, "timeout": timeout(timeoutFor)},
 			function (err,res,body) {
-
 				if (err) {
 					if (root.tries == 0) {
 						requesterr(url,err,timeoutFor,{"warn":true});
@@ -432,6 +463,17 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				if (!report(url,is.JSONparsable(body),{"abort":true})) return;
+				CATALOG = JSON.parse(body);
+				var cat = CATALOG["catalog"];
+				if (ID) {
+					for (var i = 0;i < cat.length;i++) {
+						if (cat[i]["id"] == ID) {
+							var catr = [cat[i]];
+							break;
+						}
+					}
+					CATALOG["catalog"] = catr;
+				}
 				report(url,is.HAPIJSON(body,VERSION,'catalog'));
 				var datasets = JSON.parse(body).catalog;
 				if (datasets) {
@@ -499,8 +541,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		}
 
 		if (!ID) {
+			var id = datasets[0]["id"];
 			var url = ROOT + '/info?id=' + datasets[0]["id"];
 		} else {
+			var id = ID;
 			var url = ROOT + '/info' + "?id=" + ID;
 			// Only check one dataset with id = ID.
 			datasets = selectOne(datasets,'id',ID);
@@ -523,6 +567,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		}
 
 		report(url);
+
+		var link = PLOTSERVER+"?server=" + ROOT + "&id=" + id + "&format=gallery";
+		var note = "<a target='_blank' href='" + link + "'>Visually check data</a>";
+
+		if (info.tries[datasets.length] == 0) {
+			if (RES) RES.write("&nbsp&nbsp;<font style='color:black;background:#00CED1'>Note</font>:&nbsp" + note + "<br>");
+		}
+
 		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}},
 			function (err,res,body) {
 
@@ -566,7 +618,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					name = header.parameters[i]["name"];
 					size = header.parameters[i]["size"];
 					fill = header.parameters[i]["fill"];
+					units = header.parameters[i]["units"];
 
+					report(url,is.UnitsOK(units,type),{"warn":true});
 					report(url,is.FillOK(fill,type,len,name,type),{"warn":true});
 					if (type === "string") {
 						report(url,is.FillOK(fill,type,len,name,'nullstring'),{"warn":true});
@@ -817,6 +871,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		// Reduced data request. Request one parameter at a time.
 
+		if (pn == -1 || pn == header.parameters.length) {
+			// -1 is case when one parameter given (!PARAMETER is true)
+			datasets.shift(); // Remove first element
+			info(datasets); // Start next dataset
+			return; // All parameters for dataset have been checked.
+		}
+
 		// TODO:
 		// This is contorted logic to check only one parameter. Need
 		// to rewrite. Also allow PARAMETER to be list of parameters.
@@ -828,12 +889,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					break;
 				}
 			}	
-		}
-
-		if (pn == i+1 || header.parameters.length == pn) {
-			datasets.shift(); // Remove first element
-			info(datasets); // Start next dataset
-			return; // All parameters for dataset have been checked.
 		}
 
 		var parameter = header.parameters[pn].name;
@@ -963,7 +1018,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					// Check next parameter
 					datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll);
 				} else {
-					console.log("here;")
+					// Case where one parameter given. See TODO above.
+					datar(datasets,header,start,stop,useTimeoutFor,-1,bodyAll);
 				}
 			})
 	}

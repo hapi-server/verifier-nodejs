@@ -400,10 +400,24 @@ function LengthAppropriate(len,type,name) {
 }
 exports.LengthAppropriate = LengthAppropriate;
 
-function TimeFirstParameter(header) {
-	return {"description": "is.TimeFirstParameter(): First parameter should (not must) be named 'Time' b/c clients will likely label first parameter as 'Time' on plot to protect against first parameter names that are not sensible.", "error": header.parameters[0].name !== "Time", "got": header.parameters[0].name};
+function FirstParameterOK(header,what) {
+	if (what == "name") {
+		return {"description": "is.FirstParameterOK(): First parameter should (not must) be named 'Time' b/c clients will likely label first parameter as 'Time' on plot to protect against first parameter names that are not sensible.", "error": header.parameters[0].name !== "Time", "got": header.parameters[0].name};
+	}
+	if (what == "fill") {
+		var t = false;
+		var got = 'null';
+		if (!('fill' in header.parameters[0]) {
+			got = 'No fill entry.'
+		}
+		if (header.parameters[0].fill != null) {
+			t = true;
+			got = header.parameters[0].fill;
+		}
+		return {"description": "is.FirstParameterOK(): First parameter must have a fill of null or it should not be specified.", "error": t, "got": got};
+	}
 }
-exports.TimeFirstParameter = TimeFirstParameter;
+exports.FirstParameterOK = FirstParameterOK;
 
 function UnitsOK(units,type) {
 

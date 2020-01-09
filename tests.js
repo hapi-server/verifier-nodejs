@@ -608,7 +608,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					return;
 				}
 
-				report(url,is.TimeFirstParameter(header),{"warn":true});
+				report(url,is.FirstParameterOK(header, "name"),{"warn":true});
+				report(url,is.FirstParameterOK(header, "fill"),{"warn":true});
 				report(url,is.TimeIncreasing(header,"{start,stop}Date"));
 				report(url,is.TimeIncreasing(header,"sample{Start,Stop}Date"));
 								

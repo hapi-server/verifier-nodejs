@@ -598,7 +598,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				if (header.parameters) {
 					if (header.parameters[0].name) {
 						report(url,is.Unique(header.parameters,"parameters","name"));
-						header.parameters = removeDuplicates(header.parameters,'name');
+						//header.parameters = removeDuplicates(header.parameters,'name');
 					} else {
 						report(url,{"description":"Expect first parameter object to have a key 'name'","error":true,"got": JSON.stringify(header.parameters[0])},{"abort":true});
 						return;						
@@ -608,8 +608,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					return;
 				}
 
+				report(url,is.FormatInHeader(header, "nodata"));
 				report(url,is.FirstParameterOK(header, "name"),{"warn":true});
-				report(url,is.FirstParameterOK(header, "fill"),{"warn":true});
+				report(url,is.FirstParameterOK(header, "fill"));
 				report(url,is.TimeIncreasing(header,"{start,stop}Date"));
 				report(url,is.TimeIncreasing(header,"sample{Start,Stop}Date"));
 								
@@ -676,7 +677,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					} else {
 						var useTimeoutFor = "datasampledefault";
 						// Check one day
-						report(url,{"description":"Not enough information to compute time.max to use.  Using time.min = startDate and time.max = startDate + P1D.","error":true,"got":"No cadence and no sampleStartDate and sampleStopDate."},{"warn":true});
+						report(url,{"description":"Not enough information to compute time.max to use for data tests. Using time.min = startDate and time.max = startDate + P1D.","error":true,"got":"No cadence and no sampleStartDate and sampleStopDate."},{"warn":true});
 						var stop  = new Date(start).valueOf() + 86400*1000;
 						var stop = new Date(stop).toISOString();
 					}
@@ -768,6 +769,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		if (CLOSED) {return;}
 
 		// Request all parameters.
+		// TODO: Need to set useTimeoutFor as in info() and infor()
 
 		if (!start || !stop) {
 			report(url,{"description":"Need at least startDate and stopDate or sampleStartDate and sampleStopDate to continue.","error":true,"got":"To abort"},{"abort":true});
@@ -782,7 +784,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					if (useTimeoutFor === "datapreviousfail") {
 						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
 						// Start checking individual parameters. Skip test
-						// using different time format (data2())
+						// using different time format (data2()) and request
+						// with header (data3()).
 						datar(datasets,header,start,stop,useTimeoutFor,0,null);
 					} else {
 						requesterr(url,err,useTimeoutFor,{"warn":true});
@@ -838,9 +841,39 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		request({"url":url,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}},
 			function (err,res,body) {
-				if (err) {return;}
+
+				// TODO: Code below is very similar to that in data()
+				if (err) {
+					if (useTimeoutFor === "datapreviousfail") {
+						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
+						// Start checking individual parameters. Skip test
+						// using different time format (data2()) and request
+						// with header (data3()).
+						datar(datasets,header,start,stop,useTimeoutFor,0,null);
+					} else {
+						requesterr(url,err,useTimeoutFor,{"warn":true});
+						// Try again
+						data2(datasets,header,start,stop,"datapreviousfail");
+					}
+					return;
+				}
+
+				if (!report(url,is.HTTP200(res),{"stop":true})) {
+					data3(datasets,header,start,stop,useTimeoutFor,bodyAll);
+					return;
+				}
+				if (!report(url,is.FileOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
+					data3(datasets,header,start,stop,useTimeoutFor,bodyAll);					
+					return;
+				}
+				if (!bodyAll || bodyAll.length === 0) {
+					data3(datasets,header,start,stop,useTimeoutFor,bodyAll);
+					return;					
+				}
+				// End repeated code.
+
 				report(url,is.FileDataOK(header,body,bodyAll,null,"contentsame"));
-				datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+				data3(datasets,header,start,stop,useTimeoutFor,bodyAll);
 			});		
 
 		function md2doy(timestr) {
@@ -864,6 +897,74 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			//console.log("Modified: " + timestrnew);
 			return timestrnew;
 		}
+	}
+
+	function data3(datasets,header,start,stop,useTimeoutFor,bodyAll) {
+
+		// Same as data() but request with header.
+		if (CLOSED) {return;}
+
+		var url = ROOT + '/data?id='+ datasets[0].id + '&time.min=' + start + '&time.max=' + stop;
+		url = url + "&include=header";
+		report(url);
+		request({"url":url,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}},
+			function (err,res,body) {
+
+				// TODO: Code below is very similar to that in data()
+				if (err) {
+					if (useTimeoutFor === "datapreviousfail") {
+						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
+						// Start checking individual parameters. Skip test
+						// using different time format (data2()) and request
+						// with header (data3()).
+						datar(datasets,header,start,stop,useTimeoutFor,0,null);
+					} else {
+						requesterr(url,err,useTimeoutFor,{"warn":true});
+						// Try again
+						data3(datasets,header,start,stop,"datapreviousfail");
+					}
+					return;
+				}
+
+				if (!report(url,is.HTTP200(res),{"stop":true})) {
+					datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+					return;
+				}
+				if (!report(url,is.FileOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
+					datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+					return;
+				}
+				if (!bodyAll || bodyAll.length === 0) {
+					datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+					return;					
+				}
+				// End repeated code.
+
+				var bodyLines = body.split(/\r?\n/);
+				var headerLines = "";
+				var dataLines = "";
+
+				// Extract header lines.
+				for (var i = 0; i < bodyLines.length; i++) {
+					if (bodyLines[i][0] === "#") {
+						headerLines = headerLines + bodyLines[i].slice(1);
+					} else {
+						break;
+					}
+				}
+
+				// TODO: Need to make ignore differences in newline string \r\n should
+				// be considered same as \n.
+				var dataLines = bodyLines.slice(i).join("\n");
+				if (report(url,is.JSONparsable(headerLines),{"abort":false})) {
+					var bodyJSON = JSON.parse(headerLines)
+					report(url,is.FormatInHeader(bodyJSON, "data"));
+					report(url,is.HeaderSame(header, bodyJSON));
+					report(url,is.FileDataOK(header,bodyAll,dataLines,null,"contentsame"));
+				}
+				datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+		})
+
 	}
 
 	function datar(datasets,header,start,stop,useTimeoutFor,pn,bodyAll) {

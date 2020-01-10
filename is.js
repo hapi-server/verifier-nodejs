@@ -1,6 +1,7 @@
 var fs        = require('fs');
 var moment    = require('moment');
 var Validator = require('jsonschema').Validator;
+var diff      = require('deep-diff').diff;
 
 // Note that for reporting to have correct line numbers, must start functions with
 // function FNAME( and start description with 'is.FNAME()'.
@@ -188,12 +189,14 @@ function FileDataOK(header,body,bodyAll,pn,what) {
 	if (what === "contentsame") {
 		var e = false;
 		var got = "Match";
+		var desc = "is.FileDataOK(): Expect data response to be same as previous request given differing request URLs. (Checks byte equivalence not content equivalence.)";
+
 		if (bodyAll !== body) { // byte equivalent
 
-			if (lines.length != linesAll.length) { // # lines same.
+			if (lines.length != linesAll.length) { // # lines not same.
 				e = true;
 				got = lines.length + " rows vs. " + linesAll.length + " rows.";
-				return {"description":"Expect response to be same as previous request given different time format is used in this request (checks byte equivalence not content equivalence).", "error": e, "got": got};		
+				return {"description":desc, "error": e, "got": got};		
 			}
 
 			// Look for location of difference.
@@ -222,18 +225,19 @@ function FileDataOK(header,body,bodyAll,pn,what) {
 			if (e1) {
 				got = line.length + " columns vs. " + lineAll.length + " columns on line " + (i+1) + ".";
 				e = true;
-				return {"description":"Expect response to be same as previous request given different time format is used in this request (checks byte equivalence not content equivalence).", "error": e, "got": got};		
+				return {"description":desc, "error": e, "got": got};		
 			}
 			if (e2) {
 				got = "Difference on line " + (i+1) + " column " + (nf+1) + ".";
 				e = true;
-				return {"description":"Expect response to be same as previous request given different time format is used in this request (checks byte equivalence not content equivalence).", "error": e, "got": got};		
+				return {"description":desc, "error": e, "got": got};		
 			}
+			// TODO: Can e1 and e2 be false?
 		}
-		return {"description":"Expect response to be same as previous request given different time format is used in this request (checks byte equivalence not content equivalence).", "error": e, "got": got};		
+		return {"description":desc, "error": e, "got": got};		
 	}
 
-	var desc = "Expect data from one parameter request to match data from all parameter request.";
+	var desc = "is.FileDataOK(): Expect data from one parameter request to match data from all parameter request.";
 	var t = false;
 	var got = "Match";
 
@@ -257,7 +261,7 @@ function FileDataOK(header,body,bodyAll,pn,what) {
 		return {"description":"is.FileDataOK(): " + desc,"error":t,"got":got};
 	}
 
-	var desc = "Expect content from one parameter request to match content from all parameter request.";
+	var desc = "is.FileDataOK(): Expect content from one parameter request to match content from all parameter request.";
 	t = false;
 
 	var line = "";
@@ -400,6 +404,63 @@ function LengthAppropriate(len,type,name) {
 }
 exports.LengthAppropriate = LengthAppropriate;
 
+function HeaderSame(headerInfo, headerBody) {
+	// Compare header from info response with header in data response
+
+	var differences = diff(headerInfo, headerBody);	
+	var keptDiffs = [];
+
+	console.log(headerInfo);
+	console.log(headerBody);
+	console.log(differences);
+	if (differences) {
+		for (var i = 0; i < differences.length; i++) {
+			if (differences[i].path[0] !== 'format' && differences[i].path[0] !== 'creationDate') {
+				console.log('path: ' + differences[i].path);
+				var keep = true;
+				for (j = 0; j < differences[i].path.length; j++) {
+					//console.log("path[" + j + "] = " + differences[i].path[j]);
+					if (typeof(differences[i].path[j]) === 'string' && differences[i].path[j].substring(0,2) === 'x_') {
+						keep = false;
+						break;
+					}
+				}
+				if (keep) {
+					keptDiffs.push(differences[i]);
+				}
+			}
+		}
+	}
+	var desc = "is.HeaderSame(): Expect header in info response to match header in data response when 'include=header' requested.";
+	if (keptDiffs.length == 0) {
+		return {"description": desc, "error": false, "got": "Matching headers."};
+	} else {
+		var got = "Differences:\n" + JSON.stringify(keptDiffs);
+		return {"description": desc, "error": true, "got": got};
+	}
+}
+exports.HeaderSame = HeaderSame;
+
+function FormatInHeader(header,type) {
+	if (type == "nodata") {
+		var t = 'format' in header;
+		var got = 'No format given.'
+		if (t) {
+			got = "Format of '" + header.format + "' specified."
+		}
+		return {"description": "is.FormatInHeader(): Info response should not have 'format' specified.", "error": t, "got": got};		
+	}
+	if (type == "data") {
+		var t = !('format' in header);
+		var got = 'No format given.'
+		if (!t) {
+			got = "Format of '" + header.format + "' specified."
+		}
+		return {"description": "is.FormatInHeader(): Header in csv response should have 'format: csv' specified.", "error": t, "got": got};		
+	}
+}
+exports.FormatInHeader = FormatInHeader;
+
 function FirstParameterOK(header,what) {
 	if (what == "name") {
 		return {"description": "is.FirstParameterOK(): First parameter should (not must) be named 'Time' b/c clients will likely label first parameter as 'Time' on plot to protect against first parameter names that are not sensible.", "error": header.parameters[0].name !== "Time", "got": header.parameters[0].name};
@@ -407,7 +468,7 @@ function FirstParameterOK(header,what) {
 	if (what == "fill") {
 		var t = false;
 		var got = 'null';
-		if (!('fill' in header.parameters[0]) {
+		if (!('fill' in header.parameters[0])) {
 			got = 'No fill entry.'
 		}
 		if (header.parameters[0].fill != null) {
@@ -421,7 +482,8 @@ exports.FirstParameterOK = FirstParameterOK;
 
 function UnitsOK(units,type) {
 
-	if (!units) {return;} // No unit or units=null so no test needed.
+	// No unit, units=null, or units !== 'isotime' so no test needed.
+	if (!units || type !== 'isotime') {return;} 
 	var t = false;
 	var got = "type = '" + type + "' and units = '" + units + "' for parameter " + name + ".";
 	if (type == "isotime" && units !== "UTC") {

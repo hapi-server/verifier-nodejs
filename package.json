@@ -17,13 +17,14 @@
   },
   "dependencies": {
     "chalk": "*",
+    "deep-diff": "^1.0.2",
     "express": "^4.15.3",
     "ip": "1.1.5",
     "jsonschema": "^1.1.1",
     "moment": "^2.18.1",
+    "request": "^2.81.0",
     "semver": "^5.5.0",
-    "yargs": "^8.0.2",
-    "request": "^2.81.0"
+    "yargs": "^8.0.2"
   },
   "scripts": {
     "start": "node verify.js --port 9999",

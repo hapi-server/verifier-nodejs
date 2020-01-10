@@ -959,7 +959,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				if (report(url,is.JSONparsable(headerLines),{"abort":false})) {
 					var bodyJSON = JSON.parse(headerLines)
 					report(url,is.FormatInHeader(bodyJSON, "data"));
-					report(url,is.HeaderSame(header, bodyJSON));
+					report(url,is.HeaderSame(header, bodyJSON), {'warn': true});
 					report(url,is.FileDataOK(header,bodyAll,dataLines,null,"contentsame"));
 				}
 				datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);

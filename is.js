@@ -410,13 +410,13 @@ function HeaderSame(headerInfo, headerBody) {
 	var differences = diff(headerInfo, headerBody);	
 	var keptDiffs = [];
 
-	console.log(headerInfo);
-	console.log(headerBody);
-	console.log(differences);
+	//console.log(headerInfo);
+	//console.log(headerBody);
+	//console.log(differences);
 	if (differences) {
 		for (var i = 0; i < differences.length; i++) {
 			if (differences[i].path[0] !== 'format' && differences[i].path[0] !== 'creationDate') {
-				console.log('path: ' + differences[i].path);
+				//console.log('path: ' + differences[i].path);
 				var keep = true;
 				for (j = 0; j < differences[i].path.length; j++) {
 					//console.log("path[" + j + "] = " + differences[i].path[j]);

@@ -485,6 +485,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					report(url,is.Unique(datasets,"datasets","id"));
 					var datasets = removeDuplicates(datasets,'id');
 					report(url,is.TooLong(datasets,"catalog","id","title",40),{"warn":true});
+					report(url,is.CIdentifier(datasets,"dataset id"),{"warn":true});					
 					infoerr(datasets);
 				} else {
 					report(url,

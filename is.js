@@ -102,6 +102,27 @@ function CadenceOK(cadence,start,stop,what) {
 }
 exports.CadenceOK = CadenceOK;
 
+function CIdentifier(arr,type) {
+	var re_str = "[_a-zA-Z][_a-zA-Z0-9]{1,30}";
+
+	var arr_fail = [];
+	for (var i = 0; i < arr.length;i++) {
+		var re = new RegExp(re_str);
+		var t = re.test(arr[i]);
+		if (!t) {
+			arr_fail.push(arr[i]);
+		}
+	}
+	var got = "All " + type + "(s) match.";
+	if (arr_fail.length > 0) {
+		console.log(arr_fail);
+		got = "Non-matching " + type + "(s):" + JSON.stringify(arr_fail);
+	}
+	return {"description": "is.CIdentifier(): Expect " + type + " to match c identifier regex '" + re_str + "'.", "error": arr_fail.length > 0, "got": got};
+
+}
+exports.CIdentifier = CIdentifier;
+
 function ErrorCorrect(code,wanted,what) {
 
 	if (what === "httpcode") {

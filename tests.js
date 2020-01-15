@@ -352,22 +352,22 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		if (typeof(root.tries) === "undefined") {
 			root.tries = 0
-			var timeoutFor = "default";
+			var metaTimeout = "default";
 		} else {
 			root.tries += 1;
-			var timeoutFor = "defaultpreviousfail";			
+			var metaTimeout = "defaultpreviousfail";			
 		};
 
 		var url = ROOT;
 		report(url);
-		request({"url": url, "timeout": timeout(timeoutFor)},
+		request({"url": url, "timeout": timeout(metaTimeout)},
 			function (err,res,body) {
 				if (err) {
 					if (root.tries == 0) {
-						requesterr(url,err,timeoutFor,{"warn":true});
+						requesterr(url,err,metaTimeout,{"warn":true});
 						root(); // Try again
 					} else {
-						requesterr(url,err,timeoutFor);
+						requesterr(url,err,metaTimeout);
 						capabilities();
 					}
 					return;
@@ -387,24 +387,24 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		if (typeof(capabilities.tries) === "undefined") {
 			capabilities.tries = 0
-			var timeoutFor = "default";
+			var metaTimeout = "default";
 		} else {
 			capabilities.tries += 1;
-			var timeoutFor = "defaultpreviousfail";			
+			var metaTimeout = "defaultpreviousfail";			
 		};
 
 		var url = ROOT + "/capabilities";
 		report(url);
 		//console.log(ip.address())
-		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()} },
+		request({"url":url,"timeout": timeout(metaTimeout), "headers": {"Origin": ip.address()} },
 			function (err,res,body) {
 
 				if (err) {
 					if (capabilities.tries == 0) {
-						requesterr(url,err,timeoutFor,{"warn":true});
+						requesterr(url,err,metaTimeout,{"warn":true});
 						capabilities(); // Try again
 					} else {
-						requesterr(url,err,timeoutFor);
+						requesterr(url,err,metaTimeout);
 						catalog();
 					}
 					return;
@@ -438,23 +438,28 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		if (typeof(catalog.tries) === "undefined") {
 			catalog.tries = 0
-			var timeoutFor = "default";
+			var metaTimeout = "default";
 		} else {
 			catalog.tries += 1;
-			var timeoutFor = "defaultpreviousfail";			
+			var metaTimeout = "defaultpreviousfail";			
 		};
 
 		var url = ROOT + "/catalog";
 		report(url);
-		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}},
+		request(
+			{
+				"url": url,
+				"timeout": timeout(metaTimeout),
+				"headers": {"Origin": ip.address()}
+			},
 			function (err,res,body) {
 
 				if (err) {
 					if (catalog.tries == 0) {
-						requesterr(url,err,timeoutFor,{"warn":true});
+						requesterr(url,err,metaTimeout,{"warn":true});
 						catalog(); // Try again
 					} else {
-						requesterr(url,err,timeoutFor,{"abort":true});
+						requesterr(url,err,metaTimeout,{"abort":true});
 					}
 					return;
 				}
@@ -482,7 +487,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					report(url,is.TooLong(datasets,"catalog","id","title",40),{"warn":true});
 					infoerr(datasets);
 				} else {
-					report(url,{"description":"Expect datasets element in catalog","error":true,"got": datasets},{"abort":true});
+					report(url,
+						{
+							"description": "Expect datasets element in catalog",
+						 	"error": true,
+						 	"got": datasets
+						 },
+						 {"abort":true});
 					return
 				}
 			})
@@ -494,10 +505,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		if (typeof(infoerr.tries) === "undefined") {
 			infoerr.tries = 0
-			var timeoutFor = "default";
+			var metaTimeout = "default";
 		} else {
 			infoerr.tries += 1;
-			var timeoutFor = "defaultpreviousfail";			
+			var metaTimeout = "defaultpreviousfail";			
 		};
 
 		var url = ROOT + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
@@ -507,10 +518,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 				if (err) {
 					if (infoerr.tries == 0) {
-						requesterr(url,err,timeoutFor,{"warn":true});
+						requesterr(url,err,metaTimeout,{"warn":true});
 						infoerr(datasets); // Try again
 					} else {
-						requesterr(url,err,timeoutFor,{"abort":false});
+						requesterr(url,err,metaTimeout,{"abort":false});
 						info(datasets);
 					}
 					return;
@@ -518,13 +529,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				report(url,is.ErrorCorrect(res.statusCode,404,"httpcode"));
-				report(url,is.ErrorInformative(res.statusMessage,1406,"httpmessage"),{"warn":true});
+				var err1406 = errors(1406);
+				report(url,is.StatusInformative(res.statusMessage,err1406.status.message,'httpstatus'),{"warn":true});
 				if (report(url,is.JSONparsable(body),{"stop":true})) {
 					var json = JSON.parse(body);
 					if (report(url,is.HAPIJSON(body,VERSION,'HAPIStatus'),{"stop":true})) {
 						report(url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
-						var err1406 = errors(1406);
-						report(url,is.ErrorInformative(json.status.message,err1406.status.message,"hapimessage"),{"warn":true});
+						report(url,is.StatusInformative(json.status.message,err1406.status.message,'hapistatus'),{"warn":true});
 					} 
 				}
 				info(datasets);
@@ -535,7 +546,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		if (CLOSED) {return;}
 
-		if (datasets.length == 0) { // All datsets have been checked.
+		if (datasets.length == 0) {
+			// All datsets have been checked.
 			report();
 			return;
 		}
@@ -549,13 +561,21 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			// Only check one dataset with id = ID.
 			datasets = selectOne(datasets,'id',ID);
 			if (datasets.length == 0) {
-				if (!report(url,{"description": "Dataset " + ID + " is not in catalog","error":true,"got": "to abort"},{"abort":true})) {
+				if (!report(url,
+								{
+									"description": "Dataset " + ID + " is not in catalog",
+									"error": true,
+									"got": "to abort"
+								},
+								{"abort":true}
+							)
+					) {
 					return;
 				}
 			}
 		}
 
-		var timeoutFor = "default";
+		var metaTimeout = "default";
 		if (typeof(info.tries) === "undefined") {
 			info.tries = [];
 		}
@@ -563,7 +583,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			info.tries[datasets.length] = 0;
 		} else {
 			info.tries[datasets.length] += 1;
-			timeoutFor = "defaultpreviousfail";			
+			metaTimeout = "defaultpreviousfail";			
 		}
 
 		report(url);
@@ -575,15 +595,15 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			if (RES) RES.write("&nbsp&nbsp;<font style='color:black;background:#00CED1'>Note</font>:&nbsp" + note + "<br>");
 		}
 
-		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}},
+		request({"url":url,"timeout": timeout(metaTimeout), "headers": {"Origin": ip.address()}},
 			function (err,res,body) {
 
 				if (err) {
 					if (info.tries[datasets.length] == 0) {
-						requesterr(url,err,timeoutFor,{"warn":true});
+						requesterr(url,err,metaTimeout,{"warn":true});
 						info(datasets); // Try again
 					} else {
-						requesterr(url,err,timeoutFor);
+						requesterr(url,err,metaTimeout);
 						datasets.shift(); // Remove first element
 						info(datasets); // Start next dataset
 					}
@@ -658,11 +678,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				if (START && STOP) {
 					var start = START;
 					var stop  = STOP;
-					var useTimeoutFor = "datasamplechosen";
+					var dataTimeout = "datasamplechosen";
 				} else if (header["sampleStartDate"] && header["sampleStopDate"]) {
 					var start = header["sampleStartDate"];
 					var stop  = header["sampleStopDate"];
-					var useTimeoutFor = "datasamplesuggested";
+					var dataTimeout = "datasamplesuggested";
 					report(url,is.CadenceOK(header["cadence"],start,stop,"sampleStart/sampleStop"),{"warn":true});
 				} else {
 					var start = header["startDate"];
@@ -673,27 +693,28 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 						var md = moment.duration(header["cadence"]);
 						var stop = new Date(start).valueOf() + 10*md._milliseconds;
 						var stop = new Date(stop).toISOString();
-						var useTimeoutFor = "datasample10xcadence";
+						var dataTimeout = "datasample10xcadence";
 					} else {
-						var useTimeoutFor = "datasampledefault";
+						var dataTimeout = "datasampledefault";
 						// Check one day
 						report(url,{"description":"Not enough information to compute time.max to use for data tests. Using time.min = startDate and time.max = startDate + P1D.","error":true,"got":"No cadence and no sampleStartDate and sampleStopDate."},{"warn":true});
 						var stop  = new Date(start).valueOf() + 86400*1000;
 						var stop = new Date(stop).toISOString();
 					}
 				}
-				infor(datasets,header,start,stop,useTimeoutFor);
+				infor(datasets,header,start,stop,dataTimeout);
 			})
 	}
 
-	function infor(datasets,header,start,stop,useTimeoutFor) {
+	function infor(datasets,header,start,stop,dataTimeout) {
 		
 		if (CLOSED) {return;}
 
-		// Check if JSON response has two parameter objects when only one parameter is requested.
-		// Checks only the second parameter (first parameter after Time).
+		// Check if JSON response has two parameter objects when only
+		// one parameter is requested. Checks only the second parameter
+		// (first parameter after Time).
 
-		var timeoutFor = "default";
+		var metaTimeout = "default";
 		if (typeof(infor.tries) === "undefined") {
 			infor.tries = [];
 		}
@@ -701,12 +722,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			infor.tries[datasets.length] = 0;
 		} else {
 			infor.tries[datasets.length] += 1;
-			timeoutFor = "defaultpreviousfail";			
+			metaTimeout = "defaultpreviousfail";			
 		};
 
 		if (header.parameters.length == 1) {
 			// Time is only parameter; can't do request for second parameter.
-			data(datasets,header,start,stop,useTimeoutFor);
+			dataAll_YMD(datasets,header,start,stop,dataTimeout);
 			return;
 		}
 
@@ -719,29 +740,37 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				}
 			}
 		}
-		var url = ROOT + '/info' + "?id=" + datasets[0].id + '&parameters=' + parameter;
+		var url = ROOT + '/info' 
+					+ "?id=" + datasets[0].id 
+					+ '&parameters=' + parameter;
 
 		report(url);
-		request({"url":url,"timeout": timeout(timeoutFor), "headers": {"Origin": ip.address()}},
+		request(
+			{
+				"url": url,
+				"timeout": timeout(metaTimeout),
+				"headers": {"Origin": ip.address()}
+			},
 			function (err,res,body) {
 				if (err) {
 					if (infor.tries[datasets.length] == 0) {
-						requesterr(url,err,timeoutFor,{"warn":true});
-						infor(datasets,header,start,stop,useTimeoutFor); // Try again
+						// Try again
+						requesterr(url,err,metaTimeout,{"warn":true});
+						infor(datasets,header,start,stop,dataTimeout); 
 					} else {
 						requesterr(url,err,'default',{"stop":true});
-						data(datasets,header,start,stop,useTimeoutFor);
+						dataAll_YMD(datasets,header,start,stop,dataTimeout);
 					}
 					return;
 				}
 
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					data(datasets,header,start,stop,useTimeoutFor);
+					dataAll_YMD(datasets,header,start,stop,dataTimeout);
 					return;
 				}
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				if (!report(url,is.JSONparsable(body),{"stop":true})) {
-					data(datasets,header,start,stop,useTimeoutFor);
+					dataAll_YMD(datasets,header,start,stop,dataTimeout);
 					return;
 				}
 				var headerReduced = JSON.parse(body); // Reduced header
@@ -760,51 +789,74 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				}
 				var equivalent = isEquivalent(header,headerReduced,headerReduced.parameters[1],true);
 				report(url,{"description":"Expect info response for one parameter to match content in response for all parameters","error": !equivalent, "got": (equivalent ? "Match." : "Mismatch.")});
-				data(datasets,header,start,stop,useTimeoutFor);
+				dataAll_YMD(datasets,header,start,stop,dataTimeout);
 			})
 	}
 
-	function data(datasets,header,start,stop,useTimeoutFor) {
+	function dataAll_YMD(datasets,header,start,stop,dataTimeout) {
+
+		// Request all parameters.
 
 		if (CLOSED) {return;}
 
-		// Request all parameters.
-		// TODO: Need to set useTimeoutFor as in info() and infor()
+		if (typeof(dataAll_YMD.tries) === "undefined") {
+			dataAll_YMD.tries = 0
+			var useTimeout = dataTimeout;
+		} else {
+			dataAll_YMD.tries += 1;
+			var useTimeout = "datapreviousfail";			
+		};
 
 		if (!start || !stop) {
-			report(url,{"description":"Need at least startDate and stopDate or sampleStartDate and sampleStopDate to continue.","error":true,"got":"To abort"},{"abort":true});
+			report(url,
+					{
+						"description":"Need at least startDate and stopDate or sampleStartDate and sampleStopDate to continue.",
+						"error":true,
+						"got":"To abort"
+					},
+					{"abort": true});
 		}
 
-		var url = ROOT + '/data?id='+ datasets[0].id + '&time.min=' + start + '&time.max=' + stop;
+		var url = ROOT 
+					+ '/data?id=' + datasets[0].id 
+					+ '&time.min=' + start 
+					+ '&time.max=' + stop;
+
 		report(url);
-		request({"url":url,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}},
+		request(
+			{
+				"url": url,
+				"gzip": true,
+				"timeout": timeout(useTimeout),
+				"headers": {"Origin": ip.address()}
+			},
 			function (err,res,bodyAll) {
 
 				if (err) {
-					if (useTimeoutFor === "datapreviousfail") {
-						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
+					if (useTimeout === "datapreviousfail") {
+						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
 						// Start checking individual parameters. Skip test
-						// using different time format (data2()) and request
-						// with header (data3()).
-						datar(datasets,header,start,stop,useTimeoutFor,0,null);
+						// using different time format (dataAll_YDOY()) and request
+						// with header (dataAll_YMD_Header()).
+						datar(datasets,header,start,stop,dataTimeout,null,0);
 					} else {
-						requesterr(url,err,useTimeoutFor,{"warn":true});
+						requesterr(url,err,useTimeout,{"warn":true});
 						// Try again
-						data(datasets,header,start,stop,"datapreviousfail");
+						dataAll_YMD(datasets,header,start,stop,dataTimeout);
 					}
 					return;
 				}
 
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					data2(datasets,header,start,stop,useTimeoutFor,bodyAll);
+					dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
 				}
 				if (!report(url,is.FileOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
-					data2(datasets,header,start,stop,useTimeoutFor,bodyAll);					
+					dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll);					
 					return;
 				}
 				if (!bodyAll || bodyAll.length === 0) {
-					data2(datasets,header,start,stop,useTimeoutFor,bodyAll);
+					dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;					
 				}
 
@@ -819,64 +871,81 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 				report(url,is.FileDataOK(header,bodyAll,null,null,'Ncolumns'));
 
-				data2(datasets,header,start,stop,useTimeoutFor,bodyAll);
+				dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll);
 		})
 	}
 
-	function data2(datasets,header,start,stop,useTimeoutFor,bodyAll) {
+	function dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll) {
+
+		// Same request as dataAll_YMD() but with different time format.
 
 		if (CLOSED) {return;}
 
-		// Same request as data() but with different time format.
+		if (typeof(dataAll_YDOY.tries) === "undefined") {
+			dataAll_YDOY.tries = 0
+			var useTimeout = dataTimeout;
+		} else {
+			dataAll_YDOY.tries += 1;
+			var useTimeout = "datapreviousfail";			
+		};
+
 		var startnew = md2doy(start);
 		var stopnew = md2doy(stop);
 
 		if (startnew === start && stopnew === stop) {
 			// No check to perform.
-			datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+			datar(datasets,header,start,stop,dataTimeout,bodyAll,0);
 			return;
 		}
 
-		var url = ROOT + '/data?id='+ datasets[0].id + '&time.min=' + startnew + '&time.max=' + stopnew;
+		var url = ROOT + '/data?id=' + datasets[0].id
+					+ '&time.min=' + startnew
+					+ '&time.max=' + stopnew;
 
-		request({"url":url,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}},
+		request({
+					"url": url,
+					"gzip": true,
+					"timeout": timeout(useTimeout),
+					"headers": {"Origin": ip.address()}
+				},
 			function (err,res,body) {
 
-				// TODO: Code below is very similar to that in data()
+				// TODO: Code below is very similar to that in dataAll_YMD()
 				if (err) {
-					if (useTimeoutFor === "datapreviousfail") {
-						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
+					if (useTimeout === "datapreviousfail") {
+						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
 						// Start checking individual parameters. Skip test
-						// using different time format (data2()) and request
-						// with header (data3()).
-						datar(datasets,header,start,stop,useTimeoutFor,0,null);
+						// using different time format (dataAll_YDOY()) and request
+						// with header (dataAll_YMD_Header()).
+						datar(datasets,header,start,stop,dataTimeout,null,0);
 					} else {
-						requesterr(url,err,useTimeoutFor,{"warn":true});
+						requesterr(url,err,useTimeout,{"warn":true});
 						// Try again
-						data2(datasets,header,start,stop,"datapreviousfail");
+						dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll);
 					}
 					return;
 				}
 
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					data3(datasets,header,start,stop,useTimeoutFor,bodyAll);
+					dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
 				}
-				if (!report(url,is.FileOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
-					data3(datasets,header,start,stop,useTimeoutFor,bodyAll);					
+				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
+					dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll);					
 					return;
 				}
-				if (!bodyAll || bodyAll.length === 0) {
-					data3(datasets,header,start,stop,useTimeoutFor,bodyAll);
+				if (!body || body.length === 0) {
+					dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;					
 				}
-				// End repeated code.
+				// End similar code.
 
 				report(url,is.FileDataOK(header,body,bodyAll,null,"contentsame"));
-				data3(datasets,header,start,stop,useTimeoutFor,bodyAll);
+				dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll);
 			});		
 
 		function md2doy(timestr) {
+			// Converts from YYYY-MM-DD to YYYY-DOY or vice-versa
 			//console.log("Original: " + timestr.substring(0,10));
 			var timestrnew = timestr;
 			if (/[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(timestr)) {
@@ -899,46 +968,61 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		}
 	}
 
-	function data3(datasets,header,start,stop,useTimeoutFor,bodyAll) {
+	function dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll) {
 
-		// Same as data() but request with header.
+		// Same as dataAll_YMD() but request with header.
+
 		if (CLOSED) {return;}
 
-		var url = ROOT + '/data?id='+ datasets[0].id + '&time.min=' + start + '&time.max=' + stop;
-		url = url + "&include=header";
+		if (typeof(dataAll_YDOY.tries) === "undefined") {
+			dataAll_YMD_Header.tries = 0
+			var useTimeout = dataTimeout;
+		} else {
+			dataAll_YMD_Header.tries += 1;
+			var useTimeout = "datapreviousfail";			
+		};
+
+		var url = ROOT + '/data?id=' + datasets[0].id 
+					+ '&time.min=' + start 
+					+ '&time.max=' + stop
+					+ "&include=header";
 		report(url);
-		request({"url":url,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}},
+		request(
+			{
+				"url": url,
+				"gzip": true,
+				"timeout": timeout(useTimeout),
+				"headers": {"Origin": ip.address()}
+			},
 			function (err,res,body) {
 
-				// TODO: Code below is very similar to that in data()
+				// TODO: Code below is very similar to that in dataAll_YMD()
 				if (err) {
-					if (useTimeoutFor === "datapreviousfail") {
-						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
-						// Start checking individual parameters. Skip test
-						// using different time format (data2()) and request
-						// with header (data3()).
-						datar(datasets,header,start,stop,useTimeoutFor,0,null);
+					if (useTimeout === "datapreviousfail") {
+						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
+						// Start next test
+						dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
 					} else {
-						requesterr(url,err,useTimeoutFor,{"warn":true});
+						requesterr(url,err,useTimeout,{"warn":true});
 						// Try again
-						data3(datasets,header,start,stop,"datapreviousfail");
+						dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll);
 					}
 					return;
 				}
 
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+					dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
 				}
-				if (!report(url,is.FileOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
-					datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
+					dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
 				}
-				if (!bodyAll || bodyAll.length === 0) {
-					datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+				if (!body || body.length === 0) {
+					dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;					
 				}
-				// End repeated code.
+				// End similar code.
 
 				var bodyLines = body.split(/\r?\n/);
 				var headerLines = "";
@@ -962,16 +1046,94 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					report(url,is.HeaderSame(header, bodyJSON), {'warn': true});
 					report(url,is.FileDataOK(header,bodyAll,dataLines,null,"contentsame"));
 				}
-				datar(datasets,header,start,stop,useTimeoutFor,0,bodyAll);
+				dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
 		})
-
 	}
 
-	function datar(datasets,header,start,stop,useTimeoutFor,pn,bodyAll) {
+	function dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll) {
+
+		// Attempt to create a HAPI 1201 response (no data in interval) by setting
+		// start time to be 1 ms after reported dataset start and stop time to be
+		// 2 ms after reported start.
 
 		if (CLOSED) {return;}
+		
+		if (typeof(dataAll_1201.tries) === "undefined") {
+			dataAll_1201.tries = 0
+			var useTimeout = dataTimeout;
+		} else {
+			dataAll_1201.tries += 1;
+			var useTimeout = "datapreviousfail";			
+		};
+
+		var stop2 = start;
+		var start2 = start;
+
+		// moment.js assumes local time if no trailing Z. Add trailing
+		// Z if it is not given. The trailingZfix function addresses
+		// case where stop2 is a date only, in which case moment.js
+		// does not accept a date only with a trailing Z and it is removed.
+		if (!start2.match(/Z$/)) {
+			start2 = start2 + "Z";
+		}
+		if (!stop2.match(/Z$/)) {
+			stop2 = stop2 + "Z";
+		}
+		var start2 = moment(is.trailingZfix(start2)).add(1,'ms').toISOString();
+		var stop2 = moment(is.trailingZfix(stop2)).add(2,'ms').toISOString();
+		if (!start.match(/Z$/)) {
+			// If start did not have trailing Z, remove it from new start.
+			start2 = start2.slice(0,-1);
+		}
+		if (!stop.match(/Z$/)) {
+			// If stop did not have trailing Z, remove it from new stop.
+			stop2 = stop2.slice(0,-1);
+		}
+
+		var url = ROOT + '/data?id='+ datasets[0].id 
+					+ '&time.min=' + start2 
+					+ '&time.max=' + stop2;
+
+		report(url);
+		request(
+			{
+				"url": url,
+				"gzip": true,
+				"timeout": timeout(useTimeout),
+				"headers": {"Origin": ip.address()}
+			},
+			function (err,res,body) {
+
+				// TODO: Code below is very similar to that in dataAll_YMD()
+				if (err) {
+					if (useTimeout === "datapreviousfail") {
+						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
+						// Start next check
+						datar(datasets,header,start,stop,dataTimeout,bodyAll,0);
+					} else {
+						requesterr(url,err,useTimeout,{"warn":true});
+						// Try again
+						dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
+					}
+					return;
+				}
+
+				if (!report(url,is.HTTP200(res),{"stop":true})) {
+					datar(datasets,header,start,stop,dataTimeout,bodyAll,0);
+					return;
+				}
+				// End similar code.
+
+				report(url,is.FileOK(body,"empty",res.statusMessage),{"warn":true});
+				datar(datasets,header,start,stop,dataTimeout,bodyAll,0);
+		})		
+	}
+
+	function datar(datasets,header,start,stop,dataTimeout,bodyAll,pn) {
 
 		// Reduced data request. Request one parameter at a time.
+
+		if (CLOSED) {return;}
 
 		if (pn == -1 || pn == header.parameters.length) {
 			// -1 is case when one parameter given (!PARAMETER is true)
@@ -996,35 +1158,52 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		var parameter = header.parameters[pn].name;
 
 		if (!parameter) {
-			report(url,{"description":"Parameter #" + pn + " does not have a name.","error":true,"got":"No name."},{"stop":true});
+			report(url,
+						{
+							"description": "Parameter #" + pn + " does not have a name.",
+							"error": true,
+							"got": "No name."
+						},
+						{"stop":true}
+					);
 			// Check next parameter
-			datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll);
+			datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn);
 			return;
 		}
 
 		if (!start || !stop) {
-			report(url,{"description":"Need at least startDate and stopDate or sampleStartDate and sampleStopDate to continue.","error":true,"got":"To abort"},{"abort":true});
+			report(url,
+						{
+							"description": "Need at least startDate and stopDate or sampleStartDate and sampleStopDate to continue.",
+							"error":true,"got":"To abort"}
+						,
+						{"abort":true}
+					);
 		}
 
-		var url = ROOT + '/data?id='+ datasets[0].id + '&parameters=' + parameter + '&time.min=' + start + '&time.max=' + stop;
+		var url = ROOT + '/data?id=' + datasets[0].id
+					+ '&parameters=' + parameter
+					+ '&time.min=' + start
+					+ '&time.max=' + stop;
 		report(url);
-		request({"url":url,"gzip":true,"timeout": timeout(useTimeoutFor), "headers": {"Origin": ip.address()}},
+		request({"url":url,"gzip":true,"timeout": timeout(dataTimeout), "headers": {"Origin": ip.address()}},
 			function (err,res,body) {
 
 				if (err) {
-					if (useTimeoutFor === "datapreviousfail") {
-						requesterr(url,err,useTimeoutFor,{"warn":true,"stop":true});
+					if (dataTimeout === "datapreviousfail") {
+						requesterr(url,err,dataTimeout,{"warn":true,"stop":true});
 						// Start on next parameter
-						datar(datasets,header,start,stop,"datapreviousfail",++pn,bodyAll);
+						datar(datasets,header,start,stop,"datapreviousfail",bodyAll,++pn);
 					} else {
-						requesterr(url,err,useTimeoutFor,{"warn":true});
+						requesterr(url,err,dataTimeout,{"warn":true});
 						// Try again
-						datar(datasets,header,start,stop,"datapreviousfail",pn,bodyAll);
+						datar(datasets,header,start,stop,"datapreviousfail",bodyAll,++pn);
 					}
 					return;
 				}
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll); // Check next parameter
+					// Check next parameter
+					datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn); 
 					return;
 				}
 
@@ -1034,12 +1213,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
 					// Check next parameter
-					datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll);
+					datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn);
 					return;
 				}
 				if (!body || body.length === 0) {
 					// Check next parameter
-					datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll);
+					datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn);
 					return;					
 				}
 
@@ -1072,7 +1251,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				if (pn == 0) {
 					// Time was requested parameter, no more columns to check
 					report(url,is.SizeCorrect(line1.length-1,0,header.parameters[pn]),{"warn":false});
-					datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll); // Check next parameter
+					// Check next parameter
+					datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn);
 					return;
 				}
 
@@ -1089,7 +1269,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				}
 
 				// TODO: Check all lines?
-				// Move this look into is.FileOK?
+				// Move this check into is.FileOK?
 				for (var j=1;j < nf;j++) {
 					if (j == 1 || j == nf-1) {var shush = false} else {shush = true}
 					var extra = ' in column ' + j + ' on first line.'
@@ -1108,7 +1288,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					}
 				}
 
-				// Note line.length - 1 = because split() adds extra empty element at end if trailing newline.
+				// Note line.length - 1 = because split() adds extra empty
+				// element at end if trailing newline.
 				report(url,is.SizeCorrect(line1.length-1,nf-1,header.parameters[pn]),{"warn":true});
 				
 				if (bodyAll) {
@@ -1118,10 +1299,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 				if (!PARAMETER) {
 					// Check next parameter
-					datar(datasets,header,start,stop,useTimeoutFor,++pn,bodyAll);
+					datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn);
 				} else {
 					// Case where one parameter given. See TODO above.
-					datar(datasets,header,start,stop,useTimeoutFor,-1,bodyAll);
+					datar(datasets,header,start,stop,dataTimeout,bodyAll,-1);
 				}
 			})
 	}

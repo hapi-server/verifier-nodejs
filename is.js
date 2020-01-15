@@ -51,6 +51,8 @@ function trailingZfix(str) {
 	} 
 	return str;
 }
+exports.trailingZfix = trailingZfix;
+
 function isinteger(str) {
 	return parseInt(str) < 2^31 - 1 && parseInt(str) > -2^31 && parseInt(str) == parseFloat(str) && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim());
 }
@@ -103,38 +105,35 @@ exports.CadenceOK = CadenceOK;
 function ErrorCorrect(code,wanted,what) {
 
 	if (what === "httpcode") {
-		return {"description": "is.ErrorCorrect(): Expect HTTP code to be " + wanted, "error": code != wanted, "got": code};
+		return {"description": "is.ErrorCorrect(): Expect HTTP code in JSON to be " + wanted, "error": code != wanted, "got": code};
 	}
 	if (what === "hapicode") {
 		t = code == wanted
 		var got = code;
 		if (t != true) {got = code + "."}
-		return {"description": "is.ErrorCorrect(): Expect HAPI code to be " + wanted, "error": t != true, "got": got};
+		return {"description": "is.ErrorCorrect(): Expect HAPI code in JSON to be " + wanted, "error": t != true, "got": got};
 	}
 
 }
 exports.ErrorCorrect = ErrorCorrect;
 
-function ErrorInformative(message,wanted,what) {
+function StatusInformative(message,wanted,what) {
 
-	if (what === "httpmessage") {
-		var wanted = "HAPI " + wanted;
-		var re = new RegExp(wanted);
-		var t = re.test(message);
-		var l = "<a href='https://github.com/hapi-server/verifier-nodejs/issues/19'>Explanation.</a>";
-		return {"description": "is.ErrorInformative(): Want HTTP header status message to match '" + wanted + "'. ("+l+")", "error": t != true, "got": "'" + message + "'"};
+	var re = new RegExp(wanted);
+	var t = re.test(message);
+	var got = message;
+	if (t !== true) {got = message + "."}
+
+	if (what === "hapistatus") {
+		var l = "<a href='https://github.com/hapi-server/verifier-nodejs/wiki#status-informative'>(Explanation.)</a>";
+		return {"description": "is.StatusInformative(): Want HAPI status message in JSON response to contain the string '" + wanted + "' (default HAPI error message). " + l, "error": t !== true, "got": "'" + message + "'"};
 	}
-
-	if (what === "hapimessage") {
-		var re = new RegExp(wanted);
-		var t = re.test(wanted);
-		var got = message;
-		if (t != true) {got = message + "."}
-		return {"description": "is.ErrorInformative(): Want status.message element of response to contain the string '" + wanted + "' (default HAPI error message)", "error": t != true, "got": "'" + message + "'"};
+	if (what === "httpstatus") {
+		var l = "<a href='https://github.com/hapi-server/verifier-nodejs/wiki#status-informative'>(Explanation.)</a>";
+		return {"description": "is.StatusInformative(): Want HTTP status message to contain the string '" + wanted + "' (default HAPI error message). " + l, "error": t !== true, "got": "'" + message + "'"};
 	}
-
 }
-exports.ErrorInformative = ErrorInformative;
+exports.StatusInformative = StatusInformative;
 
 function FileDataOK(header,body,bodyAll,pn,what) {
 
@@ -294,6 +293,11 @@ function FileDataOK(header,body,bodyAll,pn,what) {
 		t = false;
 		// Parameter
 		for (var j=0;j<nf-1;j++) {
+			if (!line[1+j] || !lineAll[fc+1]) {
+				t = false;
+				got = "Problem with line " + (j) + ": " + line[1+j];
+				break;
+			}
 			if (line[1+j].trim() !== lineAll[fc+j].trim()) {
 				if (header.parameters[pn].name) {
 					var name = "'" + header.parameters[pn].name + "'";
@@ -336,13 +340,12 @@ function FileOK(body,what,other) {
 
 		var emptyExpected = /HAPI 1201/.test(other);
 		if ( (!body || body.length === 0) && emptyExpected) {
-			return {"description":'is.FileOK(): Expect file to be empty if HAPI 1201 in first HTTP header line.',"error":false,"got": "Empty body and HTTP 1201."};
+			return {"description":'is.FileOK(): Expect no HTTP response body if HAPI 1201 in HTTP header status message.',"error":false,"got": "Empty body and 'HAPI 1201' in HTTP header status message."};
 		}
-		if (!body || body.length === 0) {
-			return {"description":'is.FileOK(): Expect file to not be empty unless HAPI 1201 in first HTTP header line.',"error":true,"got":body.length + " bytes."};
-		} else {
-			return {"description":'is.FileOK(): Expect file to not be empty',"error":false,"got":body.length + " bytes."};			
+		if ( (!body || body.length === 0) && !emptyExpected) {
+			return {"description":'is.FileOK(): If no HTTP response body, expect HAPI 1201 in HTTP header status message.',"error":true,"got": "Empty body and HTTP header status message of '" + other + "'"};
 		}
+		return {"description":'is.FileOK(): Expect HTTP response body.',"error": false,"got": body.length + " bytes."};			
 	}
 
 	if (what === "firstchar") {
@@ -655,7 +658,18 @@ function TimeIncreasing(header,what) {
 			var line = header[i].split(",");
 			var linenext = header[i+1].split(",");
 			//var t = new Date(linenext[0].trim()).getTime() > new Date(line[0].trim()).getTime();
-			var t = moment( trailingZfix(linenext[0].trim()) ).valueOf() > moment( trailingZfix(line[0].trim()) ).valueOf();
+			if (!line || !linenext) {
+				t = false;
+				got = "Problem with line " + (i) + " or " + (i+1);
+				break;
+			}
+			try {
+				var t = moment( trailingZfix(linenext[0].trim()) ).valueOf() > moment( trailingZfix(line[0].trim()) ).valueOf();
+			} catch (e) {
+				t = false;
+				got = "Was not able to parse either " + linenext[0].trim() + " or " + line[0].trim();
+				break;
+			}
 			//console.log(linenext[0].trim())
 			//console.log(moment.valueOf(linenext[0].trim()))
 			if (!t) {
@@ -731,9 +745,12 @@ function HAPITime(isostr,version) {
 			result = HAPITime(str,version);
 			if (result.error == true) {
 				t = false;
-				got = str + " is not a valid HAPI Time string.";
+				got = "'" + str + "'" + " is not a valid HAPI Time string.";
 				if (!/Z$/.test(str)) {
 					got = got + " (Missing trailing Z.)";
+				}
+				if (!/^[0-9]$/.test(str)) {
+					got = got + " (First character is not [0-9].)";
 				}
 				break;
 			}

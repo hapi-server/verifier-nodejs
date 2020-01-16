@@ -71,6 +71,46 @@ function isfloat(str) {
 	return Math.abs(parseFloat(str)) < Number.MAX_VALUE && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
 }
 
+function RequestError(err,res,timeoutType,timeoutObj) {
+
+	var tout = timeoutObj[timeoutType]["timeout"];
+	var when = timeoutObj[timeoutType]["when"];
+
+	if (!err) {
+		// Remove nonsense extra precision on timings.
+		var timings = res.timings;
+		for (var key in timings) {
+			timings[key] = timings[key].toFixed(1);
+		}
+		var timingPhases = res.timingPhases;
+		for (var key in timingPhases) {
+			timingPhases[key] = timingPhases[key].toFixed(1);
+		}
+
+		var timeInfo = "";
+		if (timingPhases && timings) {
+			timeInfo = JSON.stringify(timings) + ", " + JSON.stringify(timingPhases);
+			timeInfo = " <a href='https://github.com/request/request#requestoptions-callback'>Timing info [ms]</a>: " + timeInfo;
+		}
+		return {"description":"is.RequestError(): Expect no request error for timeout of " + tout + " ms used when " + when,"error": false,"got": "No error." + timeInfo};
+	}
+
+	if (err.code === "ETIMEDOUT") {
+		// https://github.com/request/request/blob/master/request.js#L846
+		return {"description":"is.RequestError(): Expect HTTP headers and start of response body in less than " + tout + " ms when " + when,"error": true,"got": "ETIMEDOUT"};
+	} else if (err.code === "ESOCKETTIMEDOUT") {
+		//https://github.com/request/request/blob/master/request.js#L811
+		 return {"description":"is.RequestError(): Expect time interval between bytes sent to be less than " + tout + " ms when " + when,"error": true,"got": "ESOCKETTIMEDOUT"};
+	} else if (err.code === "ECONNRESET") {
+		return {"description":"is.RequestError(): Expect connection to not be reset by server","error": true,"got": "ECONNRESET"};
+	} else if (err.code === "ECONNREFUSED") {
+		return {"description":"is.RequestError(): Expect connection to not be refused by server","error": true,"got": "ECONNREFUSED"};
+	} else {
+		return {"description":"is.RequestError(): Probably URL is malformed.","error":true,"got":err};
+	}
+}
+exports.RequestError = RequestError;
+
 function CadenceValid(cadence) {
 	var md = moment.duration(cadence);
 	var t = md._isValid;

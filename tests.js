@@ -204,13 +204,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			for (var i = 0;i<report.warns.length;i++) {
 				if (RES) RES.write("<br><a href='" + report.warns[i].url.replace(/\&parameters/,"&amp;parameters") + "'>" + report.warns[i].url.replace(/\&parameters/,"&amp;parameters") + "</a><br>")
 				if (!RES) console.log("|" + clc.blue(report.warns[i].url));
-				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:yellow'>Warn:</font>&nbsp;" + report.warns[i].description + "; Got: <b>" + report.warns[i].got.toString().replace(/\n/g,"<br>").replace(/\s/g,"&nbsp;") + "</b><br>");
+				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:yellow'>Warn:</font>&nbsp;" + report.warns[i].description + "; Got: <b>" + report.warns[i].got.toString().replace(/\n/g,"<br>") + "</b><br>");
 				if (!RES) console.log("|  " + clc.yellowBright.inverse("Warn") + " " + report.warns[i].description + "; Got: " + clc.bold(report.warns[i].got));
 			}
 			for (var i = 0;i<report.fails.length;i++) {
 				if (RES) RES.write("<br><a href='" + report.fails[i].url.replace(/\&parameters/,"&amp;parameters") + "'>" + report.fails[i].url.replace(/\&parameters/,"&amp;parameters") + "</a><br>")
 				if (!RES) console.log("|" + clc.blue(report.fails[i].url));
-				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:red'>Fail</font>&nbsp;" + report.fails[i].description + "; Got: <b>" + report.fails[i].got.toString().replace(/\n/g,"<br>").replace(/\s/g,"&nbsp;") + "</b><br>");
+				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:red'>Fail</font>&nbsp;" + report.fails[i].description + "; Got: <b>" + report.fails[i].got.toString().replace(/\n/g,"<br>") + "</b><br>");
 				if (!RES) console.log("|  " + clc.red.inverse("Fail") + " " + report.fails[i].description + "; Got: " + clc.bold(report.fails[i].got));
 			}
 
@@ -294,11 +294,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		}
 		if (obj.error == true && warn == false) {
 			report.fails.push(obj)
-			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='color:black;background:red'>Fail</font>:&nbsp" + obj.description + ";&nbsp;Got: <b>" + obj.got.toString().replace(/\n/g,"<br>").replace(/\s/g,"&nbsp;")+ "</b><br>");
+			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='color:black;background:red'>Fail</font>:&nbsp" + obj.description + ";&nbsp;Got: <b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
 			if (!RES) console.log(indentcons + "  " + clc.inverse.red("Fail") + ": " + obj.description + "; Got: " + clc.bold(obj.got));
 		} else if (obj.error == true && warn == true) {
 			report.warns.push(obj)
-			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='color:black;background:yellow'>Warn</font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b>" + obj.got.toString().replace(/\n/g,"<br>").replace(/\s/g,"&nbsp;") + "</b><br>");
+			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='color:black;background:yellow'>Warn</font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
 			if (!RES) console.log(indentcons + "  " + clc.yellowBright.inverse("Warn") + ": " + obj.description + "; Got: " + clc.bold(obj.got));
 		} else {
 			report.passes.push(obj);
@@ -307,7 +307,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				if (!RES) console.log(indentcons + "  " + "Passes are being suppressed.");
 			}
 			if (report.shushon == false) {
-				if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='color:black;background:green'>Pass</font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b>" + obj.got.toString().replace(/\n/g,"<br>").replace(/\s/g,"&nbsp;") + "</b><br>");
+				if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='color:black;background:green'>Pass</font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
 				if (!RES) console.log(indentcons + "  " + clc.green.inverse("Pass") + ": " + obj.description + "; Got: " + clc.bold(obj.got));
 			}
 		}
@@ -328,40 +328,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		return !(obj.error && stop) 
 	}
 
-	function requesterr(url,err,what,obj) {
-
-		// Catch errors that occur when reqeust is made and before tests are done on response.
-		if (obj) {
-			if (!obj.warn) obj.warn = false;
-			if (!obj.stop) obj.stop = false;
-			if (!obj.abort) obj.abort = false;
-		} else {
-			obj = {"warn":false,"stop":false,"abort":false,"showurl":true};
-		}
-
-		if (!err) {
-			report(url,{"description":"is.RequestError(): Expect no request error.","error": false,"got": "No error."});
-			return;
-		}
-
-		var tout = timeout(what);
-		var when = timeout(what,"when");
-
-		if (err.code === "ETIMEDOUT") {
-			// https://github.com/request/request/blob/master/request.js#L846
-			report(url,{"description":"is.RequestError(): Expect HTTP headers and start of response body in less than " + tout + " ms when " + when,"error": true,"got": "ETIMEDOUT"},obj)
-		} else if (err.code === "ESOCKETTIMEDOUT") {
-			//https://github.com/request/request/blob/master/request.js#L811
-			report(url,{"description":"is.RequestError(): Expect time interval between bytes sent to be less than " + tout + " ms when " + when,"error": true,"got": "ESOCKETTIMEDOUT"},obj)
-		} else if (err.code === "ECONNRESET") {
-			report(url,{"description":"is.RequestError(): Expect connection to not be reset by server","error": true,"got": "ECONNRESET"},obj)
-		} else if (err.code === "ECONNREFUSED") {
-			report(url,{"description":"is.RequestError(): Expect connection to not be refused by server","error": true,"got": "ECONNREFUSED"},obj)
-		} else {
-			report(url,{"description":"is.RequestError(): Probably URL is malformed.","error":true,"got":err},obj);
-		}
-	}
-
 	function root() {
 
 		// Check optional landing page.
@@ -379,18 +345,16 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		request({"url": url, "timeout": timeout(metaTimeout), "time": true},
 			function (err,res,body) {
 				if (err) {
+					report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 					if (root.tries == 0) {
-						requesterr(url,err,metaTimeout,{"warn":true});
 						root(); // Try again
 					} else {
-						requesterr(url,err,metaTimeout);
 						capabilities();
 					}
 					return;
 				}
-				console.log(res.timings);
-				console.log(res.timingPhases);
-				requesterr(url,null,metaTimeout);
+
+				report(url,is.RequestError(err,res,metaTimeout,timeout()));
 
 				// TODO: if (!body), warn.
 				//console.log(res);
@@ -416,19 +380,20 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		var url = ROOT + "/capabilities";
 		report(url);
 		//console.log(ip.address())
-		request({"url":url,"timeout": timeout(metaTimeout), "headers": {"Origin": ip.address()} },
+		request({"url":url,"timeout": timeout(metaTimeout), "headers": {"Origin": ip.address()}, "time": true },
 			function (err,res,body) {
 
 				if (err) {
+					report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 					if (capabilities.tries == 0) {
-						requesterr(url,err,metaTimeout,{"warn":true});
 						capabilities(); // Try again
 					} else {
-						requesterr(url,err,metaTimeout);
 						catalog();
 					}
 					return;
 				}
+
+				report(url,is.RequestError(err,res,metaTimeout,timeout()));
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
@@ -471,20 +436,22 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			{
 				"url": url,
 				"timeout": timeout(metaTimeout),
-				"headers": {"Origin": ip.address()}
+				"headers": {"Origin": ip.address()},
+				"time": true
 			},
 			function (err,res,body) {
 
 				if (err) {
 					if (catalog.tries == 0) {
-						requesterr(url,err,metaTimeout,{"warn":true});
+						report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 						catalog(); // Try again
 					} else {
-						requesterr(url,err,metaTimeout,{"abort":true});
+						report(url,is.RequestError(err,res,metaTimeout,timeout()),{"abort":true});
 					}
 					return;
 				}
 
+				report(url,is.RequestError(err,res,metaTimeout,timeout()));
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
@@ -536,20 +503,20 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 		var url = ROOT + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
 		report(url);
-		request({"url":url,"timeout": timeout(metaTimeout)},
+		request({"url":url,"timeout": timeout(metaTimeout), "time": true},
 			function (err,res,body) {
 
 				if (err) {
+					report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 					if (infoerr.tries == 0) {
-						requesterr(url,err,metaTimeout,{"warn":true});
 						infoerr(datasets); // Try again
 					} else {
-						requesterr(url,err,metaTimeout,{"abort":false});
 						info(datasets);
 					}
 					return;
 				}
 
+				report(url,is.RequestError(err,res,metaTimeout,timeout()));
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				report(url,is.ErrorCorrect(res.statusCode,404,"httpcode"));
 				var err1406 = errors(1406);
@@ -619,21 +586,21 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			if (RES) RES.write("&nbsp&nbsp;<font style='color:black;background:#00CED1'>Note</font>:&nbsp" + note + "<br>");
 		}
 
-		request({"url":url,"timeout": timeout(metaTimeout), "headers": {"Origin": ip.address()}},
+		request({"url":url,"timeout": timeout(metaTimeout), "headers": {"Origin": ip.address()}, "time": true},
 			function (err,res,body) {
 
 				if (err) {
+					report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 					if (info.tries[datasets.length] == 0) {
-						requesterr(url,err,metaTimeout,{"warn":true});
 						info(datasets); // Try again
 					} else {
-						requesterr(url,err,metaTimeout);
 						datasets.shift(); // Remove first element
 						info(datasets); // Start next dataset
 					}
 					return;
 				}
 
+				report(url,is.RequestError(err,res,metaTimeout,timeout()));
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				if (!report(url,is.JSONparsable(body),{"abort":true})) return;
@@ -775,21 +742,23 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			{
 				"url": url,
 				"timeout": timeout(metaTimeout),
-				"headers": {"Origin": ip.address()}
+				"headers": {"Origin": ip.address()},
+				"time": true
 			},
 			function (err,res,body) {
 				if (err) {
 					if (infor.tries[datasets.length] == 0) {
 						// Try again
-						requesterr(url,err,metaTimeout,{"warn":true});
+						report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 						infor(datasets,header,start,stop,dataTimeout); 
 					} else {
-						requesterr(url,err,'default',{"stop":true});
+						report(url,is.RequestError(err,res,metaTimeout,timeout()),{"stop":true});
 						dataAll1(datasets,header,start,stop,dataTimeout);
 					}
 					return;
 				}
 
+				report(url,is.RequestError(err,res,metaTimeout,timeout()));
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
 					dataAll1(datasets,header,start,stop,dataTimeout);
 					return;
@@ -855,25 +824,27 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				"url": url,
 				"gzip": true,
 				"timeout": timeout(useTimeout),
-				"headers": {"Origin": ip.address()}
+				"headers": {"Origin": ip.address()},
+				"time": true
 			},
 			function (err,res,bodyAll) {
 
 				if (err) {
 					if (useTimeout === "datapreviousfail") {
-						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
+						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
 						// Start checking individual parameters. Skip test
 						// using different time format (dataAll2()) and request
 						// with header (dataAll_Header()).
-						datar(datasets,header,start,stop,"",dataTimeout,null,0);
+						datar(datasets,header,start,stop,"",useTimeout,null,0);
 					} else {
-						requesterr(url,err,useTimeout,{"warn":true});
+						report(url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true});
 						// Try again
 						dataAll1(datasets,header,start,stop,dataTimeout);
 					}
 					return;
 				}
 
+				report(url,is.RequestError(err,res,useTimeout,timeout()));
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
 					dataAll2(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
@@ -929,26 +900,28 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					"url": url,
 					"gzip": true,
 					"timeout": timeout(useTimeout),
-					"headers": {"Origin": ip.address()}
+					"headers": {"Origin": ip.address()},
+					"time": true
 				},
 			function (err,res,body) {
 
 				// TODO: Code below is very similar to that in dataAll1()
 				if (err) {
 					if (useTimeout === "datapreviousfail") {
-						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
+						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
 						// Start checking individual parameters. Skip test
 						// using different time format (dataAll2()) and request
 						// with header (dataAll_Header()).
 						datar(datasets,header,start,stop,"",dataTimeout,null,0);
 					} else {
-						requesterr(url,err,useTimeout,{"warn":true});
+						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true});
 						// Try again
 						dataAll2(datasets,header,start,stop,dataTimeout,bodyAll);
 					}
 					return;
 				}
 
+				report(url,is.RequestError(err,res,useTimeout,timeout()));
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
 					dataAll_Header(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
@@ -1017,24 +990,26 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				"url": url,
 				"gzip": true,
 				"timeout": timeout(useTimeout),
-				"headers": {"Origin": ip.address()}
+				"headers": {"Origin": ip.address()},
+				"time": true
 			},
 			function (err,res,body) {
 
 				// TODO: Code below is very similar to that in dataAll1()
 				if (err) {
 					if (useTimeout === "datapreviousfail") {
-						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
+						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
 						// Start next test
 						dataAll_1201(datasets,header,start,stop,"",dataTimeout,bodyAll);
 					} else {
-						requesterr(url,err,useTimeout,{"warn":true});
+						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true});
 						// Try again
 						dataAll_Header(datasets,header,start,stop,dataTimeout,bodyAll);
 					}
 					return;
 				}
 
+				report(url,is.RequestError(err,res,useTimeout,timeout()));
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
 					dataAll_1201(datasets,header,start,stop,"",dataTimeout,bodyAll);
 					return;
@@ -1131,24 +1106,26 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				"url": url,
 				"gzip": true,
 				"timeout": timeout(useTimeout),
-				"headers": {"Origin": ip.address()}
+				"headers": {"Origin": ip.address()},
+				"time": true
 			},
 			function (err,res,body) {
 
 				// TODO: Code below is very similar to that in dataAll1()
 				if (err) {
 					if (useTimeout === "datapreviousfail") {
-						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
+						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
 						// Start next check
 						datar(datasets,header,start,stop,version,dataTimeout,bodyAll,0);
 					} else {
-						requesterr(url,err,useTimeout,{"warn":true});
+						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true});
 						// Try again
 						dataAll_1201(datasets,header,start,stop,version,dataTimeout,bodyAll);
 					}
 					return;
 				}
 
+				report(url,is.RequestError(err,res,useTimeout,timeout()));
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
 					datar(datasets,header,start,stop,version,dataTimeout,bodyAll,0);
 					return;
@@ -1221,21 +1198,23 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			version = is.versions().pop();
 		}
 		report(url);
-		request({"url":url,"gzip":true,"timeout": timeout(dataTimeout), "headers": {"Origin": ip.address()}},
+		request({"url":url,"gzip":true,"timeout": timeout(dataTimeout), "headers": {"Origin": ip.address()}, "time": true},
 			function (err,res,body) {
 
 				if (err) {
 					if (dataTimeout === "datapreviousfail") {
-						requesterr(url,err,dataTimeout,{"warn":true,"stop":true});
+						report(url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true,"stop":true});
 						// Start on next parameter
 						datar(datasets,header,start,stop,version,"datapreviousfail",bodyAll,++pn);
 					} else {
-						requesterr(url,err,dataTimeout,{"warn":true});
+						report(url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true});
 						// Try again
 						datar(datasets,header,start,stop,version,"datapreviousfail",bodyAll,++pn);
 					}
 					return;
 				}
+
+				report(url,is.RequestError(err,res,dataTimeout,timeout()));
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
 					// Check next parameter
 					datar(datasets,header,start,stop,version,dataTimeout,version,bodyAll,++pn); 
@@ -1345,25 +1324,28 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 	function timeout(what,when) {
 
-		var datapreviousfail = 5000;
+		var datapreviousfail = DATATIMEOUT || 5000;
 		if (DATATIMEOUT) {
 			datapreviousfail = 2*datapreviousfail;
 		}
-		var metapreviousfail = 5000;
+		var metapreviousfail = METATIMEOUT || 5000;
 		if (METATIMEOUT) {
 			metapreviousfail = 2*metapreviousfail;
 		}
 
 		var obj = {
 			"datadefault":{"timeout": DATATIMEOUT || 10000,"when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."},
-			"datapreviousfail":{"timeout": DATATIMEOUT || datapreviousfail,"when":"a previous request for data failed or timed out."},
+			"datapreviousfail":{"timeout": datapreviousfail,"when":"a previous request for data failed or timed out."},
 			"datasample10xcadence":{"timeout": DATATIMEOUT || 1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
 			"datasamplesuggested":{"timeout": DATATIMEOUT || 1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
 			"datasamplechosen":{"timeout": DATATIMEOUT || 1000,"when":"time.min/max given to validator"},
-			"metadefault":{"timeout": METATIMEOUT || 200,"when":"Request is for metadata."},
-			"metapreviousfail":{"timeout": METATIMEOUT || metapreviousfail,"when":"a previous request for metadata failed or timed out."}
+			"metadefault":{"timeout": METATIMEOUT || 200,"when":"request is for metadata."},
+			"metapreviousfail":{"timeout": metapreviousfail,"when":"a previous request for metadata failed or timed out."}
 		};
 
+		if (!what) {
+			return obj;
+		}
 		if (!when) {
 			return obj[what]["timeout"];
 		} else {

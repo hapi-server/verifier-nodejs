@@ -9,7 +9,7 @@ const urllib = require('url');
 
 var is = require('./is.js'); // Test library
 
-function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
+function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RES) {
 
 	var PLOTSERVER = 'http://hapi-server.org/plot';
 	//var PLOTSERVER = 'http://localhost:5000/';
@@ -135,10 +135,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		}
 	}
 
-	if (!VERSION) {
-		VERSION = is.versions().pop();
-	}
-
 	if (REQ) {
 		var CLOSED = false;
 		REQ.connection.on('close',function() {CLOSED = true;});
@@ -148,6 +144,18 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 	process.on('uncaughtException', internalerror);
 
 	root();
+
+	function versioncheck(url,metaVersion,urlVersion) {
+		if (urlVersion) {
+			return urlVersion; // Use version given in URL
+		} else {
+			if (!report(url,is.HAPIVersion(metaVersion),{"stop":false})) {
+				return is.versions().pop(); // Use latest version
+			} else {
+				return metaVersion;
+			}
+		}		
+	}
 
 	function report(url,obj,opts) {
 
@@ -232,11 +240,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			// First call to report(); initialize and attach arrays
 			// to report object.
 			if (RES) {RES.write("<html><body>");}
-			if (RES) {
-				var linkopen = "<a href='https://github.com/hapi-server/verifier-nodejs/tree/master/schemas/HAPI-data-access-schema-"+VERSION+".json'>";
-				RES.write("Using " + linkopen + "HAPI schema version " + VERSION + "</a><br/>");
-			} else {
-				console.log("Using HAPI schema version " + VERSION);
+
+			if (VERSION) {
+				if (RES) {
+					var linkopen = "<a href='https://github.com/hapi-server/verifier-nodejs/tree/master/schemas/HAPI-data-access-schema-"+VERSION+".json'>";
+					RES.write("Using " + linkopen + "HAPI schema version " + VERSION + "</a><br/>");
+				} else {
+					console.log("Using HAPI schema version " + VERSION);
+				}
 			}
 			report.fails = [];  // Initalize failure array
 			report.passes = []; // Initalize passes array			
@@ -328,21 +339,26 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			obj = {"warn":false,"stop":false,"abort":false,"showurl":true};
 		}
 
+		if (!err) {
+			report(url,{"description":"is.RequestError(): Expect no request error.","error": false,"got": "No error."});
+			return;
+		}
+
 		var tout = timeout(what);
 		var when = timeout(what,"when");
 
 		if (err.code === "ETIMEDOUT") {
 			// https://github.com/request/request/blob/master/request.js#L846
-			report(url,{"description":"Expect headers and start of response body in less than " + tout + " ms when " + when,"error": true,"got": "ETIMEDOUT"},obj)
+			report(url,{"description":"is.RequestError(): Expect HTTP headers and start of response body in less than " + tout + " ms when " + when,"error": true,"got": "ETIMEDOUT"},obj)
 		} else if (err.code === "ESOCKETTIMEDOUT") {
 			//https://github.com/request/request/blob/master/request.js#L811
-			report(url,{"description":"Expect time interval between bytes sent to be less than " + tout + " ms when " + when,"error": true,"got": "ESOCKETTIMEDOUT"},obj)
+			report(url,{"description":"is.RequestError(): Expect time interval between bytes sent to be less than " + tout + " ms when " + when,"error": true,"got": "ESOCKETTIMEDOUT"},obj)
 		} else if (err.code === "ECONNRESET") {
-			report(url,{"description":"Expect connection to not be reset by server","error": true,"got": "ECONNRESET"},obj)
+			report(url,{"description":"is.RequestError(): Expect connection to not be reset by server","error": true,"got": "ECONNRESET"},obj)
 		} else if (err.code === "ECONNREFUSED") {
-			report(url,{"description":"Expect connection to not be refused by server","error": true,"got": "ECONNREFUSED"},obj)
+			report(url,{"description":"is.RequestError(): Expect connection to not be refused by server","error": true,"got": "ECONNREFUSED"},obj)
 		} else {
-			report(url,{"description":"Probably URL is malformed.","error":true,"got":err},obj);
+			report(url,{"description":"is.RequestError(): Probably URL is malformed.","error":true,"got":err},obj);
 		}
 	}
 
@@ -352,15 +368,15 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		if (typeof(root.tries) === "undefined") {
 			root.tries = 0
-			var metaTimeout = "default";
+			var metaTimeout = "metadefault";
 		} else {
 			root.tries += 1;
-			var metaTimeout = "defaultpreviousfail";			
+			var metaTimeout = "metapreviousfail";			
 		};
 
 		var url = ROOT;
 		report(url);
-		request({"url": url, "timeout": timeout(metaTimeout)},
+		request({"url": url, "timeout": timeout(metaTimeout), "time": true},
 			function (err,res,body) {
 				if (err) {
 					if (root.tries == 0) {
@@ -372,6 +388,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					}
 					return;
 				}
+				console.log(res.timings);
+				console.log(res.timingPhases);
+				requesterr(url,null,metaTimeout);
+
 				// TODO: if (!body), warn.
 				//console.log(res);
 				report(url,is.HTTP200(res),{"warn":true});
@@ -387,10 +407,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		if (typeof(capabilities.tries) === "undefined") {
 			capabilities.tries = 0
-			var metaTimeout = "default";
+			var metaTimeout = "metadefault";
 		} else {
 			capabilities.tries += 1;
-			var metaTimeout = "defaultpreviousfail";			
+			var metaTimeout = "metapreviousfail";			
 		};
 
 		var url = ROOT + "/capabilities";
@@ -419,11 +439,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					catalog();
 					return;
 				}
-				if (!report(url,is.HAPIJSON(body,VERSION,'capabilities'),{"stop":true})) {
+				var json = JSON.parse(body);
+				var version = versioncheck(url,json.HAPI,VERSION);
+				if (!report(url,is.HAPIJSON(body,version,'capabilities'),{"stop":true})) {
 					catalog();
 					return;
 				}
-				var json = JSON.parse(body);
 				var outputFormats = json.outputFormats || "No outputFormats element."
 				// Existence of 'csv' can't be checked with schema using enum b/c
 				// only requirement is 'csv'; any other output formats can be defined.
@@ -438,10 +459,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		if (typeof(catalog.tries) === "undefined") {
 			catalog.tries = 0
-			var metaTimeout = "default";
+			var metaTimeout = "metadefault";
 		} else {
 			catalog.tries += 1;
-			var metaTimeout = "defaultpreviousfail";			
+			var metaTimeout = "metapreviousfail";			
 		};
 
 		var url = ROOT + "/catalog";
@@ -479,7 +500,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					}
 					CATALOG["catalog"] = catr;
 				}
-				report(url,is.HAPIJSON(body,VERSION,'catalog'));
+				var version = versioncheck(url,CATALOG.HAPI,VERSION);
+				report(url,is.HAPIJSON(body,version,'catalog'));
 				var datasets = JSON.parse(body).catalog;
 				if (datasets) {
 					report(url,is.Unique(datasets,"datasets","id"));
@@ -506,15 +528,15 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 		if (typeof(infoerr.tries) === "undefined") {
 			infoerr.tries = 0
-			var metaTimeout = "default";
+			var metaTimeout = "metadefault";
 		} else {
 			infoerr.tries += 1;
-			var metaTimeout = "defaultpreviousfail";			
+			var metaTimeout = "metapreviousfail";			
 		};
 
 		var url = ROOT + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
 		report(url);
-		request({"url":url,"timeout": timeout("default")},
+		request({"url":url,"timeout": timeout(metaTimeout)},
 			function (err,res,body) {
 
 				if (err) {
@@ -534,7 +556,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				report(url,is.StatusInformative(res.statusMessage,err1406.status.message,'httpstatus'),{"warn":true});
 				if (report(url,is.JSONparsable(body),{"stop":true})) {
 					var json = JSON.parse(body);
-					if (report(url,is.HAPIJSON(body,VERSION,'HAPIStatus'),{"stop":true})) {
+					var version = versioncheck(url,json.HAPI,VERSION);
+					if (report(url,is.HAPIJSON(body,version,'HAPIStatus'),{"stop":true})) {
 						report(url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
 						report(url,is.StatusInformative(json.status.message,err1406.status.message,'hapistatus'),{"warn":true});
 					} 
@@ -576,7 +599,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			}
 		}
 
-		var metaTimeout = "default";
+		var metaTimeout = "metadefault";
 		if (typeof(info.tries) === "undefined") {
 			info.tries = [];
 		}
@@ -584,7 +607,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			info.tries[datasets.length] = 0;
 		} else {
 			info.tries[datasets.length] += 1;
-			metaTimeout = "defaultpreviousfail";			
+			metaTimeout = "metapreviousfail";			
 		}
 
 		report(url);
@@ -614,8 +637,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				if (!report(url,is.JSONparsable(body),{"abort":true})) return;
-				report(url,is.HAPIJSON(body,VERSION,'info'));
 				var header = JSON.parse(body);
+				var version = versioncheck(url,header.HAPI,VERSION);
+				report(url,is.HAPIJSON(body,version,'info'));
 				if (header.parameters) {
 					if (header.parameters[0].name) {
 						report(url,is.Unique(header.parameters,"parameters","name"));
@@ -676,7 +700,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					validCadence = !obj.error;
 				}
 
-				if (START && STOP) {
+				if (START && STOP) { 
+					// start/stop given in verifier request URL
 					var start = START;
 					var stop  = STOP;
 					var dataTimeout = "datasamplechosen";
@@ -696,7 +721,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 						var stop = new Date(stop).toISOString();
 						var dataTimeout = "datasample10xcadence";
 					} else {
-						var dataTimeout = "datasampledefault";
+						var dataTimeout = "datadefault";
 						// Check one day
 						report(url,{"description":"Not enough information to compute time.max to use for data tests. Using time.min = startDate and time.max = startDate + P1D.","error":true,"got":"No cadence and no sampleStartDate and sampleStopDate."},{"warn":true});
 						var stop  = new Date(start).valueOf() + 86400*1000;
@@ -715,7 +740,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		// one parameter is requested. Checks only the second parameter
 		// (first parameter after Time).
 
-		var metaTimeout = "default";
+		var metaTimeout = "metadefault";
 		if (typeof(infor.tries) === "undefined") {
 			infor.tries = [];
 		}
@@ -723,12 +748,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			infor.tries[datasets.length] = 0;
 		} else {
 			infor.tries[datasets.length] += 1;
-			metaTimeout = "defaultpreviousfail";			
+			metaTimeout = "metapreviousfail";			
 		};
 
 		if (header.parameters.length == 1) {
 			// Time is only parameter; can't do request for second parameter.
-			dataAll_YMD(datasets,header,start,stop,dataTimeout);
+			dataAll1(datasets,header,start,stop,dataTimeout);
 			return;
 		}
 
@@ -760,22 +785,23 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 						infor(datasets,header,start,stop,dataTimeout); 
 					} else {
 						requesterr(url,err,'default',{"stop":true});
-						dataAll_YMD(datasets,header,start,stop,dataTimeout);
+						dataAll1(datasets,header,start,stop,dataTimeout);
 					}
 					return;
 				}
 
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					dataAll_YMD(datasets,header,start,stop,dataTimeout);
+					dataAll1(datasets,header,start,stop,dataTimeout);
 					return;
 				}
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				if (!report(url,is.JSONparsable(body),{"stop":true})) {
-					dataAll_YMD(datasets,header,start,stop,dataTimeout);
+					dataAll1(datasets,header,start,stop,dataTimeout);
 					return;
 				}
 				var headerReduced = JSON.parse(body); // Reduced header
-				if (!report(url,is.HAPIJSON(body,VERSION,'info'))) {
+				var version = versioncheck(url,headerReduced.HAPI,VERSION);
+				if (!report(url,is.HAPIJSON(body,version,'info'))) {
 					if (headerReduced.parameters) {
 						if (headerReduced.parameters[0]) {
 							report(url,{"description":"Expect # parameters in JSON to be 2 when one non-time parameter is requested","error": headerReduced.parameters.length != 2,"got": headerReduced.parameters.length + " parameters."});
@@ -790,21 +816,21 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				}
 				var equivalent = isEquivalent(header,headerReduced,headerReduced.parameters[1],true);
 				report(url,{"description":"Expect info response for one parameter to match content in response for all parameters","error": !equivalent, "got": (equivalent ? "Match." : "Mismatch.")});
-				dataAll_YMD(datasets,header,start,stop,dataTimeout);
+				dataAll1(datasets,header,start,stop,dataTimeout);
 			})
 	}
 
-	function dataAll_YMD(datasets,header,start,stop,dataTimeout) {
+	function dataAll1(datasets,header,start,stop,dataTimeout) {
 
-		// Request all parameters.
+		// Request all parameters using start/stop.
 
 		if (CLOSED) {return;}
 
-		if (typeof(dataAll_YMD.tries) === "undefined") {
-			dataAll_YMD.tries = 0
+		if (typeof(dataAll1.tries) === "undefined") {
+			dataAll1.tries = 0
 			var useTimeout = dataTimeout;
 		} else {
-			dataAll_YMD.tries += 1;
+			dataAll1.tries += 1;
 			var useTimeout = "datapreviousfail";			
 		};
 
@@ -837,27 +863,27 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					if (useTimeout === "datapreviousfail") {
 						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
 						// Start checking individual parameters. Skip test
-						// using different time format (dataAll_YDOY()) and request
-						// with header (dataAll_YMD_Header()).
-						datar(datasets,header,start,stop,dataTimeout,null,0);
+						// using different time format (dataAll2()) and request
+						// with header (dataAll_Header()).
+						datar(datasets,header,start,stop,"",dataTimeout,null,0);
 					} else {
 						requesterr(url,err,useTimeout,{"warn":true});
 						// Try again
-						dataAll_YMD(datasets,header,start,stop,dataTimeout);
+						dataAll1(datasets,header,start,stop,dataTimeout);
 					}
 					return;
 				}
 
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll);
+					dataAll2(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
 				}
 				if (!report(url,is.FileOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
-					dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll);					
+					dataAll2(datasets,header,start,stop,dataTimeout,bodyAll);					
 					return;
 				}
 				if (!bodyAll || bodyAll.length === 0) {
-					dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll);
+					dataAll2(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;					
 				}
 
@@ -872,32 +898,28 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 				report(url,is.FileDataOK(header,bodyAll,null,null,'Ncolumns'));
 
-				dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll);
+				dataAll2(datasets,header,start,stop,dataTimeout,bodyAll);
 		})
 	}
 
-	function dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll) {
+	function dataAll2(datasets,header,start,stop,dataTimeout,bodyAll) {
 
-		// Same request as dataAll_YMD() but with different time format.
+		// Same request as dataAll1() but with different time format.
+		// If dataAll1() used YMD, then dataAll2() uses YDOY and vice-versa.
 
 		if (CLOSED) {return;}
 
-		if (typeof(dataAll_YDOY.tries) === "undefined") {
-			dataAll_YDOY.tries = 0
+		if (typeof(dataAll2.tries) === "undefined") {
+			dataAll2.tries = 0
 			var useTimeout = dataTimeout;
 		} else {
-			dataAll_YDOY.tries += 1;
+			dataAll2.tries += 1;
 			var useTimeout = "datapreviousfail";			
 		};
 
+		// md2doy converts YMD -> DOY or YDOY -> YMD
 		var startnew = md2doy(start);
 		var stopnew = md2doy(stop);
-
-		if (startnew === start && stopnew === stop) {
-			// No check to perform.
-			datar(datasets,header,start,stop,dataTimeout,bodyAll,0);
-			return;
-		}
 
 		var url = ROOT + '/data?id=' + datasets[0].id
 					+ '&time.min=' + startnew
@@ -911,42 +933,44 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				},
 			function (err,res,body) {
 
-				// TODO: Code below is very similar to that in dataAll_YMD()
+				// TODO: Code below is very similar to that in dataAll1()
 				if (err) {
 					if (useTimeout === "datapreviousfail") {
 						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
 						// Start checking individual parameters. Skip test
-						// using different time format (dataAll_YDOY()) and request
-						// with header (dataAll_YMD_Header()).
-						datar(datasets,header,start,stop,dataTimeout,null,0);
+						// using different time format (dataAll2()) and request
+						// with header (dataAll_Header()).
+						datar(datasets,header,start,stop,"",dataTimeout,null,0);
 					} else {
 						requesterr(url,err,useTimeout,{"warn":true});
 						// Try again
-						dataAll_YDOY(datasets,header,start,stop,dataTimeout,bodyAll);
+						dataAll2(datasets,header,start,stop,dataTimeout,bodyAll);
 					}
 					return;
 				}
 
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll);
+					dataAll_Header(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
 				}
 				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
-					dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll);					
+					dataAll_Header(datasets,header,start,stop,dataTimeout,bodyAll);					
 					return;
 				}
 				if (!body || body.length === 0) {
-					dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll);
+					dataAll_Header(datasets,header,start,stop,dataTimeout,bodyAll);
 					return;					
 				}
 				// End similar code.
 
 				report(url,is.FileDataOK(header,body,bodyAll,null,"contentsame"));
-				dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll);
+				dataAll_Header(datasets,header,start,stop,dataTimeout,bodyAll);
 			});		
 
 		function md2doy(timestr) {
 			// Converts from YYYY-MM-DD to YYYY-DOY or vice-versa
+			// TODO: Function name is confusing.
+
 			//console.log("Original: " + timestr.substring(0,10));
 			var timestrnew = timestr;
 			if (/[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(timestr)) {
@@ -969,17 +993,17 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 		}
 	}
 
-	function dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll) {
+	function dataAll_Header(datasets,header,start,stop,dataTimeout,bodyAll) {
 
-		// Same as dataAll_YMD() but request with header.
+		// Same as dataAll1() but request with header.
 
 		if (CLOSED) {return;}
 
-		if (typeof(dataAll_YDOY.tries) === "undefined") {
-			dataAll_YMD_Header.tries = 0
+		if (typeof(dataAll2.tries) === "undefined") {
+			dataAll_Header.tries = 0
 			var useTimeout = dataTimeout;
 		} else {
-			dataAll_YMD_Header.tries += 1;
+			dataAll_Header.tries += 1;
 			var useTimeout = "datapreviousfail";			
 		};
 
@@ -997,30 +1021,30 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			},
 			function (err,res,body) {
 
-				// TODO: Code below is very similar to that in dataAll_YMD()
+				// TODO: Code below is very similar to that in dataAll1()
 				if (err) {
 					if (useTimeout === "datapreviousfail") {
 						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
 						// Start next test
-						dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
+						dataAll_1201(datasets,header,start,stop,"",dataTimeout,bodyAll);
 					} else {
 						requesterr(url,err,useTimeout,{"warn":true});
 						// Try again
-						dataAll_YMD_Header(datasets,header,start,stop,dataTimeout,bodyAll);
+						dataAll_Header(datasets,header,start,stop,dataTimeout,bodyAll);
 					}
 					return;
 				}
 
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
+					dataAll_1201(datasets,header,start,stop,"",dataTimeout,bodyAll);
 					return;
 				}
 				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
-					dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
+					dataAll_1201(datasets,header,start,stop,"",dataTimeout,bodyAll);
 					return;
 				}
 				if (!body || body.length === 0) {
-					dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
+					dataAll_1201(datasets,header,start,stop,"",dataTimeout,bodyAll);
 					return;					
 				}
 				// End similar code.
@@ -1040,25 +1064,30 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 				// TODO: Need to make ignore differences in newline string \r\n should
 				// be considered same as \n.
+				// CSV response checks are for response without header.
+				// Use the HAPI version found in this check and pass through
+				// to CSV response check functions.
+				var version = "";
 				var dataLines = bodyLines.slice(i).join("\n");
 				if (report(url,is.JSONparsable(headerLines),{"abort":false})) {
-					var bodyJSON = JSON.parse(headerLines)
+					var bodyJSON = JSON.parse(headerLines);
 					report(url,is.FormatInHeader(bodyJSON, "data"));
 					report(url,is.HeaderSame(header, bodyJSON), {'warn': true});
+					var version = bodyJSON.HAPI;
 					report(url,is.FileDataOK(header,bodyAll,dataLines,null,"contentsame"));
 				}
-				dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
+				dataAll_1201(datasets,header,start,stop,version,dataTimeout,bodyAll);
 		})
 	}
 
-	function dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll) {
+	function dataAll_1201(datasets,header,start,stop,version,dataTimeout,bodyAll) {
 
 		// Attempt to create a HAPI 1201 response (no data in interval) by setting
 		// start time to be 1 ms after reported dataset start and stop time to be
 		// 2 ms after reported start.
 
 		if (CLOSED) {return;}
-		
+
 		if (typeof(dataAll_1201.tries) === "undefined") {
 			dataAll_1201.tries = 0
 			var useTimeout = dataTimeout;
@@ -1095,6 +1124,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					+ '&time.min=' + start2 
 					+ '&time.max=' + stop2;
 
+		version = versioncheck(url,version,VERSION);
 		report(url);
 		request(
 			{
@@ -1105,32 +1135,32 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 			},
 			function (err,res,body) {
 
-				// TODO: Code below is very similar to that in dataAll_YMD()
+				// TODO: Code below is very similar to that in dataAll1()
 				if (err) {
 					if (useTimeout === "datapreviousfail") {
 						requesterr(url,err,useTimeout,{"warn":true,"stop":true});
 						// Start next check
-						datar(datasets,header,start,stop,dataTimeout,bodyAll,0);
+						datar(datasets,header,start,stop,version,dataTimeout,bodyAll,0);
 					} else {
 						requesterr(url,err,useTimeout,{"warn":true});
 						// Try again
-						dataAll_1201(datasets,header,start,stop,dataTimeout,bodyAll);
+						dataAll_1201(datasets,header,start,stop,version,dataTimeout,bodyAll);
 					}
 					return;
 				}
 
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
-					datar(datasets,header,start,stop,dataTimeout,bodyAll,0);
+					datar(datasets,header,start,stop,version,dataTimeout,bodyAll,0);
 					return;
 				}
 				// End similar code.
 
 				report(url,is.FileOK(body,"empty",res.statusMessage),{"warn":true});
-				datar(datasets,header,start,stop,dataTimeout,bodyAll,0);
+				datar(datasets,header,start,stop,version,dataTimeout,bodyAll,0);
 		})		
 	}
 
-	function datar(datasets,header,start,stop,dataTimeout,bodyAll,pn) {
+	function datar(datasets,header,start,stop,version,dataTimeout,bodyAll,pn) {
 
 		// Reduced data request. Request one parameter at a time.
 
@@ -1168,7 +1198,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 						{"stop":true}
 					);
 			// Check next parameter
-			datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn);
+			datar(datasets,header,start,stop,version,dataTimeout,bodyAll,++pn);
 			return;
 		}
 
@@ -1186,6 +1216,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					+ '&parameters=' + parameter
 					+ '&time.min=' + start
 					+ '&time.max=' + stop;
+
+		if (!version && !VERSION) {
+			version = is.versions().pop();
+		}
 		report(url);
 		request({"url":url,"gzip":true,"timeout": timeout(dataTimeout), "headers": {"Origin": ip.address()}},
 			function (err,res,body) {
@@ -1194,17 +1228,17 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					if (dataTimeout === "datapreviousfail") {
 						requesterr(url,err,dataTimeout,{"warn":true,"stop":true});
 						// Start on next parameter
-						datar(datasets,header,start,stop,"datapreviousfail",bodyAll,++pn);
+						datar(datasets,header,start,stop,version,"datapreviousfail",bodyAll,++pn);
 					} else {
 						requesterr(url,err,dataTimeout,{"warn":true});
 						// Try again
-						datar(datasets,header,start,stop,"datapreviousfail",bodyAll,++pn);
+						datar(datasets,header,start,stop,version,"datapreviousfail",bodyAll,++pn);
 					}
 					return;
 				}
 				if (!report(url,is.HTTP200(res),{"stop":true})) {
 					// Check next parameter
-					datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn); 
+					datar(datasets,header,start,stop,version,dataTimeout,version,bodyAll,++pn); 
 					return;
 				}
 
@@ -1214,12 +1248,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
 					// Check next parameter
-					datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn);
+					datar(datasets,header,start,stop,version,dataTimeout,bodyAll,++pn);
 					return;
 				}
 				if (!body || body.length === 0) {
 					// Check next parameter
-					datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn);
+					datar(datasets,header,start,stop,version,dataTimeout,bodyAll,++pn);
 					return;					
 				}
 
@@ -1245,7 +1279,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 				var timeLength = header.parameters[0].length;
 				
 				report(url,is.CorrectLength(time1,timeLength,"Time","",false),{"warn":true});
-				report(url,is.HAPITime(lines,VERSION));
+
+				report(url,is.HAPITime(lines,version));
 				report(url,is.TimeIncreasing(lines,"CSV"));
 				report(url,is.TimeInBounds(lines,start,stop));
 
@@ -1253,7 +1288,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 					// Time was requested parameter, no more columns to check
 					report(url,is.SizeCorrect(line1.length-1,0,header.parameters[pn]),{"warn":false});
 					// Check next parameter
-					datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn);
+					datar(datasets,header,start,stop,version,dataTimeout,bodyAll,++pn);
 					return;
 				}
 
@@ -1300,34 +1335,44 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,REQ,RES) {
 
 				if (!PARAMETER) {
 					// Check next parameter
-					datar(datasets,header,start,stop,dataTimeout,bodyAll,++pn);
+					datar(datasets,header,start,stop,version,dataTimeout,bodyAll,++pn);
 				} else {
 					// Case where one parameter given. See TODO above.
-					datar(datasets,header,start,stop,dataTimeout,bodyAll,-1);
+					datar(datasets,header,start,stop,version,dataTimeout,bodyAll,-1);
 				}
 			})
+	}
+
+	function timeout(what,when) {
+
+		var datapreviousfail = 5000;
+		if (DATATIMEOUT) {
+			datapreviousfail = 2*datapreviousfail;
+		}
+		var metapreviousfail = 5000;
+		if (METATIMEOUT) {
+			metapreviousfail = 2*metapreviousfail;
+		}
+
+		var obj = {
+			"datadefault":{"timeout": DATATIMEOUT || 10000,"when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."},
+			"datapreviousfail":{"timeout": DATATIMEOUT || datapreviousfail,"when":"a previous request for data failed or timed out."},
+			"datasample10xcadence":{"timeout": DATATIMEOUT || 1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
+			"datasamplesuggested":{"timeout": DATATIMEOUT || 1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
+			"datasamplechosen":{"timeout": DATATIMEOUT || 1000,"when":"time.min/max given to validator"},
+			"metadefault":{"timeout": METATIMEOUT || 200,"when":"Request is for metadata."},
+			"metapreviousfail":{"timeout": METATIMEOUT || metapreviousfail,"when":"a previous request for metadata failed or timed out."}
+		};
+
+		if (!when) {
+			return obj[what]["timeout"];
+		} else {
+			return obj[what]["when"];
+		}
 	}
 }
 exports.run = run;
 
-function timeout(what,when) {
-
-	var obj = {
-		"datapreviousfail":{"timeout":5000,"when":"a previous request for data failed or timed out."},
-		"datasampledefault":{"timeout":10000,"when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."},
-		"datasample10xcadence":{"timeout":1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
-		"datasamplesuggested":{"timeout":1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
-		"datasamplechosen":{"timeout":1000,"when":"time.min/max given to validator"},
-		"default":{"timeout":200,"when":"Request is for metadata."},
-		"defaultpreviousfail":{"timeout":5000,"when":"a previous request for metadata failed or timed out."}
-	};
-
-	if (!when) {
-		return obj[what]["timeout"];
-	} else {
-		return obj[what]["when"];
-	}
-}
 
 function errors(num) {
 

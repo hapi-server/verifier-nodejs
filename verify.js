@@ -9,7 +9,7 @@ var argv = require('yargs')
 					"parameter": "",
 					"timemax": "",
 					"timemin": "",
-					"version": "2.0-1"
+					"version": ""
 				})
 				.argv
 
@@ -33,7 +33,7 @@ if (argv.url !== "") {
 	}
 	argv.parameter = argv.parameter || argv.parameters || "";
 	
-	if (!versions().includes(argv.version)) {
+	if (argv.version !== "" && !versions().includes(argv.version)) {
 		console.log("Version must be one of ",versions());
 	}
 
@@ -65,7 +65,7 @@ if (argv.url !== "") {
 			return;
 		}
 
-		var allowed = ["url","id","parameter","parameters","time.min","time.max","version"];
+		var allowed = ["url","id","parameter","parameters","time.min","time.max","version","datatimeout","metatimeout"];
 		for (var key in req.query) {
 			if (!allowed.includes(key)) {
 				res.end("Only allowed parameters are " + allowed.join(",") + " (not "+key+").");
@@ -80,7 +80,9 @@ if (argv.url !== "") {
 		// Caution: Code is duplicated in command line mode.
 		if (/\?id=/.test(req.query['url'])) {
 			req.query['id'] = req.query['url'].split("?id=")[1];
-			req.query['url'] = req.query['url'].split("?id=")[0].replace(/\/info$|\/data$|\/catalog$/,"");
+			req.query['url'] = req.query['url']
+								.split("?id=")[0]
+								.replace(/\/info$|\/data$|\/catalog$/,"");
 		}
 
 		var url   = req.query["url"]       || ""
@@ -88,10 +90,12 @@ if (argv.url !== "") {
 		var param = req.query["parameter"] || req.query["parameters"] || ""
 		var start = req.query["time.min"]  || ""
 		var stop  = req.query["time.max"]  || ""
+		var datatimeout = parseInt(req.query["datatimeout"]) || ""
+		var metatimeout = parseInt(req.query["metatimeout"]) || ""
 
 		var version = req.query["version"] || argv.version;
-		if (!versions().includes(version)) {
-			console.log("Version must be one of ",versions());
+		if (version && !versions().includes(version)) {
+			res.status(400).end("version must be one of " + JSON.stringify(versions()));
 		}
 
 		if (param) {
@@ -99,7 +103,7 @@ if (argv.url !== "") {
 				res.end("Only one parameter may be specified.");
 			}
 		}
-		tests.run(url,id,param,start,stop,version,req,res);
+		tests.run(url,id,param,start,stop,version,datatimeout,metatimeout,req,res);
 
 	})
 

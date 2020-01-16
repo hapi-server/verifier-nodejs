@@ -3,7 +3,7 @@
 		"id": "/HAPI",
 		"description": "HAPI Version",
 		"type": "string",
-		"pattern": "^2.0$"
+		"pattern": "^2.0|^2.1$"
 	},
 	"HAPIDateTime": {
 		"id": "/HAPIDateTime",

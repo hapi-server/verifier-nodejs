@@ -8,17 +8,28 @@ var diff      = require('deep-diff').diff;
 
 var schemas = {};
 schemas["1.1"] = require("./schemas/HAPI-data-access-schema-1.1.json");
-schemas["2.0"] = require("./schemas/HAPI-data-access-schema-2.0.json");
-schemas["2.0-1"] = require("./schemas/HAPI-data-access-schema-2.0-1.json");
+schemas["2.0"] = require("./schemas/HAPI-data-access-schema-2.0-1.json");
 
 function versions() {
 	arr = [];
 	for (key in schemas) {
 		arr.push(key);
 	}
-	return arr;
+	return arr.sort();
 }
 exports.versions = versions;
+
+function HAPIVersion(version) {
+	var	got = version;
+	var t = false;
+	if (versions().includes(version)) {
+		t = true;
+	} else {
+		got = "'" + version + "', which is not valid or not implemented by verifier. Will use " + versions().pop();
+	}
+	return {"description": "is.HAPIVersion(): Expect HAPI version in JSON response to be one of " + JSON.stringify(versions()), "error": t != true, "got": got};	
+}
+exports.HAPIVersion = HAPIVersion;
 
 function schema(version) {
 	var json = schemas[version];
@@ -209,13 +220,13 @@ function FileDataOK(header,body,bodyAll,pn,what) {
 	if (what === "contentsame") {
 		var e = false;
 		var got = "Match";
-		var desc = "is.FileDataOK(): Expect data response to be same as previous request given differing request URLs. (Checks byte equivalence not content equivalence.)";
+		var desc = "is.FileDataOK(): Expect data response to be same as previous request given differing request URLs.";
 
 		if (bodyAll !== body) { // byte equivalent
 
 			if (lines.length != linesAll.length) { // # lines not same.
 				e = true;
-				got = lines.length + " rows vs. " + linesAll.length + " rows.";
+				got = lines.length + " rows here vs. " + linesAll.length + " rows previously.";
 				return {"description":desc, "error": e, "got": got};		
 			}
 
@@ -359,12 +370,14 @@ function FileOK(body,what,other) {
 
 	if (what === "empty") {
 
+		var l = "<a href='https://github.com/hapi-server/verifier-nodejs/wiki#status-informative'>(Explanation.)</a>";
+
 		var emptyExpected = /HAPI 1201/.test(other);
 		if ( (!body || body.length === 0) && emptyExpected) {
-			return {"description":'is.FileOK(): Expect no HTTP response body if HAPI 1201 in HTTP header status message.',"error":false,"got": "Empty body and 'HAPI 1201' in HTTP header status message."};
+			return {"description":"is.FileOK(): Expect no HTTP response body if 'HAPI 1201' in HTTP header status message. " + l,"error":false,"got": "Empty body and 'HAPI 1201' in HTTP header status message."};
 		}
 		if ( (!body || body.length === 0) && !emptyExpected) {
-			return {"description":'is.FileOK(): If no HTTP response body, expect HAPI 1201 in HTTP header status message.',"error":true,"got": "Empty body and HTTP header status message of '" + other + "'"};
+			return {"description":"is.FileOK(): If no HTTP response body, expect 'HAPI 1201' in HTTP header status message. " + l,"error":true,"got": "Empty body and HTTP header status message of '" + other + "'"};
 		}
 		return {"description":'is.FileOK(): Expect HTTP response body.',"error": false,"got": body.length + " bytes."};			
 	}
@@ -759,7 +772,7 @@ function HAPITime(isostr,version) {
 	var t = true;
 	if (typeof(isostr) === 'object') {
 		var starttest = new Date().getTime();
-		got = "Valid HAPI Time format";
+		got = "Valid HAPI Time strings";
 		for (var i = 0; i < isostr.length; i++) {
 			if (isostr[i] === '') {break};
 			str = isostr[i].split(",")[0].trim();
@@ -782,7 +795,9 @@ function HAPITime(isostr,version) {
 			}
 			//console.log(isostr[i] + " " + t)
 		}
-		return {"description":"is.HAPITime(): Expect time column to contain valid HAPI time strings.","error":t != true,"got":got};
+		var url = "https://github.com/hapi-server/verifier-nodejs/tree/master/schemas/HAPI-data-access-schema-"+version+".json";
+
+		return {"description":"is.HAPITime(): Expect time column to contain valid <a href='"+url+"'>HAPI " + version + " HAPITime strings</a>","error":t != true,"got":got};
 	}
 	// Tests if a string is a valid HAPI time representation, which is a subset of ISO 8601.
 	// Two tests are made: (1) A set of regular expressions in the JSON schema (see ./schemas)
@@ -985,7 +1000,7 @@ function HAPIJSON(text,version,part){
 	v.addSchema(s["HAPI"], '/HAPI');
 	v.addSchema(s["HAPIDateTime"], '/HAPIDateTime');
 	v.addSchema(s["HAPIStatus"], '/HAPIStatus');
-	var version = s["HAPI"].pattern.replace("^","").replace("$","");
+	//var version = s["HAPI"].pattern.replace("^","").replace("$","");
 	var vr = v.validate(json, s[part]);
 	//console.log(JSON.stringify(vr,null,4))
 	var ve = vr.errors;
@@ -1000,6 +1015,6 @@ function HAPIJSON(text,version,part){
 		got = "\n\t" + JSON.stringify(err,null,4).replace(/\n/g,"\n\t")
 	}
 	var url = "https://github.com/hapi-server/verifier-nodejs/tree/master/schemas/HAPI-data-access-schema-"+version+".json";
-	return {"description":"is.HAPIJSON(): Expect body to be valid <a href='"+url+"'>" + part + " schema</a>","error":ve.length != 0,"got":got};
+	return {"description":"is.HAPIJSON(): Expect body to be valid <a href='"+url+"'>HAPI " + version + " " + part + " schema</a>","error":ve.length != 0,"got":got};
 }
 exports.HAPIJSON = HAPIJSON;

@@ -567,22 +567,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
 				}
 				if (PARAMETER) {
-					if (0) {
-						var Time = header.parameters[0];
-						header.parameters = selectOne(header.parameters,'name',PARAMETER);
-						header.parameters.unshift(Time);
-						if (header.parameters.length == 1) {
-							if (!report(url,
-								{
-									"description": "Parameter " + PARAMETER + " given in URL or on command line is not in parameter array returned by " + url,
-									"error": true,
-									"got": "To abort"
-								}
-								,{"abort":true})) {
-								return;
-							}
-						}
-					}
 					var tmp = selectOne(header.parameters,'name',PARAMETER);
 					if (tmp.length != 1) {
 						if (!report(url,{"description": "Parameter " + PARAMETER + " given in URL or on command line is not in parameter array returned by " + url,"error":true,"got": "To abort"},{"abort":true})) return;
@@ -619,7 +603,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					} else {
 						var dataTimeout = "datadefault";
 						// Check one day
-						report(url,{"description":"Not enough information to compute time.max to use for data tests. Using time.min = startDate and time.max = startDate + P1D.","error":true,"got":"No cadence and no sampleStartDate and sampleStopDate."},{"warn":true});
+						report(url,
+							{
+								"description": "Not enough information to compute time.max to use for data tests. Using time.min = startDate and time.max = startDate + P1D.",
+								"error":true,
+								"got":"No cadence and no sampleStartDate and sampleStopDate."
+							},
+							{"warn":true});
 						var stop  = new Date(start).valueOf() + 86400*1000;
 						var stop = new Date(stop).toISOString();
 					}

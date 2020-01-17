@@ -1,11 +1,12 @@
-var fs      = require('fs');
-var clc     = require('chalk');
-var moment  = require('moment');
-var ip      = require("ip");
-const zlib  = require('zlib');
-const http  = require('http');
-const https = require('https');
-const urllib = require('url');
+const fs      = require('fs');
+const clc     = require('chalk');
+const moment  = require('moment');
+const ip      = require("ip");
+const zlib    = require('zlib');
+const http    = require('http');
+const https   = require('https');
+const urllib  = require('url');
+const request = require('request');
 
 var is = require('./is.js'); // Test library
 
@@ -21,118 +22,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		if (!RES) console.log(clc.red('Problem with verification server (Uncaught Exception). Aborting.'));
 		if (!RES) process.exit(1);
 		if (!RES) console.log(err.stack);
-	}
-
-	function request(obj, cb) {
-
-		if (1) {
-			// Old method
-			//"request": "^2.81.0",
-			var requestAsync = require('request');
-			requestAsync(obj, function (err, res, body) {
-				cb(err,res,body);
-			});
-		}
-
-		// Remove need for large request library.
-		if (0) {
-			const URLobj = urllib.parse(obj.url);
-
-			robj = {};
-			robj.protocol = URLobj.protocol;
-			robj.host = URLobj.host.split(":")[0];
-			robj.hostname = URLobj.host.split(":")[0];
-			robj.port = URLobj.port;
-			robj.path = URLobj.path;
-
-			// Timeout not working. See 
-			// https://stackoverflow.com/questions/6214902/how-to-set-a-timeout-on-a-http-request-in-node
-			//robj.timeout = obj.timeout;
-			// Do this manually. See below.
-
-			robj.headers = {};
-			if (obj.gzip) {
-				robj.headers['Accept-Encoding'] = 'gzip';
-			}
-
-			var aborted = false;
-
-			// Time-to-First-Byte timer.
-			ttfbTimer = setTimeout(function () {
-				//console.log('ETIMEDOUT');
-				if (!aborted) {
-					aborted = true;
-					var err = new Error('ETIMEDOUT');
-					err.code = 'ETIMEDOUT';
-					err.connect = true;
-					if (typeof(req) !== "undefined") {
-						req.abort()
-						cb(err,null,null);
-					};
-				}
-			}, obj.timeout);
-
-			var proto = http;
-			if (robj.protocol === "https:") {
-				proto = https;
-			}
-			req = proto.get(robj, (res) => {
-
-				res.code = res.statusCode;
-				clearTimeout(ttfbTimer);
-
-				var gzip = res.headers['content-encoding'] === 'gzip';
-				if (gzip) {
-					var chunks = [];
-				} else {
-					var chunks = '';
-				}
-
-				res.on('data', (chunk) => {
-					if (gzip) {
-						//console.log('got chunk.')
-						chunks.push(chunk);
-					} else {
-						chunks = chunks + chunk;
-					}
-				});
-				res.on('end', () => {
-					if (gzip) {
-						var buffer = Buffer.concat(chunks);
-						zlib.gunzip(buffer, (err, buffer) => {
-							res.body = buffer && buffer.toString();
-							cb(null,res,res.body);
-						})
-					} else {
-						res.body = chunks;
-						cb(null,res,chunks);
-					}
-				});
-			})
-			.on("error", (err) => {
-				if (!aborted) {
-					aborted = true;
-					console.log('Request Error:');
-					console.log(err);
-					cb(err,null,null);
-				}
-			});
-
-			req
-				.setTimeout(obj.timeout, function () {
-					// Timeout for time between bytes.
-					console.log('ESOCKETTIMEDOUT');
-					if (!aborted) {
-						aborted = true;
-						console.log('ESOCKETTIMEDOUT');
-						var err = new Error('ESOCKETTIMEDOUT');
-						err.code = 'ESOCKETTIMEDOUT';
-						err.connect = false;
-						req.abort();
-						cb(err,null,null);
-					}
-				});
-		}
 	}
 
 	if (REQ) {
@@ -329,7 +218,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 	}
 
 	function root() {
-
 		// Check optional landing page.
 
 		if (typeof(root.tries) === "undefined") {
@@ -342,7 +230,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 		var url = ROOT;
 		report(url);
-		request({"url": url, "timeout": timeout(metaTimeout), "time": true},
+		request(
+			{
+				"url": url,
+				"timeout": timeout(metaTimeout),
+				"time": true
+			},
 			function (err,res,body) {
 				if (err) {
 					report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
@@ -379,8 +272,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 		var url = ROOT + "/capabilities";
 		report(url);
-		//console.log(ip.address())
-		request({"url":url,"timeout": timeout(metaTimeout), "headers": {"Origin": ip.address()}, "time": true },
+		request(
+			{
+				"url": url,
+				"timeout": timeout(metaTimeout),
+				"headers": {"Origin": ip.address()},
+				"time": true
+			},
 			function (err,res,body) {
 
 				if (err) {
@@ -413,7 +311,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				var outputFormats = json.outputFormats || "No outputFormats element."
 				// Existence of 'csv' can't be checked with schema using enum b/c
 				// only requirement is 'csv'; any other output formats can be defined.
-				report(url,{"description":"Expect outputFormats to have 'csv'","error": outputFormats.indexOf("csv") == -1,"got": outputFormats.toString()});
+				report(url,
+						{
+							"description":"Expect outputFormats to have 'csv'",
+							"error": outputFormats.indexOf("csv") == -1,
+							"got": outputFormats.toString()
+						});
 				catalog();
 			})
 	}
@@ -503,7 +406,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 		var url = ROOT + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
 		report(url);
-		request({"url":url,"timeout": timeout(metaTimeout), "time": true},
+		request(
+			{
+				"url": url,
+				"timeout": timeout(metaTimeout),
+				"time": true
+			},
 			function (err,res,body) {
 
 				if (err) {
@@ -612,11 +520,24 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 						report(url,is.Unique(header.parameters,"parameters","name"));
 						//header.parameters = removeDuplicates(header.parameters,'name');
 					} else {
-						report(url,{"description":"Expect first parameter object to have a key 'name'","error":true,"got": JSON.stringify(header.parameters[0])},{"abort":true});
+						report(url,
+							{
+								"description":
+								"Expect first parameter object to have a key 'name'",
+								"error": true,
+								"got": JSON.stringify(header.parameters[0])
+							},
+							{"abort":true});
 						return;						
 					}
 				} else {
-					report(url,{"description":"Expect parameters element in catalog","error":true,"got": header.parameters},{"abort":true});
+					report(url,
+						{
+							"description": "Expect parameters element in catalog",
+							"error": true,
+							"got": header.parameters
+						},
+						{"abort":true});
 					return;
 				}
 
@@ -651,7 +572,15 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 						header.parameters = selectOne(header.parameters,'name',PARAMETER);
 						header.parameters.unshift(Time);
 						if (header.parameters.length == 1) {
-							if (!report(url,{"description": "Parameter " + PARAMETER + " given in URL or on command line is not in parameter array returned by " + url,"error":true,"got": "To abort"},{"abort":true})) return;
+							if (!report(url,
+								{
+									"description": "Parameter " + PARAMETER + " given in URL or on command line is not in parameter array returned by " + url,
+									"error": true,
+									"got": "To abort"
+								}
+								,{"abort":true})) {
+								return;
+							}
 						}
 					}
 					var tmp = selectOne(header.parameters,'name',PARAMETER);
@@ -1183,8 +1112,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			report(url,
 						{
 							"description": "Need at least startDate and stopDate or sampleStartDate and sampleStopDate to continue.",
-							"error":true,"got":"To abort"}
-						,
+							"error":true,
+							"got":"To abort"
+						},
 						{"abort":true}
 					);
 		}
@@ -1198,7 +1128,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			version = is.versions().pop();
 		}
 		report(url);
-		request({"url":url,"gzip":true,"timeout": timeout(dataTimeout), "headers": {"Origin": ip.address()}, "time": true},
+		request(
+			{
+					"url": url,
+					"gzip": true,
+					"timeout": timeout(dataTimeout),
+					"headers": {"Origin": ip.address()},
+					"time": true
+			},
 			function (err,res,body) {
 
 				if (err) {
@@ -1276,7 +1213,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				var name = header.parameters[pn]["name"];
 				var size = header.parameters[pn]["size"];
 
-				var nf = 1; // Number of fields (columns) counter (start at 1 since time checked already)
+				var nf = 1; // Number of fields (columns) counter
+							// (start at 1 since time checked already)
 				if (!size) {
 					nf = nf + 1; // Width of field (number of columns of field)
 				} else {

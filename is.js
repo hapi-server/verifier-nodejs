@@ -9,6 +9,7 @@ var diff      = require('deep-diff').diff;
 var schemas = {};
 schemas["1.1"] = require("./schemas/HAPI-data-access-schema-1.1.json");
 schemas["2.0"] = require("./schemas/HAPI-data-access-schema-2.0-1.json");
+schemas["2.1"] = require("./schemas/HAPI-data-access-schema-2.1.json");
 
 function versions() {
 	arr = [];
@@ -389,7 +390,7 @@ function FileDataOK(header,body,bodyAll,pn,what) {
 }
 exports.FileDataOK = FileDataOK;
 
-function FileOK(body,what,other) {
+function FileOK(body,what,other,emptyExpected) {
 	
 	var desc,t,got;
 
@@ -399,9 +400,9 @@ function FileOK(body,what,other) {
 		}
 		if (body.length == 0 || other.length == 0) {
 			if (body.length == 0 && other.length != 0) {
-				return {"description":'is.FileOK(): If empty response for single parameter, expect empty response for all parameters.',"error":true,"got": "Single parameter body: " + body.length + " bytes. All parameter body: " + other.length + " bytes."};
+				return {"description":'is.FileOK(): If empty response for single parameter, expect empty response for all parameters.',"error": true,"got": "Single parameter body: " + body.length + " bytes. All parameter body: " + other.length + " bytes."};
 			} else {
-				return {"description":'is.FileOK(): If empty response for single parameter, expect empty response for all parameters.',"error":false,"got": "Both empty."};
+				return {"description":'is.FileOK(): If empty response for single parameter, expect empty response for all parameters.',"error": false,"got": "Both empty."};
 			}
 		} else {
 			return; // Test is not relevant.
@@ -411,15 +412,25 @@ function FileOK(body,what,other) {
 	if (what === "empty") {
 
 		var l = "<a href='https://github.com/hapi-server/verifier-nodejs/wiki#status-informative'>(Explanation.)</a>";
+		var l2 = "<a href='https://github.com/hapi-server/verifier-nodejs/wiki#empty-body'>(Explanation.)</a>";
 
-		var emptyExpected = /HAPI 1201/.test(other);
-		if ( (!body || body.length === 0) && emptyExpected) {
-			return {"description":"is.FileOK(): Expect no HTTP response body if 'HAPI 1201' in HTTP header status message. " + l,"error":false,"got": "Empty body and 'HAPI 1201' in HTTP header status message."};
+		var emptyIndicated = /HAPI 1201/.test(other);
+		if (!body || body.length === 0) {
+			if (emptyExpected && !emptyIndicated) {
+				return {"description":"is.FileOK(): If data part of response has zero length, want 'HAPI 1201' in HTTP header status message. " + l2,"error": true,"got": "Zero bytes and HTTP header status message of '" + other + "'"};
+			}
+			if (!emptyExpected) {
+				if (emptyIndicated) {
+					return {"description":"is.FileOK(): A data part of response with zero bytes was not expected. " + l2,"error": false,"got": "Zero bytes (but 'HAPI 1201' is in HTTP header status message)."};
+				} else {
+					return {"description":"is.FileOK(): A data part of response with zero bytes was not expected. " + l2,"error": true,"got": "Zero bytes and no 'HAPI 1201' in HTTP header status message."};
+				}
+			}
 		}
-		if ( (!body || body.length === 0) && !emptyExpected) {
-			return {"description":"is.FileOK(): If no HTTP response body, expect 'HAPI 1201' in HTTP header status message. " + l,"error":true,"got": "Empty body and HTTP header status message of '" + other + "'"};
+		if (body && body.length != 0 && emptyIndicated) {
+			return {"description":"is.FileOK(): A data part of response with zero bytes was expected because 'HAPI 1201 in HTTP header status messsage." + l2,"error": false,"got": "'HAPI 1201' in HTTP header status message and " + body.length + " bytes."};
 		}
-		return {"description":'is.FileOK(): Expect HTTP response body.',"error": false,"got": body.length + " bytes."};			
+		return {"description":'is.FileOK(): Expect nonzero-length data part of response.',"error": false,"got": body.length + " bytes."};		
 	}
 
 	if (what === "firstchar") {
@@ -557,16 +568,25 @@ function FirstParameterOK(header,what) {
 }
 exports.FirstParameterOK = FirstParameterOK;
 
-function UnitsOK(units,type) {
+function UnitsOK(units,type,size) {
 
-	// No unit, units=null, or units !== 'isotime' so no test needed.
-	if (!units || type !== 'isotime') {return;} 
-	var t = false;
-	var got = "type = '" + type + "' and units = '" + units + "' for parameter " + name + ".";
-	if (type == "isotime" && units !== "UTC") {
-		t = true;
+	if (units && typeof(units) === 'object') {
+		var err = false;
+		if (units.length > 1 && units.length != size) {
+			err = true;
+		}
+		var got = "parameter '" + name + "', type = '" + type + "', size = '" + size + "', units = '" + JSON.stringify(units);
+		return {"description": "is.UnitsOK: Expect units to be a string or an array with prod(size) elements.", "error": t,"got": got};		
 	}
-	return {"description": "is.UnitsOK: Expect isotime units to be UTC.", "error": t,"got": got};
+
+	if (type === 'isotime') {
+		var err = false;
+		var got = "type = '" + type + "' and units = '" + units + "' for parameter " + name + ".";
+		if (type == "isotime" && units !== "UTC") {
+			err = true;
+		}
+		return {"description": "is.UnitsOK: Expect isotime units to be 'UTC'.", "error": err,"got": got};
+	}
 }
 exports.UnitsOK = UnitsOK;
 
@@ -684,13 +704,13 @@ function HTTP200(res){
 }
 exports.HTTP200 = HTTP200;
 
-function CorrectLength(str,len,name,extra,required) {
+function CorrectLength(str,len,name,required) {
 	var extra = extra || ""
 	var required = required || false
 	var got = "(" + (str.length) + ") - (" + (len) + ")"
 	var t = str.length != len;
 	if (t && !required) {
-		got = got + extra + " Not an error for CSV, but may cause error in binary."
+		got = got + extra + " Not an error for format=csv, but will cause error for format=binary."
 	}
 	return {"description": 'is.CorrectLength(): Expect (trimmed length of ' + name + ' string parameter in CSV) - (parameters.'+ name + '.length) = 0.', "error": t, "got": got}
 }
@@ -921,7 +941,7 @@ function Float(str,extra) {
 	var extra = extra || ""
 	var t  = isfloat(str);
 	var ts = "Math.abs(parseFloat('"+str+"')) < " + Number.MAX_VALUE + " && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('"+str+"'.trim()) == true"+extra;
-	return {"description":"is.Float(): Expect " + ts, "error":t != true, "got":"/^-?\d*(\.\d+)?$/.test('"+str+"'.trim()) = "+t};
+	return {"description":"is.Float(): Expect " + ts, "error":t != true, "got": t};
 }
 exports.Float = Float;
 

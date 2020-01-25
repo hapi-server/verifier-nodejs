@@ -9,6 +9,7 @@
 	<script>
 	var testURLs = [
 		"url=http://hapi-server.org/servers/TestData/hapi",
+		"url=http://hapi-server.org/servers/TestData2.1/hapi&version=2.1",		
 		"url=http://hapi-server.org/servers/TestData/hapi&id=dataset1&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
 		"url=http://hapi-server.org/servers/TestDataBad/hapi",
 		"url=http://hapi-server.org/servers/TestDataBad/hapi&id=dataset0&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
@@ -35,7 +36,7 @@
 	</script>
 	<body>
 		<p>
-			<a href="https://github.com/hapi-server/data-specification/">HAPI 2.0</a> server verifier.  See <a href="https://github.com/hapi-server/verifier-nodejs">verifier-nodejs</a> for source code for tests.
+			<a href="https://github.com/hapi-server/data-specification/">HAPI 2.0 and 2.1</a> server verifier.  See <a href="https://github.com/hapi-server/verifier-nodejs">verifier-nodejs</a> for source code for tests.
 		</p>
 		<h3>Usage</h3>
 		<p>
@@ -58,11 +59,12 @@
 				<li>
 					<code>?url=URL&...&datatimeout=MILLISECONDS</code>
 				</li>
+				<li>
+					<code>?url=URL&...&version=VERSION</code>
+				</li>
 			</ul>
-			A version parameter may also be specified, e.g., <code>?url=URL&...&version=VERSION</code>. The allowed values of VERSION are <code>2.0</code> and <code>2.0-1</code>. Verision <code>2.0-1</code> contains schema corrections from the <code>2.0</code> version.
-
 		<p>
-			Only a <code>URL</code> that ends in <code>/hapi</code> is required.  Only one <code>ID</code> and one <code>PARAMETER</code> may be specified (a comma-separated list is not supported).
+			Only a <code>URL</code> that ends in <code>/hapi</code> is required. Only one <code>ID</code> and one <code>PARAMETER</code> may be specified (a comma-separated list is not supported).
 		</p>
 		<p>
 			When only a <code>URL</code> is provided, all datasets and all parameters are checked. For data requests, <code>time.min=sampleStartDate</code> and <code>time.max=sampleStopDate</code> are used if both are given in a dataset's <code>/info</code> response; otherwise <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> from the <code>/info</code> response are used.
@@ -70,6 +72,9 @@
 		<p>
 			The parameters <code>metatimeout</code> and <code>datatimeout</code> set the amount of time in milliseconds before a warning about response time is given. <code>metatimeout</code> applies to all non-<code>/data</code> requests. The defaults are described and given in the function <code>timeout</code> in <a href="https://github.com/hapi-server/verifier-nodejs/blob/master/tests.js">tests.js</a>.
 
+		</p>
+		<p>
+			The allowed values of VERSION are <code>2.0</code> and <code>2.1</code>.
 		</p>
 		<h3>Usage Examples</h3>
 		<p>

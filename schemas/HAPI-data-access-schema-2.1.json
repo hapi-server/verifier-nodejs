@@ -3,7 +3,7 @@
 		"id": "/HAPI",
 		"description": "HAPI Version",
 		"type": "string",
-		"pattern": "^2.0$"
+		"pattern": "^2.1$"
 	},
 	"HAPIDateTime": {
 		"id": "/HAPIDateTime",
@@ -206,9 +206,20 @@
 							"enum": ["string","double","integer","isotime"]
 						},
 						"units": {
-							"description": "Parameter units",
-							"type": ["string","null"]
-						},
+									"oneOf": [
+												{
+													"description": "Parameter units",
+													"type": ["string","null"]
+												},
+												{
+													"description": "Parameter units",
+													"type": ["array"],
+													"items": {"type": "string"},
+													"minItems": 1,
+													"minimum": 1
+												}
+											]
+								},
 						"length": {
 							"description": "Number of characters in parameter (isotime and string parameters only)",
 							"type": "integer"

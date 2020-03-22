@@ -555,19 +555,27 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					fill = header.parameters[i]["fill"];
 					units = header.parameters[i]["units"];
 
-					if (!size) {
-						size = [1];
-					}
-					report(url,is.UnitsOK(units,type,prod(size),version),{"warn":true});
-					report(url,is.FillOK(fill,type,len,name,type),{"warn":true});
+
+					//bins = header.parameters[i]["bins"];
+					// Need to also check labels and units inside of bins element.
+					// And that length(bins) = prod(size)
+					//report(url,is.BinsOK(bins,size,version,"size"));
+					//report(url,is.BinsOK(bins,size,version,"labels"));
+					//report(url,is.BinsOK(bins,size,version,"units"));
+
+					//report(url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
+					//report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
+
+					report(url,is.LabelOK(header.parameters[i]["label"],size,version));
+					report(url,is.UnitsOK(units,size,type,version));
+
+					report(url,is.FillOK(fill,type,len,name,type));
 					if (type === "string") {
 						report(url,is.FillOK(fill,type,len,name,'nullstring'),{"warn":true});
 						report(url,is.FillOK(fill,type,len,name,'stringparse'),{"warn":true});
 					}
 
 					report(url,is.LengthAppropriate(len,type,name));
-					//report(url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
-					report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
 				}
 				if (PARAMETER) {
 					var tmp = selectOne(header.parameters,'name',PARAMETER);
@@ -1145,7 +1153,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				}
 
 				if (RES) {
-					var link = PLOTSERVER+"?server=" + url.replace("/data?","&");
+					var link = PLOTSERVER+"?server=" + url.replace("/data?","&") + "&usecache=false&usedatacache=false";
 					var note = "<a target='_blank' href='" + link + "'>Direct link for following plot.</a>";
 					RES.write("&nbsp&nbsp;&nbsp&nbsp;<font style='color:black;background:#00CED1'>Note</font>:&nbsp" + note + "<br><img src='" + link + "'/><br/>");
 				}

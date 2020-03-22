@@ -142,7 +142,7 @@
 			"timeStampLocation": {
 				"description": "Indicates the positioning of the time stamp within the measurement window.",
 				"type": "string",
-				"enum": ["BEGIN","CENTER","END","OTHER"]
+				"enum": ["begin","center","end","other"]
 			},
 			"sampleStartDate": {
 				"description": "start of a sample time period for a dataset, where the time period should contain a manageable, representative example of valid, non-fill data",
@@ -208,18 +208,46 @@
 						"units": {
 									"oneOf": [
 												{
-													"description": "Parameter units",
+													"description": "Parameter unit",
 													"type": ["string","null"]
 												},
 												{
 													"description": "Parameter units",
-													"type": ["array"],
-													"items": {"type": "string"},
+													"type": "array",
+													"items": {
+																"type": ["string","null","array"]
+													},
 													"minItems": 1,
 													"minimum": 1
 												}
 											]
-								},
+						},
+						"label": {
+									"oneOf": [
+												{
+													"description": "Parameter label",
+													"type": "string",
+													"minLength": 1
+												},
+												{
+													"description": "Parameter labels",
+													"type": "array",
+													"minItems": 1,
+													"items": {
+																"type": "string",
+																"minLength": 1
+													}
+												},
+												{
+													"description": "Parameter labels",
+													"type": "array",
+													"minItems": 1,
+													"items": {
+																"type": "array"
+													}
+												}
+											]
+						},
 						"length": {
 							"description": "Number of characters in parameter (isotime and string parameters only)",
 							"type": "integer"
@@ -266,32 +294,62 @@
 											{
 												"type": "array",
 												"items": {
-													"type": "string"
+													"type": ["string","null"]
 												},
 												"minItems": 1
 
 											},
-												{"type": "string"}
-											]
+											{
+												"type": ["string", "null"]
+											}
+										]
+									},
+									"label": {
+										"description": "The label of each bin",
+										"oneOf": [
+											{
+												"type": "array",
+												"minItems": 1,
+												"items": {
+													"type": "string",
+													"minLength": 1
+												}
+											},
+											{
+												"type": "string",
+												"minLength": 1
+											}
+										]
 									},
 									"centers": {
 										"description": "The centers of each bin",
 										"type": "array",
-										"items": {
-											"type": "number"
-										},
-										"minItems": 1
+										"minItems": 1,
+										"oneOf": [
+													{
+														"items": {
+															"type": ["number", "null"]
+														}
+													}
+										]
 									},
 									"ranges": {
 										"description": "The boundaries for each bin",
 										"type": "array",
 										"minItems": 1,
 										"items": {
-											"type": "array",
-											"minItems": 2,
-											"items": {
-												"type": "number"
-											}
+											"oneOf": [
+												{
+													"type": "array",
+													"minItems": 2,
+													"items": {
+														"type": "number"
+													}
+												},
+												{
+													"type": "null"
+												}
+											]
 										}
 									}
 								}

@@ -568,17 +568,121 @@ function FirstParameterOK(header,what) {
 }
 exports.FirstParameterOK = FirstParameterOK;
 
-function UnitsOK(units,type,size) {
+function prod(arr) {
+	// Compute product of array elements.
+	return arr.reduce(function(a,b){return a*b;})
+}
 
-	if (units && typeof(units) === 'object') {
-		var err = false;
-		if (units.length > 1 && units.length != size) {
-			err = true;
-		}
-		var got = "parameter '" + name + "', type = '" + type + "', size = '" + size + "', units = '" + JSON.stringify(units);
-		return {"description": "is.UnitsOK: Expect units to be a string or an array with prod(size) elements.", "error": t,"got": got};		
+function BinsOK(name,bins,size) {
+	if (!bins) {
+		return;
 	}
 
+	var desc = "Expect bin units, label, centers, and ranges to have correct number of elements.";
+	var err = false;
+	var got = "";
+
+	// Recursive check
+	if (false && Array.isArray(bins[0])) {
+		size.shift();
+		BinsOK(name,bins[0],size);
+		return {}; 
+	}
+	var err = false;
+	var k = 1;
+	if (size.length == 1) {
+		k = 0;
+	}
+	if (size.length == 1 && bins.length != 1) {
+		err = true;
+		got = "Parameter " + name + ": bins.length = " + bins.length + " but should equal 1. ";
+	}
+	if (size.length > 1 && bins.length != size[0]) {
+		err = true;
+		got = "Parameter " + name + ": bins.length (= " + bins.length + ") != size[0] (= " + size[0] + "). ";
+	}
+	if (size.length <= 2) {
+		for (i=0; i < bins.length; i++) {
+			if (bins[i].units && Array.isArray(bins[i].units) && bins[i].units.length > 1 && bins[i].units.length != size[k]) {
+				err = true;	
+				got = got + "Parameter " + name + ": wrong number of elements in units. Got " + bins[i].units.length + ". Expected 1 or " + size[k] + ". ";
+			}
+			if (bins[i].label && Array.isArray(bins[i].label) && bins[i].label.length > 1 && bins[i].label.length != size[k]) {
+				err = true;
+				got = got + "Parameter " + name + ": wrong number of elements in labels. Got " + bins[i].label.length + ". Expected 1 or " + size[k] + ". ";
+			}
+			if (bins[i].centers && bins[i].centers.length != size[k]) {
+				err = true;
+				got = got + "Parameter " + name + ": wrong number of elements in centers. Got " + bins[i].centers.length + ". Expected " + size[k] + ". ";
+			}
+			if (bins[i].ranges && bins[i].ranges.length != size[k]) {
+				err = true;
+				got = got + "Parameter " + name + ": wrong number of elements in ranges. Got " + bins[i].ranges.length + ". Expected " + size[k] + ". ";
+			}
+		}
+	}
+
+	if (got === "") {got = "Parameter " + name + " has correct number of elements."}
+
+	if (units.length > 1 && size.length > 2) {
+		got = "<span style='background-color:yellow'>size.length &gt; 2 for parameter " + name + ". Check not implemented.</span>"		
+	}
+
+	return {"description": "is.BinsOK: " + desc, "error": err, "got": got};		
+}
+exports.BinsOK = BinsOK;
+
+function ArrayOK(name,units,size,type,version) {
+
+	if (version !== "2.1") {
+		return;
+	}
+	// "units": [["nT"],["nT","degrees","nT"]],
+
+	// size = [N]
+	// units = "u" 
+	// units = ["u"]
+	// units = ['u1','u2',...,'uN']
+
+	// size = [N,M]
+	// units = "u"
+	// units = ["u"]
+	// units = ['uN','uM']
+	// units = [['u1',...,'u1M'],['u2',...,'uM'],...,['uN',...,'uNM']]
+	if (Array.isArray(units)) {
+		var desc = "Expect " + type + " to be a string or an array with appropriate structure. ";
+		var err = false;
+		var got = "";
+		if (units.length > 1 && size.length == 1 && units.length != size[0]) {
+			// size = [N], units = ['u1','u2',...,'uN'] case
+			err = true;
+			got = got + "if size.length == 1, " + type + " should have 1 element or size[0] elements. ";
+		}
+		if (units.length > 1 && size.length == 2) {
+			for (var j = 0; j < units.length; j++) {
+				if (Array.isArray(units[j])) {
+					if (units[j].length != 1 && units[j].length != size[1]) {
+						err = true;
+						got = got + type + "[" + j + "] contains array; it should have 1 element or size[" + (1) + "] elements. ";
+					}
+				}
+			}
+
+		}
+		if (got === "") {
+			got = "parameter '" + name + "' " + type + " has appropriate structure.";
+		} else {
+			got = "parameter '" + name + "', size = " + JSON.stringify(size) + ", " + type + " = " + JSON.stringify(units) + ". " + got;			
+		}
+		if (units.length > 1 && size.length > 2) {
+			got = "<span style='background-color:yellow'>size.length &gt; 2 for parameter " + name + ". Check not implemented.</span>"		
+		}
+		return {"description": "is.ArrayOK: " + desc, "error": err, "got": got};		
+	}
+}
+exports.ArrayOK = ArrayOK;
+
+function UnitsOK(name,units,type,size) {
 	if (type === 'isotime') {
 		var err = false;
 		var got = "type = '" + type + "' and units = '" + units + "' for parameter " + name + ".";
@@ -1057,9 +1161,16 @@ function HAPIJSON(text,version,part){
 	}
 	
 	var v = new Validator();
-	v.addSchema(s["HAPI"], '/HAPI');
-	v.addSchema(s["HAPIDateTime"], '/HAPIDateTime');
-	v.addSchema(s["HAPIStatus"], '/HAPIStatus');
+	// Look for all top-level elements that have an id starting with a /.
+	// These are subschemas that are used.
+	for (key in s) {
+		if (s[key]["id"] &&  s[key]["id"][0] === "/") {
+			v.addSchema(s[key], s[key]["id"]);
+		}
+	}
+	//v.addSchema(s["HAPIDateTime"], '/HAPIDateTime');
+	//v.addSchema(s["HAPIStatus"], '/HAPIStatus');
+	//v.addSchema(s["Mutli"], '/Multi');
 	//var version = s["HAPI"].pattern.replace("^","").replace("$","");
 	var vr = v.validate(json, s[part]);
 	//console.log(JSON.stringify(vr,null,4))

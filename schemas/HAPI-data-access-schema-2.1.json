@@ -54,6 +54,25 @@
 			}
 		}
 	},
+	"UnitsAndLabel": {
+		"id": "/UnitsAndLabel",
+		"description": "Units or label schema",
+		"oneOf": [
+					{
+						"type": ["string","null"]
+					},
+					{
+						"type": ["array"],
+						"items": [{"type": "string"}],
+						"minItems": 1
+					},
+					{
+						"type": ["array"],
+						"items": [{"type": "array"}],
+						"minItems": 1
+					}
+				]
+	},
 	"capabilities": {
 		"title": "capabilities",
 		"description": "Server /capabilities response",
@@ -205,21 +224,8 @@
 							"type": "string",
 							"enum": ["string","double","integer","isotime"]
 						},
-						"units": {
-									"oneOf": [
-												{
-													"description": "Parameter units",
-													"type": ["string","null"]
-												},
-												{
-													"description": "Parameter units",
-													"type": ["array"],
-													"items": {"type": "string"},
-													"minItems": 1,
-													"minimum": 1
-												}
-											]
-								},
+						"units": {"$ref": "/UnitsAndLabel"},
+						"label": {"$ref": "/UnitsAndLabel"},
 						"length": {
 							"description": "Number of characters in parameter (isotime and string parameters only)",
 							"type": "integer"
@@ -260,25 +266,13 @@
 										"description": "A brief comment explaining what the bins represent",
 										"type": "string"
 									},
-									"units": {
-										"description": "The units for the bins (e.g., 'Hz')",
-										"oneOf": [
-											{
-												"type": "array",
-												"items": {
-													"type": "string"
-												},
-												"minItems": 1
-
-											},
-												{"type": "string"}
-											]
-									},
+									"units": {"$ref": "/UnitsAndLabel"},
+									"label": {"$ref": "/UnitsAndLabel"},
 									"centers": {
 										"description": "The centers of each bin",
 										"type": "array",
 										"items": {
-											"type": "number"
+											"type": ["number","null","array"]
 										},
 										"minItems": 1
 									},
@@ -290,7 +284,7 @@
 											"type": "array",
 											"minItems": 2,
 											"items": {
-												"type": "number"
+												"type": ["number","null","array"]
 											}
 										}
 									}

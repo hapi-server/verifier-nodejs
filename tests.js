@@ -10,10 +10,11 @@ const request = require('request');
 
 var is = require('./is.js'); // Test library
 
-function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RES) {
+function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RES,PLOTSERVER) {
 
-	var PLOTSERVER = 'http://hapi-server.org/plot';
-	//var PLOTSERVER = 'http://localhost:5000/';
+	if (!PLOTSERVER) {
+		PLOTSERVER = 'http://hapi-server.org/plot';
+	}
 
 	var CATALOG; // Resolved in catalog(); used in report() to print ViViz links.
 	function internalerror(err) {
@@ -183,11 +184,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		}
 		if (obj.error == true && warn == false) {
 			report.fails.push(obj)
-			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='color:black;background:red'>Fail</font>:&nbsp" + obj.description + ";&nbsp;Got: <b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
+			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='background-color:red'><b>&#x2715;</b></font>:&nbsp" + obj.description + ";&nbsp;Got: <b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
 			if (!RES) console.log(indentcons + "  " + clc.inverse.red("Fail") + ": " + obj.description + "; Got: " + clc.bold(obj.got));
 		} else if (obj.error == true && warn == true) {
 			report.warns.push(obj)
-			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='color:black;background:yellow'>Warn</font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
+			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='background-color:yellow'><b>&#x26a0;</b></font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
 			if (!RES) console.log(indentcons + "  " + clc.yellowBright.inverse("Warn") + ": " + obj.description + "; Got: " + clc.bold(obj.got));
 		} else {
 			report.passes.push(obj);
@@ -196,7 +197,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				if (!RES) console.log(indentcons + "  " + "Passes are being suppressed.");
 			}
 			if (report.shushon == false) {
-				if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='color:black;background:green'>Pass</font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
+				if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='background-color:green;'><b>&#x2713;</b></font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
 				if (!RES) console.log(indentcons + "  " + clc.green.inverse("Pass") + ": " + obj.description + "; Got: " + clc.bold(obj.got));
 			}
 		}
@@ -489,9 +490,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		report(url);
 
 		if (RES && info.tries[datasets.length] == 0) {
+			img = '<img width="14px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAADqklEQVRYheXWe2iXZRQH8M8212ZzoZmaqERSipEYgWlGRESmGXSTtGkURUISUeti1D9C/VVBNyoky2VhF2YtQgoqMbpn98zKRRDdsyTshqarP8553W8/3s1tXaEvPLzve95zznPOec7l4f+OmkHIDMVMTMLwpP2Aj/Aqfv07DKjFaTgbJ2IztmBr/h+VBk3B03gQHfh9IMb0hnl4Gy+gBcP64B2GRXgRb+HkP7PxfnhAeHvSIOTn4gOsRvNAhQ/Dx7gFjUmbgAvQho34DjtybU1aG87H+JRpxO3oFMfTL8zClyLctZiP57Abn2EpZudzOa5N3lm4OGV3YwPOTB3nJH1m9Wa1Vd8z8UR6Wo/3cQkm4ykcgTtxI04RoR2JMSJPhuNoPJMeX4r3UvcSrMNRvXk+Bd/gOhHO51NZK15HEy5Lw8pQh/vxGPZNgy7HMSIpX8P1ucfkauGm9PYLEeaFokT3F2d9cH6vxZW9eZAYms9DsA2jU7YFn+cem9LIPVglavZRUdMFlmENpuFcNGBI/hsrwrok3yuxBsfjkSqDR+vuD6sKYgt24YoSb9ZjjghZhygt4hy/wt1Yme/TK+SW4r6UXV+i9yqRqIuIJGkpYYJvMbGE/hJOr/ieLxpVgYn4RHi8VTkW4x34CSN6Ydohwr4lV4HtenbE5qQVaBDn35g6yjACP9fiQyX1mdgmEnFSrgKb9OyOc/BuxfdI4dg4MajKME06dYaogKYSpg250bF4QyQWkQNf4x7cm++VObBIDKR5eLZEb5No8QsKwgrRRqvRKhLtcBwnyqku/43FhbkOrJCpF9GYjYeUJ3ebmBF7xvFQMctvTa8KjBLRmYFP0Y6XRSesxkVigE0VU/Am0apv0zMRx4mSHo8fC292iVCtFhOsM+m/oEv0+3YclIpX4HvReseIatkojml7PhvS2K50sFi/4QRcU+KE6eI851TQakRjWZceErO+OT1cnrSBXD765J0hJtfiClo9bhAjeqHubjg1119qADGYOnGX7t5OVMGT4kzbcbPIm8f3onQf0ZaLrN/D29edsBl3iJK7WrTiAhNwpBhSXWLIrO1FX31uXoOzsDMN6PeFeC7exCvinjCyF77CqwV4ODeuF+O5Q0ShmrffVtTgVHErni2ayGZRCXU4AOclX+FxsUmtbs8rDagZiAGVaBSJeqiIRpdo2Ssr9NWLyinuATurdAzoCPqLQVVB9Z3wH8eQvbMMCMv+TQNaRVvuL+9/A38AhLjYdJMsiloAAAAASUVORK5CYII=" alt="" />';
 			var link = PLOTSERVER+"?server=" + ROOT + "&id=" + id + "&format=gallery";
 			var note = "<a target='_blank' href='" + link + "'>Visually check data and test performance</a>";
-			RES.write("&nbsp&nbsp;<font style='color:black;background:#00CED1'>Note</font>:&nbsp" + note + "<br>");
+			RES.write("&nbsp&nbsp;" + img + ":&nbsp" + note + "<br>");
 		}
 
 		request({"url":url,"timeout": timeout(metaTimeout), "headers": {"Origin": ip.address()}, "time": true},
@@ -554,20 +556,25 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					size = header.parameters[i]["size"];
 					fill = header.parameters[i]["fill"];
 					units = header.parameters[i]["units"];
+					label = header.parameters[i]["label"]
 
 					if (!size) {
 						size = [1];
 					}
-					report(url,is.UnitsOK(units,type,prod(size),version),{"warn":true});
+					//console.log(name,size,units)
+					report(url,is.UnitsOK(name,units,type,size,version),{"warn":false});
 					report(url,is.FillOK(fill,type,len,name,type),{"warn":true});
+					report(url,is.ArrayOK(name,units,size,"units",version),{"warn":false});
+					report(url,is.ArrayOK(name,label,size,"label",version),{"warn":false});
 					if (type === "string") {
 						report(url,is.FillOK(fill,type,len,name,'nullstring'),{"warn":true});
 						report(url,is.FillOK(fill,type,len,name,'stringparse'),{"warn":true});
 					}
 
 					report(url,is.LengthAppropriate(len,type,name));
+					report(url,is.BinsOK(name,header.parameters[i]["bins"],size));
 					//report(url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
-					report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
+					//report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
 				}
 				if (PARAMETER) {
 					var tmp = selectOne(header.parameters,'name',PARAMETER);
@@ -1145,9 +1152,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				}
 
 				if (RES) {
-					var link = PLOTSERVER+"?server=" + url.replace("/data?","&");
-					var note = "<a target='_blank' href='" + link + "'>Direct link for following plot.</a>";
-					RES.write("&nbsp&nbsp;&nbsp&nbsp;<font style='color:black;background:#00CED1'>Note</font>:&nbsp" + note + "<br><img src='" + link + "'/><br/>");
+					var link = PLOTSERVER+"?usecache=false&usedatacache=false&server=" + url.replace("/data?","&");
+					var note = "<a target='_blank' href='" + link + "'>Direct link for following plot.</a>. Please report any plotting issues on <a target='_blank' href='https://github.com/hapi-server/client-python/issues'>the Python hapiclient GitHub page</a>.";
+					RES.write("&nbsp&nbsp;&nbsp&nbsp;<font style='color:black'>&#x261E</font>:&nbsp" + note + "<br><img src='" + link + "'/><br/>");
 				}
 
 				report(url,is.RequestError(err,res,dataTimeout,timeout()));

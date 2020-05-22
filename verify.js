@@ -9,7 +9,8 @@ var argv = require('yargs')
 					"parameter": "",
 					"timemax": "",
 					"timemin": "",
-					"version": ""
+					"version": "",
+					"plotserver":"http://hapi-server.org/plot"
 				})
 				.argv
 
@@ -37,7 +38,7 @@ if (argv.url !== "") {
 		console.log("Version must be one of ",versions());
 	}
 
-	tests.run(argv.url,argv.id,argv.parameter,argv["timemin"],argv["timemax"],argv["version"]);
+	tests.run(argv.url,argv.id,argv.parameter,argv["timemin"],argv["timemax"],argv["version"],argv.plotserver);
 } else {
 	// Server mode
 	var express = require('express');
@@ -103,12 +104,13 @@ if (argv.url !== "") {
 				res.end("Only one parameter may be specified.");
 			}
 		}
-		tests.run(url,id,param,start,stop,version,datatimeout,metatimeout,req,res);
+		tests.run(url,id,param,start,stop,version,datatimeout,metatimeout,req,res,argv.plotserver);
 
 	})
 
 	app.listen(argv.port);
-	console.log(new Date().toISOString() + " [verifier] HAPI verifier listening on port " + argv.port + ". See http://localhost:" + argv.port + "/")
+	console.log(new Date().toISOString() + " [verifier] HAPI verifier listening on port " + argv.port + ". See http://localhost:" + argv.port + "/");
+	console.log(new Date().toISOString() + " [verifier] Using plotserver " + argv.plotserver);
 }
 
 process.on('uncaughtException', function(err) {

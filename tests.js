@@ -566,6 +566,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					report(url,is.FillOK(fill,type,len,name,type),{"warn":true});
 					report(url,is.ArrayOK(name,units,size,"units",version),{"warn":false});
 					report(url,is.ArrayOK(name,label,size,"label",version),{"warn":false});
+
 					if (type === "string") {
 						report(url,is.FillOK(fill,type,len,name,'nullstring'),{"warn":true});
 						report(url,is.FillOK(fill,type,len,name,'stringparse'),{"warn":true});

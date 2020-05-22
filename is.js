@@ -11,6 +11,12 @@ schemas["1.1"] = require("./schemas/HAPI-data-access-schema-1.1.json");
 schemas["2.0"] = require("./schemas/HAPI-data-access-schema-2.0-1.json");
 schemas["2.1"] = require("./schemas/HAPI-data-access-schema-2.1.json");
 
+function prod(arr) {
+	// TODO: Also in tests.js. Move to lib.js (and create lib.js)
+	// Compute product of array elements.
+	return arr.reduce(function(a,b){return a*b;})
+}
+
 function versions() {
 	arr = [];
 	for (key in schemas) {
@@ -568,6 +574,7 @@ function FirstParameterOK(header,what) {
 }
 exports.FirstParameterOK = FirstParameterOK;
 
+<<<<<<< HEAD
 function prod(arr) {
 	// Compute product of array elements.
 	return arr.reduce(function(a,b){return a*b;})
@@ -682,12 +689,55 @@ function ArrayOK(name,units,size,type,version) {
 }
 exports.ArrayOK = ArrayOK;
 
+// TODO: Use this
+function checkdims(units,size,version) {
+	var err = false;
+	if (units && units !== null && typeof(units) !== "string") {
+		// units is an array.
+		// size passed assumed to always be an array
+		var err = false;
+		if (size.length == 1 && units.length == size[0]) {
+			// e.g., size = [2] and units = ["m", "km"] is OK
+			// So is size = [1] and units = ["m"] (but this should really be size = 1 and units = "m")
+		} else {
+			if (units.length !== size.length) {
+				// Check that number of elements in units matches number in size.
+				err = true;
+			} else if (typeof(units[0]) !== 'object') {
+				// If here, then size.length > 1. This checks for, e.g.,
+				// units = ["m", "km"] and size = [1,2], which is wrong
+				err = true;
+			} else {
+				// Check that ith subarray of units has length equal to ith value in size.
+				for (var i = 0; i < units.length; i++) {
+					if (units[i].length !== size[i]) {
+						err = true;
+						break;
+					}				
+				}
+			}
+		}
+		return err;
+	}
+}
+
 function UnitsOK(name,units,type,size) {
 	if (type === 'isotime') {
 		var err = false;
-		var got = "type = '" + type + "' and units = '" + units + "' for parameter " + name + ".";
-		if (type == "isotime" && units !== "UTC") {
-			err = true;
+		if (type(units) === 'object') {
+			for (var i = 0; i < units.length; i++) {
+				for (var j = 0; j < units[i].length; j++) {
+					if (units[i][j] !== "UTC") {
+						err = true;
+						break;
+					}
+				}
+			}
+		} else {
+			var got = "type = '" + type + "' and units = '" + units + "' for parameter " + name + ".";
+			if (units !== "UTC") {
+				err = true;
+			}			
 		}
 		return {"description": "is.UnitsOK: Expect isotime units to be 'UTC'.", "error": err,"got": got};
 	}
@@ -769,6 +819,8 @@ exports.SizeCorrect = SizeCorrect;
 
 function SizeAppropriate(size,name,what) {
 	if (!size) return; // Test not appropriate.
+	if (typeof(size) !== 'object') return; // Test not appropriate.
+
 	if (what === "needed") {
 		// Test if all elements of size are 1.
 		t = 0;

@@ -574,7 +574,6 @@ function FirstParameterOK(header,what) {
 }
 exports.FirstParameterOK = FirstParameterOK;
 
-<<<<<<< HEAD
 function prod(arr) {
 	// Compute product of array elements.
 	return arr.reduce(function(a,b){return a*b;})
@@ -724,7 +723,7 @@ function checkdims(units,size,version) {
 function UnitsOK(name,units,type,size) {
 	if (type === 'isotime') {
 		var err = false;
-		if (type(units) === 'object') {
+		if (typeof(units) === 'object') {
 			for (var i = 0; i < units.length; i++) {
 				for (var j = 0; j < units[i].length; j++) {
 					if (units[i][j] !== "UTC") {

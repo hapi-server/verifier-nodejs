@@ -1205,11 +1205,13 @@ function HAPIJSON(text,version,part){
 
 	s = schema(version);
 
-	return {
-			"description": "is.HAPIJSON(): Expect HAPI version to be one of " + JSON.stringify(Object.keys(schemas)),
-			"error": true,
-			"got": "Schema version " + version + " not one of " + JSON.stringify(Object.keys(schemas))
-		};
+	if (s === undefined) {
+		return {
+				"description": "is.HAPIJSON(): Expect HAPI version to be one of " + JSON.stringify(Object.keys(schemas)),
+				"error": true,
+				"got": "Schema version " + version + " not one of " + JSON.stringify(Object.keys(schemas))
+			};
+	}
 
 	if (typeof(text) === "object") {
 		var json = text;

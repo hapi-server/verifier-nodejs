@@ -1205,7 +1205,7 @@ function HAPIJSON(text,version,part){
 
 	s = schema(version);
 
-	if (s === undefined) {
+	if (!s) {
 		return {
 				"description": "is.HAPIJSON(): Expect HAPI version to be one of " + JSON.stringify(Object.keys(schemas)),
 				"error": true,

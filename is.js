@@ -1205,6 +1205,12 @@ function HAPIJSON(text,version,part){
 
 	s = schema(version);
 
+	return {
+			"description": "is.HAPIJSON(): Expect HAPI version to be one of " + JSON.stringify(Object.keys(schemas)),
+			"error": true,
+			"got": "Schema version " + version + " not one of " + JSON.stringify(Object.keys(schemas))
+		};
+
 	if (typeof(text) === "object") {
 		var json = text;
 	} else {
@@ -1215,7 +1221,7 @@ function HAPIJSON(text,version,part){
 	// Look for all top-level elements that have an id starting with a /.
 	// These are subschemas that are used.
 	for (key in s) {
-		if (s[key]["id"] &&  s[key]["id"][0] === "/") {
+		if (s[key]["id"] && s[key]["id"][0] === "/") {
 			v.addSchema(s[key], s[key]["id"]);
 		}
 	}

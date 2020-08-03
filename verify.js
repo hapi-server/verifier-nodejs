@@ -17,8 +17,8 @@ var argv = require('yargs')
 var tests = require('./tests.js'); // Test runner
 var versions = require('./is.js').versions;
 
-if (!sver.gte(process.version,'6.0.0')) {
-	console.log(clc.red("node.js version >= 6 required. node.js -v returns " + process.version + ". See README for instructions on upgrading using nvm."));
+if (!sver.gte(process.version,'8.0.0')) {
+	console.log(clc.red("node.js version >= 8 required. node.js -v returns " + process.version + ". See README for instructions on upgrading using nvm."));
 	process.exit(1);
 }
 if (argv.url !== "") {

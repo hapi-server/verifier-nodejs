@@ -536,6 +536,7 @@ function HeaderSame(headerInfo, headerBody) {
 exports.HeaderSame = HeaderSame;
 
 function FormatInHeader(header,type) {
+	// https://github.com/hapi-server/data-specification/blob/master/hapi-2.1.1/HAPI-data-access-spec-2.1.1.md#info
 	if (type == "nodata") {
 		var t = 'format' in header;
 		var got = 'No format given.'

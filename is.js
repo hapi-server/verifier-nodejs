@@ -487,9 +487,9 @@ exports.FileOK = FileOK;
 function LengthAppropriate(len,type,name) {
 	var got = "Type = " + type + " and length = " + len + " for parameter " + name;
 	if (/isotime|string/.test(type) && !len) {
-		obj = {"description": "If type = string or isotime, length must not be given", "error":true, "got": got};
-	} else if (!/isotime|string/.test(type) && len) {
 		obj = {"description": "If type = string or isotime, length must be given", "error":true, "got": got};
+	} else if (!/isotime|string/.test(type) && len) {
+		obj = {"description": "If type = string or isotime, length must not be given", "error":true, "got": got};
 	} else {
 		obj = {"description": "Length may only be given for types string and isotime", "error":false, "got": got};
 	}

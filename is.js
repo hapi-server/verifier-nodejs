@@ -490,9 +490,9 @@ exports.FileOK = FileOK;
 function LengthAppropriate(len,type,name) {
 	var got = "Type = " + type + " and length = " + len + " for parameter " + name;
 	if (/isotime|string/.test(type) && !len) {
-		obj = {"description": "If type = string or isotime, length must not be given", "error":true, "got": got};
-	} else if (!/isotime|string/.test(type) && len) {
 		obj = {"description": "If type = string or isotime, length must be given", "error":true, "got": got};
+	} else if (!/isotime|string/.test(type) && len) {
+		obj = {"description": "If type = string or isotime, length must not be given", "error":true, "got": got};
 	} else {
 		obj = {"description": "Length may only be given for types string and isotime", "error":false, "got": got};
 	}
@@ -539,6 +539,7 @@ function HeaderSame(headerInfo, headerBody) {
 exports.HeaderSame = HeaderSame;
 
 function FormatInHeader(header,type) {
+	// https://github.com/hapi-server/data-specification/blob/master/hapi-2.1.1/HAPI-data-access-spec-2.1.1.md#info
 	if (type == "nodata") {
 		var t = 'format' in header;
 		var got = 'No format given.'

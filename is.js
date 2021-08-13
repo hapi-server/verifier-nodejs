@@ -6,10 +6,13 @@ var diff      = require('deep-diff').diff;
 // Note that for reporting to have correct line numbers, must start functions with
 // function FNAME( and start description with 'is.FNAME()'.
 
+// TODO: Get this list by reading directory.
 var schemas = {};
 schemas["1.1"] = require("./schemas/HAPI-data-access-schema-1.1.json");
 schemas["2.0"] = require("./schemas/HAPI-data-access-schema-2.0-1.json");
 schemas["2.1"] = require("./schemas/HAPI-data-access-schema-2.1.json");
+schemas["3.0"] = require("./schemas/HAPI-data-access-schema-3.0.json");
+schemas["3.1"] = require("./schemas/HAPI-data-access-schema-3.1.json");
 
 function prod(arr) {
 	// TODO: Also in tests.js. Move to lib.js (and create lib.js)

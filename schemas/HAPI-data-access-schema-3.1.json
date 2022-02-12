@@ -264,7 +264,20 @@
                         },
                         "fill": {
                             "description": "Parameter fill",
-                            "type":  ["string","null", {"$ref": "/Refs"}]
+                            "type": {
+                                        "oneOf":[
+                                                    "string",
+                                                    "null",
+                                                    {
+                                                        "type": "object",
+                                                        "properties":
+                                                            {
+                                                                "additionalProperties": false,
+                                                                "$ref": {"type": "string"}
+                                                            }
+                                                    }
+                                                ]
+                                    }
                         },
                         "description": {
                             "description": "a brief description of the parameter",

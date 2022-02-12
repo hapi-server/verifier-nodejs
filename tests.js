@@ -100,7 +100,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			for (var i = 0;i<report.fails.length;i++) {
 				if (RES) RES.write("<br><a href='" + report.fails[i].url.replace(/\&parameters/,"&amp;parameters") + "'>" + report.fails[i].url.replace(/\&parameters/,"&amp;parameters") + "</a><br>")
 				if (!RES) console.log("|" + clc.blue(report.fails[i].url));
-				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:red'>Fail</font>&nbsp;" + report.fails[i].description + "; Got: <b>" + report.fails[i].got.toString().replace(/\n/g,"<br>") + "</b><br>");
+				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:red'>Fail</font>&nbsp;" + report.fails[i].description + "; Got: <b><pre>" + report.fails[i].got.toString().replace(/</g,"&lt;").replace(/>/g,"&gt;") + "</pre></b><br>");
 				if (!RES) console.log("|  " + clc.red.inverse("Fail") + " " + report.fails[i].description + "; Got: " + clc.bold(report.fails[i].got));
 			}
 
@@ -184,11 +184,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		}
 		if (obj.error == true && warn == false) {
 			report.fails.push(obj)
-			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='background-color:red'><b>&#x2715;</b></font>:&nbsp" + obj.description + ";&nbsp;Got: <b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
+			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='background-color:red'><b>&#x2715;</b></font>:&nbsp" + obj.description + ";&nbsp;Got: <b><pre>" + obj.got.toString().replace(/</g,"&lt;").replace(/>/g,"&gt;") + "</pre></b><br>");
 			if (!RES) console.log(indentcons + "  " + clc.inverse.red("Fail") + ": " + obj.description + "; Got: " + clc.bold(obj.got));
 		} else if (obj.error == true && warn == true) {
 			report.warns.push(obj)
-			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='background-color:yellow'><b>&#x26a0;</b></font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
+
+			var msg = obj.got.toString().replace(/</g,"&lt;").replace(/>/g,"&gt;");
+			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='background-color:yellow'><b>&#x26a0;</b></font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b><pre>" + msg + "</pre></b><br>");
 			if (!RES) console.log(indentcons + "  " + clc.yellowBright.inverse("Warn") + ": " + obj.description + "; Got: " + clc.bold(obj.got));
 		} else {
 			report.passes.push(obj);
@@ -204,7 +206,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 		if (obj.error && stop) {
 			if (abort) {
-				if (RES) RES.end("<br><font style='color:red'>Cannot continue validation tests due to last failure.</font></body></html>");
+				if (RES) RES.end("<font style='color:red'>Cannot continue validation tests due to last failure.</font></body></html>");
 				if (RES) RES.end();
 				if (!RES) console.log(clc.red("\nCannot continue validation tests due to last failure."));
 				if (!RES) process.exit(0);

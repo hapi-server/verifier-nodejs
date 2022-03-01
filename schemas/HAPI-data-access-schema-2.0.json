@@ -239,12 +239,12 @@
 											{
 												"type": "array",
 												"items": {
-													"type": ["string","null"]
+													"type": "string"
 												},
 												"minItems": 1
 
 											},
-												{"type": ["string","null"]}
+												{"type": "string"}
 											]
 									},
 									"centers": {

@@ -638,7 +638,7 @@ function BinsOK(name,bins,size) {
 		got = "<span style='background-color:yellow'>size.length &gt; 2 for parameter " + name + ". Check not implemented.</span>"		
 	}
 
-	return {"description": "is.BinsOK: " + desc, "error": err, "got": got};		
+	return {"description": "is.BinsOK(): " + desc, "error": err, "got": got};
 }
 exports.BinsOK = BinsOK;
 
@@ -687,7 +687,7 @@ function ArrayOK(name,units,size,type,version) {
 		if (units.length > 1 && size.length > 2) {
 			got = "<span style='background-color:yellow'>size.length &gt; 2 for parameter " + name + ". Check not implemented.</span>"		
 		}
-		return {"description": "is.ArrayOK: " + desc, "error": err, "got": got};		
+		return {"description": "is.ArrayOK(): " + desc, "error": err, "got": got};
 	}
 }
 exports.ArrayOK = ArrayOK;
@@ -742,7 +742,7 @@ function UnitsOK(name,units,type,size) {
 				err = true;
 			}			
 		}
-		return {"description": "is.UnitsOK: Expect isotime units to be 'UTC'.", "error": err,"got": got};
+		return {"description": "is.UnitsOK(): Expect isotime units to be 'UTC'.", "error": err,"got": got};
 	}
 }
 exports.UnitsOK = UnitsOK;

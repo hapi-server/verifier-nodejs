@@ -1,6 +1,5 @@
 var fs   = require('fs');
 var clc  = require('chalk');
-var sver = require('semver');
 var argv = require('yargs')
 				.default({
 					"port": 9999,
@@ -17,10 +16,16 @@ var argv = require('yargs')
 var tests = require('./tests.js'); // Test runner
 var versions = require('./is.js').versions;
 
-if (!sver.gte(process.version,'8.0.0')) {
-	console.log(clc.red("node.js version >= 8 required. node.js -v returns " + process.version + ". See README for instructions on upgrading using nvm."));
-	process.exit(1);
+const ver  = parseInt(process.version.slice(1).split('.')[0]);
+
+if (parseInt(ver) < 8) {
+  // TODO: On windows, min version is 8
+  console.log(clc.red("!!! node.js version >= 6 required.!!! "
+    + "node.js -v returns " + process.version
+    + ".\nConsider installing https://github.com/creationix/nvm and then 'nvm install 6'.\n"));
+  process.exit(1);
 }
+
 if (argv.url !== "") {
 	// Command-line mode
 

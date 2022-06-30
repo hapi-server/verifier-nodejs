@@ -28,7 +28,6 @@
   },
   "scripts": {
     "start": "node verify.js --port 9999",
-    "start2": "node verify.js --port 9999 --plotserver 'http://localhost:5000/'",
-    "test": "bash test/commandline.sh && bash test/server.sh"
+    "start2": "node verify.js --port 9999 --plotserver 'http://localhost:5000/'"
   }
 }

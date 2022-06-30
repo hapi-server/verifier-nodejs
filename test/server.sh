@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TESTDATA=http://mag.gmu.edu/TestData/hapi
+TESTDATA=http://hapi-server.org/servers/TestData2.0/hapi
 #TESTDATA=http://localhost:8999/hapi
 #VURL=http://localhost:9999/verify-hapi
 VURL=http://localhost:9999

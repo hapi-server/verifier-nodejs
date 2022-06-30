@@ -104,11 +104,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				if (!RES) console.log("|  " + clc.red.inverse("Fail") + " " + report.fails[i].description + "; Got: " + clc.bold(report.fails[i].got));
 			}
 
-			request({"url": ROOT+"/capabilities"},
-				function (err,res,body) {
-				}
-			)
-
 			if (RES) {
 				RES.write("<br><br>");
 				RES.write("<b>Use the following links for visual checks of data and stress testing server.</b><br><br>")
@@ -120,8 +115,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			}
 		
 			if (!RES) {
-				console.log("\nEnd of validation summary.");
-				process.exit(0); // Normal exit.
+				console.log("\nEnd of summary.");
+				if (report.fails.length) {
+					process.exit(0); // Normal exit.
+				} else {
+					process.exit(1);
+				}
 			}
 			return;
 		}
@@ -781,7 +780,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
 				}
-				if (!report(url,is.FileOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
+				if (!report(url,is.FileStructureOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
 					dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);					
 					return;
 				}
@@ -794,12 +793,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				report(url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 
-				report(url,is.FileOK(bodyAll,"firstchar"));
-				report(url,is.FileOK(bodyAll,"lastchar"));
-				report(url,is.FileOK(bodyAll,"extranewline"));
-				report(url,is.FileOK(bodyAll,"numlines"));
+				report(url,is.FileStructureOK(bodyAll,"firstchar"));
+				report(url,is.FileStructureOK(bodyAll,"lastchar"));
+				report(url,is.FileStructureOK(bodyAll,"extranewline"));
+				report(url,is.FileStructureOK(bodyAll,"numlines"));
 
-				report(url,is.FileDataOK(header,bodyAll,null,null,'Ncolumns'));
+				report(url,is.FileLineOK(header,bodyAll,null,'Ncolumns'));
 
 				dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 		})
@@ -858,7 +857,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					dataAll_Header(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
 				}
-				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
+				if (!report(url,is.FileStructureOK(body,"empty",res.statusMessage),{"stop":true})) {
 					dataAll_Header(formats,datasets,header,start,stop,dataTimeout,bodyAll);					
 					return;
 				}
@@ -868,7 +867,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				}
 				// End similar code.
 
-				report(url,is.FileDataOK(header,body,bodyAll,null,"contentsame"));
+				report(url,is.FileContentSame(header,body,bodyAll,null,"contentsame"));
 				dataAll_Header(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 			});		
 
@@ -946,7 +945,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					dataAll_1201(formats,datasets,header,start,stop,"",dataTimeout,bodyAll);
 					return;
 				}
-				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
+				if (!report(url,is.FileStructureOK(body,"empty",res.statusMessage),{"stop":true})) {
 					dataAll_1201(formats,datasets,header,start,stop,"",dataTimeout,bodyAll);
 					return;
 				}
@@ -981,7 +980,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					report(url,is.FormatInHeader(bodyJSON, "data"));
 					report(url,is.HeaderSame(header, bodyJSON), {'warn': true});
 					var version = bodyJSON.HAPI;
-					report(url,is.FileDataOK(header,bodyAll,dataLines,null,"contentsame"));
+					report(url,is.FileContentSame(header,bodyAll,dataLines,null,"contentsame"));
 				}
 				dataAll_1201(formats,datasets,header,start,stop,version,dataTimeout,bodyAll);
 		})
@@ -1064,7 +1063,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				}
 				// End similar code.
 
-				report(url,is.FileOK(body,"empty",res.statusMessage,true),{"warn": true});
+				report(url,is.FileStructureOK(body,"empty",res.statusMessage,true),{"warn": true});
 				datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,0);
 		})		
 	}
@@ -1169,9 +1168,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 				var lines = body.split("\n");
 
-				report(url,is.FileOK(body,"emptyconsistent",bodyAll));
+				report(url,is.FileStructureOK(body,"emptyconsistent",bodyAll));
 
-				if (!report(url,is.FileOK(body,"empty",res.statusMessage),{"stop":true})) {
+				if (!report(url,is.FileStructureOK(body,"empty",res.statusMessage),{"stop":true})) {
 					// Check next parameter
 					datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,++pn);
 					return;
@@ -1186,10 +1185,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				report(url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 
-				report(url,is.FileOK(body,"firstchar"));
-				report(url,is.FileOK(body,"lastchar"));
-				report(url,is.FileOK(body,"extranewline"));
-				report(url,is.FileOK(body,"numlines"));
+				report(url,is.FileStructureOK(body,"firstchar"));
+				report(url,is.FileStructureOK(body,"lastchar"));
+				report(url,is.FileStructureOK(body,"extranewline"));
+				report(url,is.FileStructureOK(body,"numlines"));
 
 				var line1 = lines[0].split(",");
 				var time1 = line1[0].trim();
@@ -1222,46 +1221,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					return;
 				}
 
-				var len  = header.parameters[pn]["length"];
-				var type = header.parameters[pn]["type"];
-				var name = header.parameters[pn]["name"];
-				var size = header.parameters[pn]["size"];
-
-				var nf = 1; // Number of fields (columns) counter
-							// (start at 1 since time checked already)
-				if (!size) {
-					nf = nf + 1; // Width of field (number of columns of field)
-				} else {
-					nf = nf + prod(size);
-				}
-
-				// TODO: Check all lines?
-				// Move this check into is.FileOK?
-				for (var j=1;j < nf;j++) {
-					if (j == 1 || j == nf-1) {var shush = false} else {shush = true}
-					var extra = ' in column ' + j + ' on first line.'
-					if (type === "string") {
-						report(url,is.CorrectLength(line1[j],len,name,extra),{"warn":true,"shush":shush});
-					}
-					if (type === "isotime") {
-						report(url,is.ISO8601(line1[j].trim(),extra));
-						report(url,is.CorrectLength(line1[j],len,name,extra),{"warn":true,"shush":shush});
-					}
-					if (type === "integer") {
-						report(url,is.Integer(line1[j],extra),{"shush":shush});
-					}
-					if (type === "double") {
-						report(url,is.Float(line1[j],extra),{"shush":shush});
-					}
-				}
-
-				// Note line.length - 1 = because split() adds extra empty
-				// element at end if trailing newline.
-				report(url,is.SizeCorrect(line1.length-1,nf-1,header.parameters[pn]),{"warn":true});
+				report(url,is.FileLineOK(header, body, pn, 'Ncolumns'));
+				//report(url,is.FileLineOK(header, body, pn, 'fields'));
+				//report(url,is.SizeCorrect(line1.length-1,nf-1,header.parameters[pn]),{"warn":true});
 				
 				if (bodyAll) {
-					report(url,is.FileDataOK(header,body,bodyAll,pn,'Ncolumns'));
-					report(url,is.FileDataOK(header,body,bodyAll,pn));
+					report(url,is.FileContentSame(header,body,bodyAll,pn,'subsetsame'));
 				}
 
 				if (!PARAMETER) {

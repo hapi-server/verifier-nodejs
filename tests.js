@@ -116,7 +116,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		
 			if (!RES) {
 				console.log("\nEnd of summary.");
-				if (report.fails.length) {
+				if (report.fails.length == 0) {
 					process.exit(0); // Normal exit.
 				} else {
 					process.exit(1);

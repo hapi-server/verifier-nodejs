@@ -412,8 +412,8 @@ function FileContentSame(header,body,bodyAll,pn,what) {
 
 		var desc = "Expect number of rows from one parameter request to match data from all parameter request.";
 		var t = lines.length != linesAll.length;
-		console.log(lines)
-		console.log(linesAll)		
+		//console.log(lines)
+		//console.log(linesAll)		
 		var got = "Match";
 		if (t) {
 			got = " # rows in single parameter request = " + lines.length + " # in all parameter request = " + linesAll.length;

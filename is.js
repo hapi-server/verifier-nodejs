@@ -246,7 +246,7 @@ function nFields(header, pn) {
 }
 
 function csvToArray(text) {
-	// https://code-examples.net/en/q/81988b
+	// https://stackoverflow.com/a/41563966/1491619
     let p = '', row = [''], ret = [row], i = 0, r = 0, s = !0, l;
     for (l of text) {
         if ('"' === l) {
@@ -266,18 +266,16 @@ function FileLineOK(header,body,pn,what) {
 
 	var nf = nFields(header, pn);
 
-	var lines = body.split("\n");
+	var lines = csvToArray(body);
 
 	if (what === "Ncolumns") {
-		var t = false;
+		let t = false;
+		let got = "(" + nf + ")" + " - (" + nf + ")";
 		if (lines.length == 0) {
-			var got = "(0)" + " - (" + nf + ")";
-		} else {
-			var got = "(" + nf + ")" + " - (" + nf + ")";
+			got = "(0)" + " - (" + nf + ")";
 		}
 		for (var i = 0;i<lines.length-1;i++) {
-			var line = lines[i].split(",");
-			t = nf != line.length;
+			t = nf != lines[i].length;
 			if (t) {
 				got = "(" + line.length + ")" + " - (" + nf + ")";
 				got = got + " on line " + (i+1);

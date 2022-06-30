@@ -13,8 +13,8 @@ Installation is only required if you do not want to test a server using http://h
 ```
 # Install Node Version Manager (NVM)
 curl https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
-# Install node.js 6
-nvm install 6
+# Install node.js 8
+nvm install 8
 # Clone repository
 git clone https://github.com/hapi-server/verifier-nodejs.git
 # Install required Node packages
@@ -37,10 +37,13 @@ If `--url URL` is provided, then output goes to stdout and a web server is not s
 # Server Usage
 
 ```
-node verify.js [--port PORT]
+node verify.js [--port PORT] [--plotserver URL]
+
 ```
 
-If no arguments are provided, a web server is started on port `9999`. See http://localhost:9999/ for documentation.
+If no arguments are provided, a web server is started on port `9999` and `plotserver=http://hapi-server.org/plot`. 
+
+See http://localhost:9999/ for API documentation.
 
 # Contact
 

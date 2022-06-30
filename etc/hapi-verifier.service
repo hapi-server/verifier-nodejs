@@ -1,8 +1,9 @@
 # sudo cp hapi-verifier.service /lib/systemd/system
 # sudo chmod 644 /lib/systemd/system/hapi-verifier.service
+# sudo systemctl enable hapi-verifier
 # sudo systemctl start hapi-verifier
 # sudo systemctl status hapi-verifier
-# sudo systemctl enable hapi-verifier
+
 
 [Unit]
 Description=HAPI Verifier
@@ -13,7 +14,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/verifier-nodejs
 ExecStart=/home/ubuntu/.nvm/versions/node/v16.2.0/bin/node verify.js --port 9997
-Restart=on-failure
+Restart=always
 
 [Install]
 WantedBy=multi-user.target

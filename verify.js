@@ -20,9 +20,9 @@ const ver  = parseInt(process.version.slice(1).split('.')[0]);
 
 if (parseInt(ver) < 8) {
   // TODO: On windows, min version is 8
-  console.log(clc.red("!!! node.js version >= 6 required.!!! "
+  console.log(clc.red("!!! node.js version >= 8 required.!!! "
     + "node.js -v returns " + process.version
-    + ".\nConsider installing https://github.com/creationix/nvm and then 'nvm install 6'.\n"));
+    + ".\nConsider installing https://github.com/creationix/nvm and then 'nvm install 8'.\n"));
   process.exit(1);
 }
 

@@ -336,6 +336,7 @@ function FileContentSame(header,body,bodyAll,pn,what) {
 
 	var nf = nFields(header, pn);
 
+	var lines = body.split("\n");
 	var linesAll = bodyAll.split("\n");
 
 	if (what === "contentsame") {

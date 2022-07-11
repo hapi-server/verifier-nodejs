@@ -66,6 +66,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			var abort = false;
 			var shush = false;
 		}
+
+		var shush = true;
 		var stop = stop || abort; // Make stop true when abort true.
 
 		var firstshush = false; // Don't print pass results for long list of similar tests.

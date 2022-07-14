@@ -1303,15 +1303,18 @@ function HAPIJSON(text,version,part){
 			v.addSchema(s[key], s[key]["id"]);
 		}
 	}
-	//v.addSchema(s["HAPIDateTime"], '/HAPIDateTime');
-	//v.addSchema(s["HAPIStatus"], '/HAPIStatus');
-	//v.addSchema(s["Mutli"], '/Multi');
-	//var version = s["HAPI"].pattern.replace("^","").replace("$","");
-	var vr = v.validate(json, s[part]);
-	//console.log(JSON.stringify(vr,null,4))
+	try {
+		var vr = v.validate(json, s[part]);
+	} catch (e) {
+		return {
+				"description": "is.HAPIJSON(): Call to JSON validator failed",
+				"error": true,
+				"got": "Schema version " + e
+			};
+	}
+
 	var ve = vr.errors;
 	var got = "is valid"
-	//console.log(ve)
 	if (ve.length != 0) {
 		var err = [];
 		for (var i = 0;i< ve.length;i++) {

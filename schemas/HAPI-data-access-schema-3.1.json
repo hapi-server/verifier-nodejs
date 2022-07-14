@@ -264,20 +264,22 @@
                         },
                         "fill": {
                             "description": "Parameter fill",
-                            "type": {
-                                        "oneOf":[
-                                                    "string",
-                                                    "null",
-                                                    {
-                                                        "type": "object",
-                                                        "properties":
+                            "oneOf":[
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "null"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties":
                                                             {
                                                                 "additionalProperties": false,
                                                                 "$ref": {"type": "string"}
                                                             }
-                                                    }
-                                                ]
-                                    }
+                                        }
+                                    ]
                         },
                         "description": {
                             "description": "a brief description of the parameter",

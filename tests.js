@@ -2,6 +2,7 @@ const fs      = require('fs');
 const clc     = require('chalk');
 const moment  = require('moment');
 const ip      = require("ip");
+const {URL}   = require("url");
 const zlib    = require('zlib');
 const http    = require('http');
 const https   = require('https');
@@ -33,6 +34,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 	// Catch uncaught execeptions.
 	process.on('uncaughtException', internalerror);
 
+	// Some servers return "Error: certificate has expired" when testing
+	// from command line or localhost.
+	let agentOptions = {"rejectUnauthorized": false};
+
 	root();
 
 	function versioncheck(url,metaVersion,urlVersion) {
@@ -45,6 +50,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				return metaVersion;
 			}
 		}		
+	}
+
+	function origin(urlstr) {
+		const urlc = new URL(urlstr);
+		let url = urlc.protocol + "://" + ip.address();
+		if (url.port) {
+			url = url + ":" + url.port;
+		}
 	}
 
 	function report(url,obj,opts) {
@@ -238,7 +251,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			{
 				"url": url,
 				"timeout": timeout(metaTimeout),
-				"time": true
+				"time": true,
+				"agentOptions": agentOptions
 			},
 			function (err,res,body) {
 				if (err) {
@@ -276,13 +290,15 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 		var url = ROOT + "/capabilities";
 		report(url);
+
 		request(
 			{
 				"url": url,
 				"timeout": timeout(metaTimeout),
-				"headers": {"Origin": ip.address()},
-				"time": true
-			},
+				"headers": {"Origin": origin(url)},
+				"time": true,
+				"agentOptions": agentOptions
+  			},
 			function (err,res,body) {
 
 				if (err) {
@@ -344,8 +360,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			{
 				"url": url,
 				"timeout": timeout(metaTimeout),
-				"headers": {"Origin": ip.address()},
-				"time": true
+				"headers": {"Origin": origin(url)},
+				"time": true,
+				"agentOptions": agentOptions
 			},
 			function (err,res,body) {
 
@@ -415,7 +432,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			{
 				"url": url,
 				"timeout": timeout(metaTimeout),
-				"time": true
+				"time": true,
+				"agentOptions": agentOptions
 			},
 			function (err,res,body) {
 
@@ -499,7 +517,14 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			RES.write("&nbsp&nbsp;" + img + ":&nbsp" + note + "<br>");
 		}
 
-		request({"url":url,"timeout": timeout(metaTimeout), "headers": {"Origin": ip.address()}, "time": true},
+		request(
+			{
+				"url": url,
+				"timeout": timeout(metaTimeout),
+				"headers": {"Origin": origin(url)},
+				"time": true,
+				"agentOptions": agentOptions
+			},
 			function (err,res,body) {
 
 				if (err) {
@@ -675,8 +700,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			{
 				"url": url,
 				"timeout": timeout(metaTimeout),
-				"headers": {"Origin": ip.address()},
-				"time": true
+				"headers": {"Origin": origin(url)},
+				"time": true,
+				"agentOptions": agentOptions
 			},
 			function (err,res,body) {
 				if (err) {
@@ -757,8 +783,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				"url": url,
 				"gzip": true,
 				"timeout": timeout(useTimeout),
-				"headers": {"Origin": ip.address()},
-				"time": true
+				"headers": {"Origin": origin(url)},
+				"time": true,
+				"agentOptions": agentOptions
 			},
 			function (err,res,bodyAll) {
 
@@ -833,8 +860,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					"url": url,
 					"gzip": true,
 					"timeout": timeout(useTimeout),
-					"headers": {"Origin": ip.address()},
-					"time": true
+					"headers": {"Origin": origin(url)},
+					"time": true,
+					"agentOptions": agentOptions
 				},
 			function (err,res,body) {
 
@@ -923,8 +951,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				"url": url,
 				"gzip": true,
 				"timeout": timeout(useTimeout),
-				"headers": {"Origin": ip.address()},
-				"time": true
+				"headers": {"Origin": origin(url)},
+				"time": true,
+				"agentOptions": agentOptions
 			},
 			function (err,res,body) {
 
@@ -1039,8 +1068,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				"url": url,
 				"gzip": true,
 				"timeout": timeout(useTimeout),
-				"headers": {"Origin": ip.address()},
-				"time": true
+				"headers": {"Origin": origin(url)},
+				"time": true,
+				"agentOptions": agentOptions
 			},
 			function (err,res,body) {
 
@@ -1137,8 +1167,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					"url": url,
 					"gzip": true,
 					"timeout": timeout(dataTimeout),
-					"headers": {"Origin": ip.address()},
-					"time": true
+					"headers": {"Origin": origin(url)},
+					"time": true,
+					"agentOptions": agentOptions
 			},
 			function (err,res,body) {
 

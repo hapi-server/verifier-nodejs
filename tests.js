@@ -54,10 +54,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 	function origin(urlstr) {
 		const urlc = new URL(urlstr);
-		let url = urlc.protocol + "://" + ip.address();
+		let url = urlc.protocol + "//" + ip.address();
 		if (url.port) {
 			url = url + ":" + url.port;
 		}
+		return url
 	}
 
 	function report(url,obj,opts) {

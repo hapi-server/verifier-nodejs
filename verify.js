@@ -26,17 +26,29 @@ if (parseInt(ver) < 8) {
   process.exit(1);
 }
 
+function fixurl(url, q) {
+
+	// Allow typical copy/paste error
+	//   ?url=http://server/hapi/info?id=abc
+	// and treat as equivalent to 
+	//   ?url=http://server/hapi&id=abc
+	// for web interface and similar for command line.
+
+	if (/\?id=/.test(q['url'])) {
+		q['id'] = q['url'].split("?id=")[1];
+		q['url'] = q['url']
+									.split("?id=")[0]
+									.replace(/\/info$|\/data$|\/catalog$/,"")
+									.replace(/\/$/,"")
+	}
+
+}
+
 if (argv.url !== "") {
 	// Command-line mode
 
-	// Allow 
-	//   --url=http://server/hapi?id=abc
-	// and treat as equivalent to 
-	//   --url=http://server/hapi --id=abc
-	if (/\?id=/.test(argv['url'])) {
-		argv['id'] = argv['url'].split("?")[1].replace("id=","");
-		argv['url'] = argv['url'].split("?")[0].replace(/\/info|\/data|\/catalog/,"");
-	}
+	fixurl(argv.url, argv);
+
 	argv.parameter = argv.parameter || argv.parameters || "";
 	
 	if (argv.version !== "" && !versions().includes(argv.version)) {
@@ -79,17 +91,7 @@ if (argv.url !== "") {
 			}
 		}
 
-		// Allow typical copy/paste error
-		//   ?url=http://server/hapi/info?id=abc
-		// and treat as equivalent to 
-		//   ?url=http://server/hapi&id=abc
-		// Caution: Code is duplicated in command line mode.
-		if (/\?id=/.test(req.query['url'])) {
-			req.query['id'] = req.query['url'].split("?id=")[1];
-			req.query['url'] = req.query['url']
-								.split("?id=")[0]
-								.replace(/\/info$|\/data$|\/catalog$/,"");
-		}
+		fixurl(req.query.url, req.query);
 
 		var url   = req.query["url"]       || ""
 		var id    = req.query["id"]        || ""

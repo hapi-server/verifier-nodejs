@@ -149,7 +149,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			if (VERSION) {
 				if (RES) {
 					var linkopen = "<a href='https://github.com/hapi-server/verifier-nodejs/tree/master/schemas/HAPI-data-access-schema-"+VERSION+".json'>";
-					RES.write("Using " + linkopen + "HAPI schema version " + VERSION + "</a><br/>");
+					RES.write("Using " + linkopen + "HAPI schema version " + VERSION + "</a><br>");
 				} else {
 					console.log("Using HAPI schema version " + VERSION);
 				}
@@ -1172,7 +1172,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				if (RES) {
 					var link = PLOTSERVER+"?usecache=false&usedatacache=false&server=" + url.replace("/data?","&");
 					var note = "<a target='_blank' href='" + link + "'>Direct link for following plot.</a>. Please report any plotting issues on <a target='_blank' href='https://github.com/hapi-server/client-python/issues'>the Python hapiclient GitHub page</a>.";
-					RES.write("&nbsp&nbsp;&nbsp&nbsp;<font style='color:black'>&#x261E</font>:&nbsp" + note + "<br><img src='" + link + "'/><br/>");
+					RES.write("&nbsp&nbsp;&nbsp&nbsp;<font style='color:black'>&#x261E</font>:&nbsp" + note + "<br><img src='" + link + "'/><br>");
 				}
 
 				report(url,is.RequestError(err,res,dataTimeout,timeout()));

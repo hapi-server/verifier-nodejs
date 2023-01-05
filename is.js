@@ -1291,8 +1291,8 @@ function ContentType(re,given){
 }
 exports.ContentType = ContentType;
 
-function JSONparsable(text) {
-	var ret = {"description":"is.JSONparsable(): Expect JSON.parse(response) to not throw error","error":false,"got":"no error"};
+function JSONParsable(text) {
+	var ret = {"description":"is.JSONParsable(): Expect JSON.parse(response) to not throw error","error":false,"got":"no error"};
 	try {
 		JSON.parse(text);
 		return ret;
@@ -1302,7 +1302,7 @@ function JSONparsable(text) {
 		return ret;
 	}
 }
-exports.JSONparsable = JSONparsable;
+exports.JSONParsable = JSONParsable;
 
 function HeaderParsable(body) {
 	let description = callerName() + ": Expect header lines in data stream to be JSON parsable after removal of leading #s.";

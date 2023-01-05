@@ -319,7 +319,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					catalog(['csv']);
 					return;
 				}
-				if (!report(url,is.JSONparsable(body),{"stop":true})) {
+				if (!report(url,is.JSONParsable(body),{"stop":true})) {
 					catalog(['csv']);
 					return;
 				}
@@ -381,7 +381,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
-				if (!report(url,is.JSONparsable(body),{"abort":true})) return;
+				if (!report(url,is.JSONParsable(body),{"abort":true})) return;
 				CATALOG = JSON.parse(body);
 				var cat = CATALOG["catalog"];
 				if (ID) {
@@ -453,7 +453,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				report(url,is.ErrorCorrect(res.statusCode,404,"httpcode"));
 				var err1406 = errors(1406);
 				report(url,is.StatusInformative(res.statusMessage,err1406.status.message,'httpstatus'),{"warn":true});
-				if (report(url,is.JSONparsable(body),{"stop":true})) {
+				if (report(url,is.JSONParsable(body),{"stop":true})) {
 					var json = JSON.parse(body);
 					var version = versioncheck(url,json.HAPI,VERSION);
 					if (report(url,is.HAPIJSON(body,version,'HAPIStatus'),{"stop":true})) {
@@ -542,7 +542,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				report(url,is.RequestError(err,res,metaTimeout,timeout()));
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
-				if (!report(url,is.JSONparsable(body),{"abort":true})) return;
+				if (!report(url,is.JSONParsable(body),{"abort":true})) return;
 				var header = JSON.parse(body);
 				var version = versioncheck(url,header.HAPI,VERSION);
 				report(url,is.HAPIJSON(body,version,'info'));
@@ -724,7 +724,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					return;
 				}
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
-				if (!report(url,is.JSONparsable(body),{"stop":true})) {
+				if (!report(url,is.JSONParsable(body),{"stop":true})) {
 					dataAll1(formats,datasets,header,start,stop,dataTimeout);
 					return;
 				}

@@ -65,7 +65,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 		// Returns !(obj.error && (stop || abort))
 		// stop means processing can't continue on current URL
-		// Abort means can't move to testing new URL.
+		// Abort means can't move to testing next URL.
 		// Note that abort = true implies stop = true.
 		if (obj == false) return false; // Case where test was not appropriate.
 
@@ -987,33 +987,15 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				}
 				// End similar code.
 
-				var bodyLines = body.split(/\r?\n/);
-				var headerLines = "";
-				var dataLines = "";
-
-				// Extract header lines.
-				for (var i = 0; i < bodyLines.length; i++) {
-					if (bodyLines[i][0] === "#") {
-						headerLines = headerLines + bodyLines[i].slice(1);
-					} else {
-						break;
-					}
-				}
-
-				// TODO: Need to make ignore differences in newline string \r\n should
-				// be considered same as \n.
-				// CSV response checks are for response without header.
-				// Use the HAPI version found in this check and pass through
-				// to CSV response check functions.
 				var version = "";
-				var dataLines = bodyLines.slice(i).join("\n");
-				if (report(url,is.JSONparsable(headerLines),{"abort":false})) {
-					var bodyJSON = JSON.parse(headerLines);
-					report(url,is.FormatInHeader(bodyJSON, "data"));
-					report(url,is.HeaderSame(header, bodyJSON), {'warn': true});
-					var version = bodyJSON.HAPI;
-					report(url,is.FileContentSame(header,bodyAll,dataLines,null,"contentsame"));
-				}
+				let ret = is.HeaderParsable(body);
+				if (report(url,ret,{"stop": true})) {
+					var headerJSON = JSON.parse(ret.csvparts.header);
+					report(url,is.FormatInHeader(headerJSON, "data"));
+					report(url,is.HeaderSame(header, headerJSON), {'warn': true});
+					var version = headerJSON.HAPI;
+					report(url,is.FileContentSame(header,bodyAll,ret.csvparts.data,null,"contentsame"));
+				}	
 				dataAll_1201(formats,datasets,header,start,stop,version,dataTimeout,bodyAll);
 		})
 	}

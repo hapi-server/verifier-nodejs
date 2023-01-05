@@ -33,6 +33,13 @@ function versions() {
 }
 exports.versions = versions;
 
+function HAPIVersionWarning(version) {
+	if (version === "3.1" || version === "3.0") {
+		return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. Some errors reported by schema check may not actually be errors.</span>`;
+	}
+	return "";
+}
+
 function HAPIVersion(version) {
 	var	got = version;
 	var t = false;
@@ -127,13 +134,18 @@ exports.RequestError = RequestError;
 
 function CadenceValid(cadence) {
 	var md = moment.duration(cadence);
+	var md2 = moment.duration(cadence.toUpperCase());
 	var t = md._isValid;
+	var got = cadence;
+	if (!t && md2._isValid) {
+		got = got + "; (Letters in cadence should be uppercase.)";
+	}
 	// moment.duration("PT720") gives md._isValid = true and
 	// md._milliseconds = 0. (Need H, M, S at end)
 	if (md._milliseconds == 0 && md._days == 0 && md._months == 0) {
 		t = false;
 	}
-	return {"description": "is.CadenceValid(): Expect cadence to be a valid ISO8601 duration", "error": t == false, "got": cadence};
+	return {"description": "is.CadenceValid(): Expect cadence to be a valid ISO8601 duration", "error": t == false, "got": got};
 }
 exports.CadenceValid = CadenceValid;
 
@@ -260,6 +272,21 @@ function csvToArray(text) {
         p = l;
     }
     return ret;
+}
+
+function splitCSV(bodyString) {
+
+	let headerString = "";
+	let bodyLines = bodyString.split(/\r?\n/);
+	for (var i = 0; i < bodyLines.length; i++) {
+		if (bodyLines[i][0] === "#") {
+			headerString = headerString + bodyLines[i].slice(1);
+		} else {
+			break;
+		}
+	}
+	let dataString = bodyLines.slice(i).join("\n");
+	return {"header": headerString, "data": dataString};
 }
 
 function FileLineOK(header,body,pn,what) {
@@ -1270,12 +1297,40 @@ function JSONparsable(text) {
 		JSON.parse(text);
 		return ret;
 	} catch (error) {
-		ret.got = error + " See http://jsonlint.org/ for a more detailed error report";
+		ret.got = "JSON.parse of:\n\n" + text + "\n\nresulted in " + error + ". Use http://jsonlint.org/ for a more detailed error report. ";
 		ret.error = true;
 		return ret;
 	}
 }
 exports.JSONparsable = JSONparsable;
+
+function HeaderParsable(body) {
+	let description = callerName() + ": Expect header lines in data stream to be JSON parsable after removal of leading #s.";
+	let ret = {"description": description, "error": false, "got": "no error"};
+
+	let csvparts;
+	try {
+		csvparts = splitCSV(body)
+	} catch (error) {
+		ret.got = "Could not split CSV into header and data parts.";
+		ret.error = true;
+		return ret;
+	}
+	ret.csvparts = csvparts;
+
+	try {
+		JSON.parse(csvparts.header);
+		return ret;
+	} catch (error) {
+		ret.got = "JSON.parse of \n\n" + csvparts.header + "\n\nresulted in " + error + ". Use http://jsonlint.org/ for a more detailed error report. ";
+		ret.error = true;
+		return ret;
+	}
+
+	return ret;
+}
+exports.HeaderParsable = HeaderParsable;
+
 
 function HAPIJSON(text,version,part){
 
@@ -1307,7 +1362,7 @@ function HAPIJSON(text,version,part){
 		var vr = v.validate(json, s[part]);
 	} catch (e) {
 		return {
-				"description": "is.HAPIJSON(): Call to JSON validator failed",
+				"description": "is.HAPIJSON(): Call to JSON validator failed.",
 				"error": true,
 				"got": "Schema version " + e
 			};
@@ -1324,6 +1379,6 @@ function HAPIJSON(text,version,part){
 		got = "\n\t" + JSON.stringify(err,null,4).replace(/\n/g,"\n\t")
 	}
 	var url = "https://github.com/hapi-server/verifier-nodejs/tree/master/schemas/HAPI-data-access-schema-"+version+".json";
-	return {"description":"is.HAPIJSON(): Expect body to be valid <a href='"+url+"'>HAPI " + version + " " + part + " schema</a>","error":ve.length != 0,"got":got};
+	return {"description":"is.HAPIJSON(): Expect body to be valid <a href='"+url+"'>HAPI " + version + " " + part + " schema</a>. " + HAPIVersionWarning(version),"error":ve.length != 0,"got":got};
 }
 exports.HAPIJSON = HAPIJSON;

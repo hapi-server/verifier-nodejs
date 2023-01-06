@@ -614,7 +614,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				}
 
 				var validCadence = false;
-				if (header["cadence"]) {
+				let ret = report(url,is.CadenceGiven(header["cadence"]),{"warn":true});
+				if (ret.error == false) {
 					report(url,is.CadenceValid(header["cadence"]));
 					var obj = is.CadenceValid(header["cadence"]);
 					validCadence = !obj.error;

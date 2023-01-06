@@ -132,20 +132,42 @@ function RequestError(err,res,timeoutType,timeoutObj) {
 }
 exports.RequestError = RequestError;
 
+function CadenceGiven(cadence) {
+	return {"description": callerName() + ": Expect the nominal cadence to be given (see <a href='https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md'>the HAPI spec for definition</a>). A nominal cadence is useful for clients and obviates the need for it to be inferred programatically.", "error": typeof(cadence) !== "string", "got": cadence || "no cadence"};
+}
+
+exports.CadenceGiven = CadenceGiven;
+
 function CadenceValid(cadence) {
-	var md = moment.duration(cadence);
-	var md2 = moment.duration(cadence.toUpperCase());
-	var t = md._isValid;
-	var got = cadence;
-	if (!t && md2._isValid) {
-		got = got + "; (Letters in cadence should be uppercase.)";
+	// https://stackoverflow.com/a/53140944/1491619
+	// TODO: Move to JSON schema.
+	var re = /^P(?!$)((\d+Y)|(\d+\.\d+Y$))?((\d+M)|(\d+\.\d+M$))?((\d+W)|(\d+\.\d+W$))?((\d+D)|(\d+\.\d+D$))?(T(?=\d)((\d+H)|(\d+\.\d+H$))?((\d+M)|(\d+\.\d+M$))?(\d+(\.\d+)?S)?)??$/;
+	var t = re.test(cadence) == true;
+	var got = cadence + " valid.";
+	if (t == false) {
+		var got = cadence + " is invalid.";
+		if (typeof(cadence) === "string" && cadence.toUpperCase() === cadence) {
+			got = got + " (Letters in cadence should be uppercase.)";
+		}
 	}
-	// moment.duration("PT720") gives md._isValid = true and
-	// md._milliseconds = 0. (Need H, M, S at end)
-	if (md._milliseconds == 0 && md._days == 0 && md._months == 0) {
-		t = false;
+
+	if (0) {
+		// Old code. moment.js is too permissive.
+		var md = moment.duration(cadence);
+		// moment.js claims duration with lowercase if valid
+		//var md2 = moment.duration(cadence.toUpperCase()); 
+		var t = md._isValid;
+		var got = cadence;
+		if (t == true && cadence.toUpperCase() !== cadence) {
+			t = false;
+		}
+		// moment.duration("PT720") gives md._isValid = true and
+		// md._milliseconds = 0. (Need H, M, S at end)
+		if (md._milliseconds == 0 && md._days == 0 && md._months == 0) {
+			t = false;
+		}
 	}
-	return {"description": "is.CadenceValid(): Expect cadence to be a valid ISO8601 duration", "error": t == false, "got": got};
+	return {"description": "is.CadenceValid(): Expect cadence to be a valid ISO8601 duration (regular expression tested: " + re.toString() + ").", "error": t == false, "got": got};
 }
 exports.CadenceValid = CadenceValid;
 
@@ -873,7 +895,7 @@ function FillOK(fill,type,len,name,what) {
 	}
 	if (what === "string") {
 		desc = "is.FillOK(): Expect length of fill value for a string parameter to be <= length of the string parameter";
-		if (len > fill.length) {
+		if (len < fill.length) {
 			t = true;
 			got  = got + " string length = " + len + "; fill length = " + fill.length;
 		}
@@ -1262,11 +1284,21 @@ function CORSAvailable(head) {
 	var a     = /\*/.test(astr);
 
 	var bhead = "Access-Control-Allow-Methods";
-	var bstr  = head[bhead.toLowerCase()];
-	var b     = /GET/.test(bstr);
+	var bstr  = head[bhead.toLowerCase()] || "";
+	var b = true; 
+	// If not specified, Methods = GET, HEAD, and POST are allowed.
+	// See links in https://stackoverflow.com/a/44385327
+	if (bstr !== "") {
+		b = /GET/.test(bstr);
+	}
 
-	var want = "Access-Control-Allow-{Origin,Methods} = " + "{*, GET}";
-	var got  = "Access-Control-Allow-{Origin,Methods} = {" + astr + ", " + bstr + "}";
+	var want = "Access-Control-Allow-Origin = '*' and, if given, Access-Control-Allow-Methods to include 'GET'";
+	var got = `Access-Control-Allow-Origin = '${astr}' and, `
+	if (bstr) {
+		got = got + `Access-Control-Allow-Methods '${bstr}'`;
+	} else {
+		got = got + "No Access-Control-Allow-Methods header."
+	}
 	var e = !(a && b);
 	return {"description":"is.CORSAvailable(): To enable AJAX clients, want CORS HTTP Headers: " + want,"error":e,"got":got};
 }

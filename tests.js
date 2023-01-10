@@ -273,8 +273,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				report(url,is.HTTP200(res),{"warn":true});
 				report(url,is.ContentType(/^text\/html/,res.headers["content-type"]),{"warn":true});
 				capabilities();
-
 			})
+	}
+
+	function about() {
+		// TODO: Added in 3.0. Tests will be similar to those in capabilities()
 	}
 
 	function capabilities() {
@@ -329,10 +332,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					catalog(['csv']);
 					return;
 				}
+
 				var outputFormats = json.outputFormats || "No outputFormats element."
 				// Existence of 'csv' can't be checked easily with schema using enum.
 				// (Could be done using oneOf for outputFormats and have csv be in emum
 				// array for each of the objects in oneOf.)
+				// Possible solution?: https://stackoverflow.com/a/17940765
 				report(url,
 						{
 							"description":"Expect outputFormats to have 'csv'",
@@ -748,6 +753,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				report(url,{"description":"Expect info response for one parameter to match content in response for all parameters","error": !equivalent, "got": (equivalent ? "Match." : "Mismatch.")});
 				dataAll1(formats,datasets,header,start,stop,dataTimeout);
 			})
+	}
+
+	function API3_0() {
+		// TODO: Check no Unicode in dataset and parameter IDs
+		// TODO: Test that time.min and start and time.max and stop are both supported for /data requests.
+		// TODO: Test that id and dataset are both supported for /catalog requests
 	}
 
 	function dataAll1(formats,datasets,header,start,stop,dataTimeout) {

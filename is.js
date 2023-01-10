@@ -35,7 +35,7 @@ exports.versions = versions;
 
 function HAPIVersionWarning(version) {
 	if (version === "3.1" || version === "3.0") {
-		return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. Some errors reported by schema check may not actually be errors.</span>`;
+		return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. Some errors reported by schema check may not actually be errors and not all features are checked.</span>`;
 	}
 	return "";
 }
@@ -202,22 +202,31 @@ function CadenceOK(cadence,start,stop,what) {
 exports.CadenceOK = CadenceOK;
 
 function CIdentifier(arr,type) {
+	// https://stackoverflow.com/questions/14953861/representing-identifiers-using-regular-expression
 	var re_str = "[_a-zA-Z][_a-zA-Z0-9]{1,30}";
 
+	// TODO: This test is broken. It will pass anything that has a first char in [_a-zA-Z]
+	// and a second char in [_a-zA-Z0-9].
 	var arr_fail = [];
+	var re = new RegExp(re_str);
 	for (var i = 0; i < arr.length;i++) {
-		var re = new RegExp(re_str);
-		var t = re.test(arr[i]);
+		var m = arr[i]["id"].match(re);
+		var t = m[0].length == m["input"];
 		if (!t) {
-			arr_fail.push(arr[i]);
+			arr_fail.push(arr[i]["id"]);
 		}
 	}
 	var got = "All " + type + "(s) match.";
 	if (arr_fail.length > 0) {
-		console.log(arr_fail);
-		got = "Non-matching " + type + "(s):" + JSON.stringify(arr_fail);
+	let No = arr_fail.length;
+		if (arr_fail.length > 10) {
+			arr_fail = arr_fail.slice(0, 10);
+			arr_fail.push("\n ... (" + (No - 10) + ") more.");
+		}
+ 		got = No + " datasets ids that are not c identfiers:\n\n" + arr_fail.join("\n");
 	}
-	return {"description": "is.CIdentifier(): Expect " + type + " to match c identifier regex '" + re_str + "'.", "error": arr_fail.length > 0, "got": got};
+
+	return {"description": "is.CIdentifier(): Prefer " + type + " to match c identifier regex '" + re_str + "'.", "error": arr_fail.length > 0, "got": got};
 
 }
 exports.CIdentifier = CIdentifier;
@@ -326,7 +335,7 @@ function FileLineOK(header,body,pn,what) {
 		for (var i = 0;i<lines.length-1;i++) {
 			t = nf != lines[i].length;
 			if (t) {
-				got = "(" + line.length + ")" + " - (" + nf + ")";
+				got = "(" + lines[i].length + ")" + " - (" + nf + ")";
 				got = got + " on line " + (i+1);
 				break;
 			}
@@ -1266,13 +1275,18 @@ function TooLong(arr,arrstr,idstr,elstr,N){
 		if (!arr[i][elstr]) continue;
 		if (arr[i][elstr]) {
 			if (arr[i][elstr].length > N) {
-				ids.push(arr[i][idstr]);
+				ids.push("id: '" + arr[i][idstr] + "'; title: '" + arr[i][elstr] + "'");
 			}
 		}
 	}
-	var got = "All objects in " + arrstr + " are shorter than " + N + " characters"
+	var got = "All titles in " + arrstr + " ≤ " + N + " characters"
+	let No = ids.length;
 	if (ids.length > 0) {
-		got = arrstr + " has " + ids.length + " object(s) (" + ids.join(",") + ") with " + elstr + " longer than " + N + " characters"
+		if (ids.length > 10) {
+			ids = ids.slice(0, 10);
+			ids.push("\n ... (" + (No - 10) + ") more.");
+		}
+		got = arrstr + " has " + No+ " datasets with a " + elstr + " > " + N + " characters: \n\n" + ids.join("\n");
 	}
  	return {"description":"is.TooLong(): Prefer " + elstr + "s in objects to be <= 40 characters","error":ids.length != 0,"got": got};
 }
@@ -1366,7 +1380,7 @@ exports.HeaderParsable = HeaderParsable;
 
 function HAPIJSON(text,version,part){
 
-	s = schema(version);
+	let s = schema(version);
 
 	if (!s) {
 		return {
@@ -1381,22 +1395,23 @@ function HAPIJSON(text,version,part){
 	} else {
 		var json = JSON.parse(text);
 	}
-	
 	var v = new Validator();
 	// Look for all top-level elements that have an id starting with a /.
 	// These are subschemas that are used.
 	for (key in s) {
 		if (s[key]["id"] && s[key]["id"][0] === "/") {
+			//console.log("Adding schema " + s[key]["id"]);
 			v.addSchema(s[key], s[key]["id"]);
 		}
 	}
 	try {
 		var vr = v.validate(json, s[part]);
 	} catch (e) {
+		console.log(e)
 		return {
 				"description": "is.HAPIJSON(): Call to JSON validator failed.",
 				"error": true,
-				"got": "Schema version " + e
+				"got": "Schema error: " + e
 			};
 	}
 

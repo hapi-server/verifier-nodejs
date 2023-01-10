@@ -80,7 +80,7 @@
         "additionalProperties": false,
         "properties": {
             "$ref": {
-              "type": "string"
+                "type": "string"
             }
         }
     },
@@ -182,6 +182,10 @@
                 "description": "stop date/time associated with sampleStartDate",
                 "$ref": "/HAPIDateTime"
             },
+            "maxRequestDuration": {
+                "description": "An ISO 8601 duration indicating the maximum duration for a request. This duration should be interpreted by clients as a limit above which a request for all parameters will very likely be rejected with a HAPI 1408 error; requests for fewer parameters and a longer duration may or may not be rejected.",
+                "type": "string"  
+            },
             "cadence": {
                 "description": "Time difference between records as an ISO 8601 duration. This is meant as a guide to the nominal cadence of the data and not necessarily a precise statement about the time between measurements.",
                 "type": "string"
@@ -219,6 +223,66 @@
                 "type": "string",
                 "enum": ["udunits2","astropy3","cdf-cluster"]
             },
+            "coordinateSystemSchema": {
+                "description": "The name of the schema or convention that contains a list of coordinate system names and definitions. If this keyword is provided, any coordinateSystemName keyword given in a parameter definition should follow this schema.",
+                "type": "string",
+                "enum": ["spase2.4.1"]
+            },
+            "citation": {
+                "description": "How to cite the data set. An actionable DOI is preferred (e.g., https://doi.org/...). This citation differs from the citation in an /info response. Here the citation is for the entity that maintains the data server.",
+                "type": "string"
+            },
+            "additionalMetadata": {
+                "description": "A way to include a block of other (non-HAPI) metadata. See below for a description of the object, which can directly contain the metadata or point to it via a URL.",
+                "type": "object",
+                "oneOf": [
+                            {
+                                "required": ["content"],
+                                "additionalProperties": false,
+                                "properties": {
+                                    "name": {
+                                        "description": "the name of the additional metadata",
+                                        "type": "string"
+                                    },
+                                    "content": {
+                                        "description": "Either a string with the metadata content (for XML), or a JSON object representing the object tree for the additional metadata",
+                                        "type": ["object","string"]
+                                    },
+                                    "schemaURL": {
+                                        "description": "A computer-readable schema for the additional metadata",
+                                        "type": "string"
+                                    },
+                                    "aboutURL": {
+                                        "description": "A human readable explanation for the additional metadata",
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            {
+                                "required": ["contentURL"],
+                                "additionalProperties": false,
+                                "properties": {
+                                    "name": {
+                                        "description": "the name of the additional metadata",
+                                        "type": "string"
+                                    },
+                                    "contentURL": {
+                                        "description": "URL pointing to additional metadata",
+                                        "type": "string"
+                                    },
+                                    "schemaURL": {
+                                        "description": "A computer-readable schema for the additional metadata",
+                                        "type": "string"
+                                    },
+                                    "aboutURL": {
+                                        "description": "A human readable explanation for the additional metadata",
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                ]
+            },
+            "definitions": {"type": "object"},
             "parameters": {
                 "description": "Parameters in dataset",
                 "type": "array",
@@ -228,11 +292,7 @@
                 "items": {
                     "type": "object",
                     "required": ["name","type","units","fill"],
-                    "patternProperties": {
-                        "x_.*": {
-                            "enum": ["number","string","boolean","object","array", "null"]
-                        }
-                    },
+                    "patternProperties": {"x_.*": {}},
                     "additionalProperties": false,
                     "properties": {
                         "name": {
@@ -242,12 +302,7 @@
                         "type": {
                             "description": "Parameter type",
                             "type": "string",
-                            "enum": ["string","isotime","integer","double"]
-                        },
-                        "encoding": {
-                            "description": "String encoding",
-                            "type": "string",
-                            "enum": ["ascii","utf-8"]
+                            "enum": ["string","double","integer","isotime"]
                         },
                         "units": {"$ref": "/UnitsAndLabel"},
                         "label": {"$ref": "/UnitsAndLabel"},
@@ -263,27 +318,31 @@
                             "minimum": 1
                         },
                         "fill": {
-                            "description": "Parameter fill",
-                            "oneOf":[
-                                        {
-                                            "type": "string"
-                                        },
-                                        {
-                                            "type": "null"
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties":
-                                                            {
-                                                                "additionalProperties": false,
-                                                                "$ref": {"type": "string"}
-                                                            }
-                                        }
-                                    ]
+                            "type": ["string","null","object"]
                         },
                         "description": {
                             "description": "a brief description of the parameter",
                             "type": "string"
+                        },
+                        "coordinateSystemName": {
+                            "description": "Some data represent directional or position information, such as look direction, spacecraft location, or a measured vector quantity. This keyword specifies the name of the coordinate system for these vector quantities. If a coordinateSystemSchema was given for this dataset, then the coordinateSystemName must come from the schema. See below for more about coordinate systems.",
+                            "type": "string"
+                        },
+                        "vectorComponents": {
+                            "description": "The name or list of names of the vector components present in a directional or positional quanitity. For a scalar parameter, only a single string indicating the component type is allowed. For an array parameter, an array of corresponding component names is expected. If not provided, the default value for vectorComponents is ['x','y','z'], which assumes the parameter is an array of length 3.",
+                            "oneOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "enum": ["x","y","z","r","rho","latitude","colatitude","longitude","longitude0","other"]
+                                            },
+                                            "minItems": 1
+                                        }
+                                    ]
                         },
                         "bins": {
                             "description": "Bins for components of a with a size having at least one element greater than 1",

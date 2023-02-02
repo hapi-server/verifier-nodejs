@@ -1,29 +1,29 @@
 var fs   = require('fs');
 var clc  = require('chalk');
 var argv = require('yargs')
-				.default({
-					"port": 9999,
-					"url": "",
-					"id": "",
-					"parameter": "",
-					"timemax": "",
-					"timemin": "",
-					"version": "",
-					"plotserver":"http://hapi-server.org/plot"
-				})
-				.argv
+						.default({
+							"port": 9999,
+							"url": "",
+							"id": "",
+							"parameter": "",
+							"timemax": "",
+							"timemin": "",
+							"version": "",
+							"plotserver":"http://hapi-server.org/plot"
+						})
+						.argv
 
 var tests = require('./tests.js'); // Test runner
 var versions = require('./is.js').versions;
 
-const ver  = parseInt(process.version.slice(1).split('.')[0]);
+const nodever  = parseInt(process.version.slice(1).split('.')[0]);
 
-if (parseInt(ver) < 8) {
-  // TODO: On windows, min version is 8
-  console.log(clc.red("!!! node.js version >= 8 required.!!! "
-    + "node.js -v returns " + process.version
-    + ".\nConsider installing https://github.com/creationix/nvm and then 'nvm install 8'.\n"));
-  process.exit(1);
+if (parseInt(nodever) < 8) {
+	// TODO: On windows, min version is 8
+	console.log(clc.red("!!! node.js version >= 8 required.!!! "
+		+ "node.js -v returns " + process.version
+		+ ".\nConsider installing https://github.com/creationix/nvm and then 'nvm install 8'.\n"));
+	process.exit(1);
 }
 
 function fixurl(url, q) {
@@ -64,7 +64,7 @@ if (argv.url !== "") {
 
 	// Not working.
 	app.use(function(err, req, res, next) {
-  		res.end('Application error.');
+			res.end('Application error.');
 	});
 
 	app.get('/favicon.ico', function (req, res, next) {
@@ -83,7 +83,7 @@ if (argv.url !== "") {
 			return;
 		}
 
-		var allowed = ["url","id","parameter","parameters","time.min","time.max","version","datatimeout","metatimeout"];
+		var allowed = ["url","id","dataset","parameter","parameters","time.min","start","time.max","stop","version","datatimeout","metatimeout"];
 		for (var key in req.query) {
 			if (!allowed.includes(key)) {
 				res.end("Only allowed parameters are " + allowed.join(",") + " (not "+key+").");
@@ -94,10 +94,10 @@ if (argv.url !== "") {
 		fixurl(req.query.url, req.query);
 
 		var url   = req.query["url"]       || ""
-		var id    = req.query["id"]        || ""
+		var id    = req.query["id"]        || req.query["dataset"] || ""
 		var param = req.query["parameter"] || req.query["parameters"] || ""
-		var start = req.query["time.min"]  || ""
-		var stop  = req.query["time.max"]  || ""
+		var start = req.query["time.min"]  || req.query["start"] || ""
+		var stop  = req.query["time.max"]  || req.query["start"] || ""
 		var datatimeout = parseInt(req.query["datatimeout"]) || ""
 		var metatimeout = parseInt(req.query["metatimeout"]) || ""
 

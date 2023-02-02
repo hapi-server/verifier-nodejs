@@ -755,7 +755,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			})
 	}
 
-	function API3_0() {
+	function api3_0() {
 		// TODO: Check no Unicode in dataset and parameter IDs
 		// TODO: Test that time.min and start and time.max and stop are both supported for /data requests.
 		// TODO: Test that id and dataset are both supported for /catalog requests

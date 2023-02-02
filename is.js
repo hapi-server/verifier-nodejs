@@ -21,7 +21,7 @@ function prod(arr) {
 }
 
 function callerName() {
-    return "is." + callerName.caller.name + "()";
+	return "is." + callerName.caller.name + "()";
 }
 
 function versions() {
@@ -211,19 +211,19 @@ function CIdentifier(arr,type) {
 	var re = new RegExp(re_str);
 	for (var i = 0; i < arr.length;i++) {
 		var m = arr[i]["id"].match(re);
-		var t = m[0].length == m["input"];
+		var t = m[0] == m["input"];
 		if (!t) {
 			arr_fail.push(arr[i]["id"]);
 		}
 	}
 	var got = "All " + type + "(s) match.";
 	if (arr_fail.length > 0) {
-	let No = arr_fail.length;
+		let No = arr_fail.length;
 		if (arr_fail.length > 10) {
 			arr_fail = arr_fail.slice(0, 10);
 			arr_fail.push("\n ... (" + (No - 10) + ") more.");
 		}
- 		got = No + " datasets ids that are not c identfiers:\n\n" + arr_fail.join("\n");
+		got = No + " datasets ids that are not c identfiers:\n\n" + arr_fail.join("\n");
 	}
 
 	return {"description": "is.CIdentifier(): Prefer " + type + " to match c identifier regex '" + re_str + "'.", "error": arr_fail.length > 0, "got": got};
@@ -290,19 +290,19 @@ function nFields(header, pn) {
 
 function csvToArray(text) {
 	// https://stackoverflow.com/a/41563966/1491619
-    let p = '', row = [''], ret = [row], i = 0, r = 0, s = !0, l;
-    for (l of text) {
-        if ('"' === l) {
-            if (s && l === p) row[i] += l;
-            s = !s;
-        } else if (',' === l && s) l = row[++i] = '';
-        else if ('\n' === l && s) {
-            if ('\r' === p) row[i] = row[i].slice(0, -1);
-            row = ret[++r] = [l = '']; i = 0;
-        } else row[i] += l;
-        p = l;
-    }
-    return ret;
+		let p = '', row = [''], ret = [row], i = 0, r = 0, s = !0, l;
+		for (l of text) {
+				if ('"' === l) {
+						if (s && l === p) row[i] += l;
+						s = !s;
+				} else if (',' === l && s) l = row[++i] = '';
+				else if ('\n' === l && s) {
+						if ('\r' === p) row[i] = row[i].slice(0, -1);
+						row = ret[++r] = [l = '']; i = 0;
+				} else row[i] += l;
+				p = l;
+		}
+		return ret;
 }
 
 function splitCSV(bodyString) {
@@ -1244,7 +1244,7 @@ exports.NaN = NaN;
 
 function Unique(arr,arrstr,idstr){
 	if (!arr.length) {
- 		return {"description":"is.Unique(): Expect " + arrstr + " to be an array","error":true,"got": typeof(arr)};
+		return {"description":"is.Unique(): Expect " + arrstr + " to be an array","error":true,"got": typeof(arr)};
 	}
 
 	var ids = [];
@@ -1264,7 +1264,7 @@ function Unique(arr,arrstr,idstr){
 	} else {
 		var got ="All unique.";
 	}
- 	return {"description":"is.Unique(): Expect all '" + idstr + "' values in objects in " + arrstr + " array to be unique","error":e,"got": got};
+	return {"description":"is.Unique(): Expect all '" + idstr + "' values in objects in " + arrstr + " array to be unique","error":e,"got": got};
 }
 exports.Unique = Unique;
 
@@ -1288,7 +1288,7 @@ function TooLong(arr,arrstr,idstr,elstr,N){
 		}
 		got = arrstr + " has " + No+ " datasets with a " + elstr + " > " + N + " characters: \n\n" + ids.join("\n");
 	}
- 	return {"description":"is.TooLong(): Prefer " + elstr + "s in objects to be <= 40 characters","error":ids.length != 0,"got": got};
+	return {"description":"is.TooLong(): Prefer " + elstr + "s in objects to be <= 40 characters","error":ids.length != 0,"got": got};
 }
 exports.TooLong = TooLong;
 

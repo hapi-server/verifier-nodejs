@@ -46,41 +46,41 @@
 		</p>
 		<h3>Usage</h3>
 		<p>
+      In the following, <code>{id,dataset}</code> means <code>id</code> or <code>dataset</code> allowed;
+      <code>{time.min,start}</code> means <code>time.min</code> or <code>start</code> allowed;
+      <code>{time.max,start}</code> means <code>time.max</code> or <code>start</code> allowed
 			<ul>
 				<li>
 					<code>?url=URL</code>
 				</li>
 				<li>
-					<code>?url=URL&id=ID</code>
+					<code>?url=URL&{id,dataset}=ID</code>
 				</li>
 				<li>
-					<code>?url=URL&id=ID&amp;parameter=PARAMETER</code>
+					<code>?url=URL&id={id,dataset}&amp;parameter=PARAMETER</code>&nbsp;&nbsp;(note <code>parameter</code> is not plural - only a single parameter may be specified)
 				</li>
 				<li>
-					<code>?url=URL&id=ID&amp;parameter=PARAMETER&time.min=HAPITIME&time.max=HAPITIME</code>
+					<code>?url=URL&id={id,dataset}&amp;parameter=PARAMETER&{time.min,start}=HAPITIME&{time.max,start}=HAPITIME</code>&nbsp;&nbsp;where <code>HAPITIME</code> is decribed in the <a href="https://github.com/hapi-server/data-specification/blob/master/hapi-3.1.0/HAPI-data-access-spec-3.1.0.md#376-representation-of-time">HAPI specification</a>.
 				</li>
 				<li>
-					<code>?url=URL&...&metatimeout=MILLISECONDS</code>
+					<code>?url=URL&...&metatimeout=MILLISECONDS</code>&nbsp;&nbsp;See below for additional details.
 				</li>
 				<li>
-					<code>?url=URL&...&datatimeout=MILLISECONDS</code>
+					<code>?url=URL&...&datatimeout=MILLISECONDS</code>&nbsp;&nbsp;See below for additional details.
 				</li>
 				<li>
-					<code>?url=URL&...&version=VERSION</code>
+					<code>?url=URL&...&version=VERSION</code>&nbsp;&nbsp;Allowed values are <code>2.0</code>, <code>2.1</code>, <code>3.0</code>, and <code>3.1</code>.
+
 				</li>
 			</ul>
 		<p>
 			Only a <code>URL</code> that ends in <code>/hapi</code> is required. Only one <code>ID</code> and one <code>PARAMETER</code> may be specified (a comma-separated list is not supported).
 		</p>
 		<p>
-			When only a <code>URL</code> is provided, all datasets and all parameters are checked. For data requests, <code>time.min=sampleStartDate</code> and <code>time.max=sampleStopDate</code> are used if both are given in a dataset's <code>/info</code> response; otherwise <code>time.min=startDate</code> and <code>time.max=startDate+P1D</code> from the <code>/info</code> response are used.
+			When only a <code>URL</code> is provided, all datasets and all parameters are checked. For data requests, <code>start=sampleStartDate</code> and <code>stop=sampleStopDate</code> are used if both are given in a dataset's <code>/info</code> response; otherwise <code>start=startDate</code> and <code>stop=startDate+P1D</code> from the <code>/info</code> response are used.
 		</p>
 		<p>
 			The parameters <code>metatimeout</code> and <code>datatimeout</code> set the amount of time in milliseconds before a warning about response time is given. <code>metatimeout</code> applies to all non-<code>/data</code> requests. The defaults are described and given in the function <code>timeout</code> in <a href="https://github.com/hapi-server/verifier-nodejs/blob/master/tests.js">tests.js</a>.
-
-		</p>
-		<p>
-			The allowed values of VERSION are <code>2.0</code>, <code>2.1</code>, <code>3.0</code>, and <code>3.1</code>.
 		</p>
 		<h3>Usage Examples</h3>
 		<p>

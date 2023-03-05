@@ -4,37 +4,36 @@ Runs a suite of tests on a HAPI server via a web interface or the command line. 
 
 A running instance, documentation, and example output is available at http://hapi-server.org/verify
 
-To run tests from the command line or to run a local server, see below.
+See below to run tests from the command line or a local server.
 
-# Installation
+# Local Installation
 
-Installation is only required if you do not want to test a server using http://hapi-server.org/verify
+Installation is only required if the server you want to test is not available from a public IP address.
 
 ```
 # Install Node Version Manager (NVM)
-curl https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
-# Install node.js 8
-nvm install 8
+curl https://raw.githubusercontent.com/creationix/nvm/v0.39.3/install.sh | bash
+nvm install
 # Clone repository
 git clone https://github.com/hapi-server/verifier-nodejs.git
-# Install required Node packages
+# Install required Node.js packages
 cd verifier-nodejs; npm install
 ```
 
-# Command-Line Usage
+## Command-Line Usage
 
 ```
 node verify.js 
-	--url URL 
-	[--id DATASETID 
-	--parameter PARAMETERNAME 
-	--timemin HAPITIME 
-	--timemax HAPITIME]
+  --url URL 
+  [--id DATASETID 
+  --parameter PARAMETERNAME 
+  --timemin HAPITIME 
+  --timemax HAPITIME]
 ```
 
-If `--url URL` is provided, then output goes to stdout and a web server is not started. See `verify.html` for documentation.
+If `--url URL` is provided, output goes to stdout, and a web server is not started. See `verify.html` for documentation.
 
-# Server Usage
+## Server Usage
 
 ```
 node verify.js [--port PORT] [--plotserver URL]
@@ -47,4 +46,4 @@ See http://localhost:9999/ for API documentation.
 
 # Contact
 
-Bob Weigel <rweigel@gmu.edu>
+Please submit questions, bug reports, and feature requests to the [issue tracker](https://github.com/hapi-server/verifier-nodejs/issues).

@@ -3,27 +3,28 @@ const clc     = require('chalk');
 const moment  = require('moment');
 const ip      = require("ip");
 const {URL}   = require("url");
-const zlib    = require('zlib');
 const http    = require('http');
 const https   = require('https');
 const urllib  = require('url');
 const request = require('request');
 
 var is = require('./is.js'); // Test library
+var report = require('./report.js').report; // Logging 
 
-function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RES,PLOTSERVER) {
+function run(opts, REQ, RES) {
 
-	if (!PLOTSERVER) {
-		PLOTSERVER = 'http://hapi-server.org/plot';
-	}
+  report.reqOpts = opts;
+  report.RES = RES;
 
-	var CATALOG; // Resolved in catalog(); used in report() to print ViViz links.
 	function internalerror(err) {
 		console.log(err.stack);
-		if (RES) RES.end('<br><br><div style="border:2px solid black"><b><font style="color:red"><b>Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.</b></font></div>');	
-		if (!RES) console.log(clc.red('Problem with verification server (Uncaught Exception). Aborting.'));
-		if (!RES) process.exit(1);
-		if (!RES) console.log(err.stack);
+		if (RES) {
+      RES.end('<br><br><div style="border:2px solid black"><b><font style="color:red"><b>Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.</b></font></div>');
+    } else {
+      console.log(clc.red('Problem with verification server (Uncaught Exception). Aborting.'));
+      console.log(err.stack);
+      process.exit(1);
+    }
 	}
 
 	if (REQ) {
@@ -61,180 +62,6 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		return url
 	}
 
-	function report(url,obj,opts) {
-
-		// Returns !(obj.error && (stop || abort))
-		// stop means processing can't continue on current URL
-		// Abort means can't move to testing next URL.
-		// Note that abort = true implies stop = true.
-		if (obj == false) return false; // Case where test was not appropriate.
-
-		if (opts) {
-			var warn  = opts["warn"]  || false; // Warn not fail message on error
-			var stop  = opts["stop"]  || false; // Need to stop tests on current URL
-			var abort = opts["abort"] || false; // Stop and send abort all processing
-			var shush = opts["shush"] || false; // Don't print unless warning, error, or url changed
-		} else {
-			var warn  = false;
-			var stop  = false;
-			var abort = false;
-			var shush = false;
-		}
-
-		var shush = false;
-		var stop = stop || abort; // Make stop true when abort true.
-
-		var firstshush = false; // Don't print pass results for long list of similar tests.
-		if (shush && report.shushon == false) {var firstshush = true};
-		report.shushon = shush;
-
-		if (!url) {
-			// Print summary when report() called.
-			if (RES) {
-				RES.write("<p>End of validation tests.</p><p>Summary: <font style='color:black;background:green'>Passes</font>:&nbsp;" + report.passes.length + ". <font style='color:black;background:yellow'>Warnings</font>:&nbsp;" + report.warns.length + ". <font style='background:red;color:black'>Failures</font>:&nbsp;" + report.fails.length + ".");
-			} else {
-				console.log("End of validation tests.");
-			}
-			if (report.warns.length + report.fails.length > 0) {
-				if (RES) {
-					RES.write("Warnings and failures repeated below.</p>");
-				} else {
-					console.log("\nWarnings and failures repeated below.");
-				}
-			}
-
-			if (!RES) console.log("************************************************************************************");
-			if (!RES) console.log("Summary: " + clc.green.inverse('Passes') + ": " + report.passes.length + ". " + clc.yellowBright.inverse('Warnings') + ": " + report.warns.length + ". " + clc.inverse.red('Failures') + ": " + report.fails.length + ".");
-			if (!RES && (report.warns.length + report.fails.length > 0)) console.log("Warnings and failures repeated below.");
-			if (!RES) console.log("************************************************************************************");
-			for (var i = 0;i<report.warns.length;i++) {
-				if (RES) RES.write("<br><a href='" + report.warns[i].url.replace(/\&parameters/,"&amp;parameters") + "'>" + report.warns[i].url.replace(/\&parameters/,"&amp;parameters") + "</a><br>")
-				if (!RES) console.log("|" + clc.blue(report.warns[i].url));
-				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:yellow'>Warn:</font>&nbsp;" + report.warns[i].description + "; Got: <b>" + report.warns[i].got.toString().replace(/\n/g,"<br>") + "</b><br>");
-				if (!RES) console.log("|  " + clc.yellowBright.inverse("Warn") + " " + report.warns[i].description + "; Got: " + clc.bold(report.warns[i].got));
-			}
-			for (var i = 0;i<report.fails.length;i++) {
-				if (RES) RES.write("<br><a href='" + report.fails[i].url.replace(/\&parameters/,"&amp;parameters") + "'>" + report.fails[i].url.replace(/\&parameters/,"&amp;parameters") + "</a><br>")
-				if (!RES) console.log("|" + clc.blue(report.fails[i].url));
-				if (RES) RES.write("&nbsp;&nbsp;<font style='color:black;background:red'>Fail</font>&nbsp;" + report.fails[i].description + "; Got: <b><pre>" + report.fails[i].got.toString().replace(/</g,"&lt;").replace(/>/g,"&gt;") + "</pre></b><br>");
-				if (!RES) console.log("|  " + clc.red.inverse("Fail") + " " + report.fails[i].description + "; Got: " + clc.bold(report.fails[i].got));
-			}
-
-			if (RES) {
-				RES.write("<br><br>");
-				RES.write("<b>Use the following links for visual checks of data and stress testing server.</b><br><br>")
-				for (var i = 0;i < CATALOG["catalog"].length;i++) {
-					var link = PLOTSERVER + "?server=" + ROOT + "&id=" +CATALOG["catalog"][i]["id"] + "&format=gallery";
-					RES.write("<a target='_blank' href='" + link + "'>" + link + "</a><br>");
-				}
-				RES.end("</body></html>");
-			}
-		
-			if (!RES) {
-				console.log("\nEnd of summary.");
-				if (report.fails.length == 0) {
-					process.exit(0); // Normal exit.
-				} else {
-					process.exit(1);
-				}
-			}
-			return;
-		}
-
-		if (typeof(report.url) === "undefined") {
-			// First call to report(); initialize and attach arrays
-			// to report object.
-			if (RES) {RES.write("<html><body>");}
-
-			if (VERSION) {
-				if (RES) {
-					var linkopen = "<a href='https://github.com/hapi-server/verifier-nodejs/tree/master/schemas/HAPI-data-access-schema-"+VERSION+".json'>";
-					RES.write("Using " + linkopen + "HAPI schema version " + VERSION + "</a><br>");
-				} else {
-					console.log("Using HAPI schema version " + VERSION);
-				}
-			}
-			report.fails = [];  // Initalize failure array
-			report.passes = []; // Initalize passes array			
-			report.warns = [];  // Initalize warning array	
-			// Parse is.js to get line numbers for test functions.
-			var istext = fs.readFileSync(__dirname + '/is.js').toString();
-			istext = istext.split("\n");
-			report.lineobj = {};
-			// Store locations in report.lineobj array.
-			// TODO: This should happen on server start not here.
-			for (var i = 0;i<istext.length;i++) {
-				if (istext[i].match(/^function/)) {
-					key = istext[i].replace(/^function (.*)?\(.*/,"$1");
-					report.lineobj[key] = i+1;
-				}
-			}
-		}
-		var indentcons = ""; // Indent console
-		var indenthtml = ""; // Indent html
-		if (/\/hapi\/data/.test(url)) {
-			// Indent extra amount when testing data url
-			var indentcons = "  ";
-			var indenthtml = "&nbsp;&nbsp;"
-		}
-		if (report.url !== url) { 
-			// Display URL only if not the same as last one seen or requested to be displayed
-			// when report() was called.
-			if (RES) RES.write("<br>" + indenthtml + "<font style='color:blue'><a href='" + url + "'>" + url.replace(/\&parameters/,"&amp;parameters") + "</a></font></br>");
-			if (!RES) console.log("\n" + indentcons + clc.blue(url));
-		}
-		report.url = url;
-		if (!obj) {
-			// If report(url) was called, only print URL so user knows it is being requested.
-			return
-		}; 
-
-		obj.url = url;
-		if (RES) {
-			// Get function name from description in obj and replace it
-			// with a link to GitHub code.
-			var key = obj.description.replace(/^is\.(.*?)\(.*/,"$1");
-			obj.description = obj.description.replace(/^(is.*?):/,"<a href='https://github.com/hapi-server/verifier-nodejs/blob/master/is.js#L__LINE__'>$1</a>");
-			obj.description = obj.description.replace(/__LINE__/,report.lineobj[key]);
-		}
-		if (obj.error == true && warn == false) {
-			report.fails.push(obj)
-			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='background-color:red'><b>&#x2715;</b></font>:&nbsp" + obj.description + ";&nbsp;Got: <b><pre>" + obj.got.toString().replace(/</g,"&lt;").replace(/>/g,"&gt;") + "</pre></b><br>");
-			if (!RES) console.log(indentcons + "  " + clc.inverse.red("Fail") + ": " + obj.description + "; Got: " + clc.bold(obj.got));
-		} else if (obj.error == true && warn == true) {
-			report.warns.push(obj)
-
-			var msg = obj.got.toString().replace(/</g,"&lt;").replace(/>/g,"&gt;");
-			if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='background-color:yellow'><b>&#x26a0;</b></font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b><pre>" + msg + "</pre></b><br>");
-			if (!RES) console.log(indentcons + "  " + clc.yellowBright.inverse("Warn") + ": " + obj.description + "; Got: " + clc.bold(obj.got));
-		} else {
-			report.passes.push(obj);
-			if (firstshush) {
-				if (RES) RES.write(indenthtml + "&nbsp&nbsp;Passes are being suppressed.<br>");
-				if (!RES) console.log(indentcons + "  " + "Passes are being suppressed.");
-			}
-			if (report.shushon == false) {
-				if (RES) RES.write(indenthtml + "&nbsp&nbsp;<font style='background-color:green;'><b>&#x2713;</b></font>:&nbsp;" + obj.description + ";&nbsp;Got:&nbsp<b>" + obj.got.toString().replace(/\n/g,"<br>") + "</b><br>");
-				if (!RES) console.log(indentcons + "  " + clc.green.inverse("Pass") + ": " + obj.description + "; Got: " + clc.bold(obj.got));
-			}
-		}
-
-		if (obj.error && stop) {
-			if (abort) {
-				if (RES) RES.end("<font style='color:red'>Cannot continue validation tests due to last failure.</font></body></html>");
-				if (RES) RES.end();
-				if (!RES) console.log(clc.red("\nCannot continue validation tests due to last failure."));
-				if (!RES) process.exit(0);
-			} else {
-				if (RES) RES.write("<br>&nbsp&nbsp;<font style='color:red'>Cannot continue tests on URL due to last failure.</font><br>");
-				if (!RES) console.log(clc.red("\nCannot continue tests on URL due to last failure."));				
-			}
-		}
-
-		// If no error, return true.  If stopping error, return false
-		return !(obj.error && stop) 
-	}
-
 	function root() {
 		// Check optional landing page.
 
@@ -246,7 +73,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			var metaTimeout = "metapreviousfail";			
 		};
 
-		var url = ROOT;
+		var url = opts["url"];
 		report(url);
 		request(
 			{
@@ -272,6 +99,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				//console.log(res);
 				report(url,is.HTTP200(res),{"warn":true});
 				report(url,is.ContentType(/^text\/html/,res.headers["content-type"]),{"warn":true});
+        //report();
+        //process.exit(0);
 				capabilities();
 			})
 	}
@@ -292,7 +121,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			var metaTimeout = "metapreviousfail";			
 		};
 
-		var url = ROOT + "/capabilities";
+		var url = opts["url"] + "/capabilities";
 		report(url);
 
 		request(
@@ -327,7 +156,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					return;
 				}
 				var json = JSON.parse(body);
-				var version = versioncheck(url,json.HAPI,VERSION);
+				var version = versioncheck(url,json.HAPI,opts["version"]);
 				if (!report(url,is.HAPIJSON(body,version,'capabilities'),{"stop":true})) {
 					catalog(['csv']);
 					return;
@@ -360,7 +189,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			var metaTimeout = "metapreviousfail";			
 		};
 
-		var url = ROOT + "/catalog";
+		var url = opts["url"] + "/catalog";
 		report(url);
 		request(
 			{
@@ -387,18 +216,19 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				report(url,is.CORSAvailable(res.headers),{"warn":true});
 				if (!report(url,is.HTTP200(res),{"abort":true})) return;
 				if (!report(url,is.JSONParsable(body),{"abort":true})) return;
-				CATALOG = JSON.parse(body);
+				var CATALOG = JSON.parse(body);
 				var cat = CATALOG["catalog"];
-				if (ID) {
+				if (opts["id"]) {
 					for (var i = 0;i < cat.length;i++) {
-						if (cat[i]["id"] == ID) {
+						if (cat[i]["id"] == opts["id"]) {
 							var catr = [cat[i]];
 							break;
 						}
 					}
 					CATALOG["catalog"] = catr;
+          report.CATALOG = CATALOG; // TODO: Hacky way to pass CATALOG to report.
 				}
-				var version = versioncheck(url,CATALOG.HAPI,VERSION);
+				var version = versioncheck(url,CATALOG.HAPI,opts["version"]);
 				report(url,is.HAPIJSON(body,version,'catalog'));
 				var datasets = JSON.parse(body).catalog;
 				if (datasets) {
@@ -414,7 +244,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 						 	"error": true,
 						 	"got": datasets
 						 },
-						 {"abort":true});
+						 {
+                "abort": true
+              });
 					return
 				}
 			})
@@ -432,7 +264,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			var metaTimeout = "metapreviousfail";			
 		};
 
-		var url = ROOT + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
+		var url = opts["url"] + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
 		report(url);
 		request(
 			{
@@ -457,13 +289,13 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				report(url,is.ErrorCorrect(res.statusCode,404,"httpcode"));
 				var err1406 = errors(1406);
-				report(url,is.StatusInformative(res.statusMessage,err1406.status.message,'httpstatus'),{"warn":true});
+				report(url,is.StatusInformative(res.statusMessage,"HAPI error 1406",'httpstatus'),{"warn":true});
 				if (report(url,is.JSONParsable(body),{"stop":true})) {
 					var json = JSON.parse(body);
-					var version = versioncheck(url,json.HAPI,VERSION);
+					var version = versioncheck(url,json.HAPI,opts["version"]);
 					if (report(url,is.HAPIJSON(body,version,'HAPIStatus'),{"stop":true})) {
 						report(url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
-						report(url,is.StatusInformative(json.status.message,err1406.status.message,'hapistatus'),{"warn":true});
+						report(url,is.StatusInformative(json.status.message,"HAPI error 1406",'hapistatus'),{"warn":true});
 					} 
 				}
 				info(formats,datasets);
@@ -480,18 +312,18 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			return;
 		}
 
-		if (!ID) {
+		if (!opts["id"]) {
 			var id = datasets[0]["id"];
-			var url = ROOT + '/info?id=' + datasets[0]["id"];
+			var url = opts["url"] + '/info?id=' + datasets[0]["id"];
 		} else {
-			var id = ID;
-			var url = ROOT + '/info' + "?id=" + ID;
-			// Only check one dataset with id = ID.
-			datasets = selectOne(datasets,'id',ID);
+			var id = opts["id"];
+			var url = opts["url"] + '/info' + "?id=" + opts["id"];
+			// Only check one dataset with id = opts["id"].
+			datasets = selectOne(datasets,'id',opts["id"]);
 			if (datasets.length == 0) {
 				if (!report(url,
 								{
-									"description": "Dataset " + ID + " is not in catalog",
+									"description": "Dataset " + opts["id"] + " is not in catalog",
 									"error": true,
 									"got": "to abort"
 								},
@@ -516,9 +348,9 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 		report(url);
 
-		if (RES && info.tries[datasets.length] == 0) {
-			img = '<img width="20px" src="data:image/png;base64,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" alt="" />';
-			var link = PLOTSERVER+"?server=" + ROOT + "&id=" + id + "&format=gallery";
+		if (RES && opts["output"] === "html" && info.tries[datasets.length] == 0) {
+			img = '<img width="20px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAYCAYAAAB5j+RNAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5AUXFQ4li0WLMAAAB4pJREFUSMedl1tMU18Wxr9NS6EVcCrhIopcvopts["id"]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" alt="" />';
+			var link = opts["plotserver"]+"?server=" + opts["url"] + "&id=" + id + "&format=gallery";
 			var note = "<a target='_blank' href='" + link + "'>Visually check data and test performance</a>";
 			RES.write("&nbsp&nbsp;" + img + ":&nbsp" + note + "<br>");
 		}
@@ -549,7 +381,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
 				if (!report(url,is.JSONParsable(body),{"abort":true})) return;
 				var header = JSON.parse(body);
-				var version = versioncheck(url,header.HAPI,VERSION);
+				var version = versioncheck(url,header.HAPI,opts["version"]);
 				report(url,is.HAPIJSON(body,version,'info'));
 				if (header.parameters) {
 					if (header.parameters[0].name) {
@@ -611,10 +443,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					//report(url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
 					//report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
 				}
-				if (PARAMETER) {
-					var tmp = selectOne(header.parameters,'name',PARAMETER);
+				if (opts["parameter"]) {
+					var tmp = selectOne(header.parameters,'name',opts["parameter"]);
 					if (tmp.length != 1) {
-						if (!report(url,{"description": "Parameter " + PARAMETER + " given in URL or on command line is not in parameter array returned by " + url,"error":true,"got": "To abort"},{"abort":true})) return;
+						if (!report(url,{"description": "Parameter " + opts["parameter"] + " given in URL or on command line is not in parameter array returned by " + url,"error":true,"got": "To abort"},{"abort":true})) return;
 					}
 				}
 
@@ -626,10 +458,10 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					validCadence = !obj.error;
 				}
 
-				if (START && STOP) { 
+				if (opts["start"] && opts["stop"]) { 
 					// start/stop given in verifier request URL
-					var start = START;
-					var stop  = STOP;
+					var start = opts["start"];
+					var stop  = opts["stop"];
 					var dataTimeout = "datasamplechosen";
 				} else if (header["sampleStartDate"] && header["sampleStopDate"]) {
 					var start = header["sampleStartDate"];
@@ -690,15 +522,15 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		}
 
 		parameter = header.parameters[1].name;
-		if (PARAMETER !== "") {
+		if (opts["parameter"] !== "") {
 			for (var i=0;i < header.parameters.length;i++) {
-				if (header.parameters[i].name === PARAMETER) {
+				if (header.parameters[i].name === opts["parameter"]) {
 					parameter = header.parameters[i].name;
 					break;
 				}
 			}
 		}
-		var url = ROOT + '/info' 
+		var url = opts["url"] + '/info' 
 					+ "?id=" + datasets[0].id 
 					+ '&parameters=' + parameter;
 
@@ -735,7 +567,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					return;
 				}
 				var headerReduced = JSON.parse(body); // Reduced header
-				var version = versioncheck(url,headerReduced.HAPI,VERSION);
+				var version = versioncheck(url,headerReduced.HAPI,opts["version"]);
 				if (!report(url,is.HAPIJSON(body,version,'info'))) {
 					if (headerReduced.parameters) {
 						if (headerReduced.parameters[0]) {
@@ -756,7 +588,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 	}
 
 	function api3_0() {
-		// TODO: Check no Unicode in dataset and parameter IDs
+		// TODO: Check no Unicode in dataset and parameter opts["id"]s
 		// TODO: Test that time.min and start and time.max and stop are both supported for /data requests.
 		// TODO: Test that id and dataset are both supported for /catalog requests
 	}
@@ -785,7 +617,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					{"abort": true});
 		}
 
-		var url = ROOT 
+		var url = opts["url"] 
 					+ '/data?id=' + datasets[0].id 
 					+ '&time.min=' + start 
 					+ '&time.max=' + stop;
@@ -865,7 +697,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		var startnew = md2doy(start);
 		var stopnew = md2doy(stop);
 
-		var url = ROOT + '/data?id=' + datasets[0].id
+		var url = opts["url"] + '/data?id=' + datasets[0].id
 					+ '&time.min=' + startnew
 					+ '&time.max=' + stopnew;
 
@@ -954,7 +786,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			var useTimeout = "datapreviousfail";			
 		};
 
-		var url = ROOT + '/data?id=' + datasets[0].id 
+		var url = opts["url"] + '/data?id=' + datasets[0].id 
 					+ '&time.min=' + start 
 					+ '&time.max=' + stop
 					+ "&include=header";
@@ -1052,11 +884,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			stop2 = stop2.slice(0,-1);
 		}
 
-		var url = ROOT + '/data?id='+ datasets[0].id 
+		var url = opts["url"] + '/data?id='+ datasets[0].id 
 					+ '&time.min=' + start2 
 					+ '&time.max=' + stop2;
 
-		version = versioncheck(url,version,VERSION);
+		version = versioncheck(url,version,opts["version"]);
 		report(url);
 		request(
 			{
@@ -1102,7 +934,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 		if (CLOSED) {return;}
 
 		if (pn == -1 || pn == header.parameters.length) {
-			// -1 is case when one parameter given (!PARAMETER is true)
+			// -1 is case when one parameter given (!opts["parameter"] is true)
 			datasets.shift(); // Remove first element
 			info(formats,datasets); // Start next dataset
 			return; // All parameters for dataset have been checked.
@@ -1110,11 +942,11 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 
 		// TODO:
 		// This is contorted logic to check only one parameter. Need
-		// to rewrite. Also allow PARAMETER to be list of parameters.
+		// to rewrite. Also allow opts["parameter"] to be list of parameters.
 		var i = NaN;
-		if (PARAMETER) {
+		if (opts["parameter"]) {
 			for (var i=0;i < header.parameters.length;i++) {
-				if (header.parameters[i].name === PARAMETER) {
+				if (header.parameters[i].name === opts["parameter"]) {
 					pn = i;
 					break;
 				}
@@ -1148,12 +980,12 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					);
 		}
 
-		var url = ROOT + '/data?id=' + datasets[0].id
+		var url = opts["url"] + '/data?id=' + datasets[0].id
 					+ '&parameters=' + parameter
 					+ '&time.min=' + start
 					+ '&time.max=' + stop;
 
-		if (!version && !VERSION) {
+		if (!version && !opts["version"]) {
 			version = is.versions().pop();
 		}
 		report(url);
@@ -1181,8 +1013,8 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					return;
 				}
 
-				if (RES) {
-					var link = PLOTSERVER+"?usecache=false&usedatacache=false&server=" + url.replace("/data?","&");
+				if (RES && opts["output"] === "html") {
+					var link = opts["plotserver"]+"?usecache=false&usedatacache=false&server=" + url.replace("/data?","&");
 					var note = "<a target='_blank' href='" + link + "'>Direct link for following plot.</a>. Please report any plotting issues on <a target='_blank' href='https://github.com/hapi-server/client-python/issues'>the Python hapiclient GitHub page</a>.";
 					RES.write("&nbsp&nbsp;&nbsp&nbsp;<font style='color:black'>&#x261E</font>:&nbsp" + note + "<br><img src='" + link + "'/><br>");
 				}
@@ -1257,7 +1089,7 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 					report(url,is.FileContentSame(header,body,bodyAll,pn,'subsetsame'));
 				}
 
-				if (!PARAMETER) {
+				if (!opts["parameter"]) {
 					// Check next parameter
 					datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,++pn);
 				} else {
@@ -1267,30 +1099,40 @@ function run(ROOT,ID,PARAMETER,START,STOP,VERSION,DATATIMEOUT,METATIMEOUT,REQ,RE
 			})
 	}
 
-	function timeout(what,when) {
+	function timeout(what, when) {
 
-		var datapreviousfail = DATATIMEOUT || 5000;
-		if (DATATIMEOUT) {
-			datapreviousfail = 2*datapreviousfail;
-		}
-		var metapreviousfail = METATIMEOUT || 5000;
-		if (METATIMEOUT) {
-			metapreviousfail = 2*metapreviousfail;
-		}
-
-		var obj = {
-			"datadefault":{"timeout": DATATIMEOUT || 10000,"when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."},
-			"datapreviousfail":{"timeout": datapreviousfail,"when":"a previous request for data failed or timed out."},
-			"datasample10xcadence":{"timeout": DATATIMEOUT || 1000,"when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."},
-			"datasamplesuggested":{"timeout": DATATIMEOUT || 1000,"when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."},
-			"datasamplechosen":{"timeout": DATATIMEOUT || 1000,"when":"time.min/max given to validator"},
-			"metadefault":{"timeout": METATIMEOUT || 200,"when":"request is for metadata."},
-			"metapreviousfail":{"timeout": metapreviousfail,"when":"a previous request for metadata failed or timed out."}
+		let obj = {
+			"datadefault": {
+        "timeout": opts["datatimeout"],
+        "when":"time.min/max not given to validator, sampleStart/Stop not given, and no cadence is in /info response and a default request is made for startDate to startDate + P1D."
+      },
+			"datapreviousfail": {
+        "timeout": 2*opts["datatimeout"],
+        "when": "a previous request for data failed or timed out."
+      },
+			"datasample10xcadence": {
+        "timeout": opts["datatimeout"],
+        "when":"time.min/max not given to validator, sampleStart/Stop not given, but cadence is in /info response."
+      },
+			"datasamplesuggested": {
+        "timeout": opts["datatimeout"],
+        "when":"time.min/max not given to validator but sampleStart/Stop is given in /info response."
+      },
+			"datasamplechosen": {
+        "timeout": opts["datatimeout"],
+        "when":"time.min/max given to validator"
+      },
+			"metadefault": {
+        "timeout": opts["metatimeout"],
+        "when":"request is for metadata."
+      },
+			"metapreviousfail": {
+        "timeout": 2*opts["metatimeout"],
+        "when":"a previous request for metadata failed or timed out."
+      }
 		};
 
-		if (!what) {
-			return obj;
-		}
+		if (!what) {return obj;}
 		if (!when) {
 			return obj[what]["timeout"];
 		} else {

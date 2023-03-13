@@ -1,10 +1,10 @@
 {
   "name": "hapi-server-verifier",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "license": "MIT",
   "engine-strict": true,
   "engines": {
-    "node": ">=6"
+    "node": ">=8"
   },
   "people": {
     "name": "Bob Weigel",
@@ -28,6 +28,7 @@
   },
   "scripts": {
     "start": "node verify.js --port 9999",
-    "start2": "node verify.js --port 9999 --plotserver 'http://localhost:5000/'"
+    "start2": "node verify.js --port 9999 --plotserver 'http://localhost:5000/'",
+    "test": "node --test"
   }
 }

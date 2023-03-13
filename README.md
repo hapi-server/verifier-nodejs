@@ -2,7 +2,9 @@
 
 Runs a suite of tests on a HAPI server via a web interface or the command line. The tests involve a combination of [JSON schema](https://github.com/hapi-server/verifier-nodejs/tree/master/schemas) validation and ad-hoc code.
 
-A running instance, documentation, and example output is available at http://hapi-server.org/verify
+A running instance, documentation, and example output is available at
+
+http://hapi-server.org/verify
 
 See below to run tests from the command line or a local server.
 

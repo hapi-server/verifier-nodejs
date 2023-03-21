@@ -569,9 +569,9 @@ function FileStructureOK(body,what,other,emptyExpected) {
       }
       if (!emptyExpected) {
         if (emptyIndicated) {
-          return {"description": callerName() + ": A data part of response with zero bytes was not expected. " + l2,"error": false,"got": "Zero bytes (but 'HAPI 1201' is in HTTP header status message)."};
+          return {"description": callerName() + ": A data part of response with zero bytes was not expected. " + l2,"error": true,"got": "Zero bytes (but 'HAPI 1201' is in HTTP header status message)."};
         } else {
-          return {"description": callerName() + ": A data part of response with zero bytes was not expected. " + l2,"error": true,"got": "Zero bytes and no 'HAPI 1201' in HTTP header status message."};
+          return {"description": callerName() + ": Zero bytes was not expected. " + l2,"error": true,"got": "Zero bytes."};
         }
       }
     }

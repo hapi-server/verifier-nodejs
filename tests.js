@@ -359,10 +359,10 @@ function run(opts, REQ, RES) {
       let localplotserver = /localhost/.test(opts["plotserver"]);
       let localtesturl = /localhost/.test(opts["url"]);
       if ((localplotserver && localtesturl) || localtesturl == false) {
-  			img = '<img width="20px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAYCAYAAAB5j+RNAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5AUXFQ4li0WLMAAAB4pJREFUSMedl1tMU18Wxr9NS6EVcCrhIopcvopts["id"]FC4gaxdRARNEYJhmeRhLEqKlRE28xxmiMQUdfxqjBhEQM1WjUFzQSRQMM4GU0QxgDCCMQIYCARUVoobSl5ZxvHpQjFf6K/5Xsh5PTvdbvfN1r7bUEyWoA0fgT5na7MTIyAqfTCZfLBVmWoVKpoNPpoNPpoNVqoVar/4xrAPiH+hvYtOAkSUJ3dzeamprQ0NCAt2/foru7G1arFQ6HA7IsQ61WQ6fTITg4GDExMTAYDEhKSoLBYEBoaCiEENOFCxAkO34FNzg4iKqqKpSXl+P58+fo6uqC0+kEgJ8GIwkhBAICAhAXF4e0tDRs3rwZKSkp8Pf3/xXcIZDs4BQmyzKHhoZoNpu5ZcsWarVaCiEIgIGBgTQYDExJSaEQYsqlUqkYEhLCqKgoajQaAiAABgcHc/v27SwtLaUkSfyJHZxSOZKoqqpCUVER7t+/D7fbDbVajeTkZGzcuBHr16+HwWCA0+lETk4Ovnz5gsjISGi1WlitVnR1daGnpweRkZHIyMjAmjVr8PLlS1RUVKCnpwcAMGvWLOTm5mL37t2Ij4+f6h+YrJwsy7xy5Qrj4+MJgEIIpqam8urVq7RYLJRl2eu3dXV17OzspN1up8Plos1mY2NjI8+fP8/FixdTCMEjR47QZrOxpqaGR48eZXh4uOJ7w4YNLCkp8fI7rpwX3OjoKE+dOkWNRkMhBIOCgnj8+HF2dHRMtVkBrOhz8fgbO/e8HuaZtyOs6HPRI0msqKhgWloahRA8e/YsZVmmLMt8+PAhMzMzFcCFCxfSbDb/GOM7nMfj4YkTJ5QzEx0dzWvXrk1Saiq4S60jRPEAcW+AKB6gvmSAR+qHaRlxs7KykomJiZwzZw4rKyuVfW1tbTSZTApgVFTUj4Bf4WRZZl5engI2b948Xr9+3QvGarWypKSELS0tigLjcK1Dbi4tHySKB4l7g19Biwd4qG6YbknixYsX6ePjwwMHDnglweDgIA8dOqTEjY2NZXFx8bjvr3A3b96kXq+nEIJqtZqXL1+epNKTJ08YGBjIY8eO0e12839WN4fdkgJ6usn+Tb1BZQU9GOCTDy62t7dz0aJFTExMpMVi8fJrsViYk5OjKGg0GllXV0eSB31ev36NgoICWK1WkMSuXbuwd+9er+whifb2dtjtdoSFhWGYPjj8xoHttXbc7HLh86iMv0X4YsEMAZDKvqEx4NXAGCIiZiM2Nha9vb349OmTV0qGh4fjwIEDWLlyJQDgxYsXKCwshN1uh/rZs2eoqakBAISEhCAzMxMajWZSRbTb7VCpVAgLC4NjjOhwEO9GZJR+lLAu2IO/zlZhxV8E2ka+w0EIWFyEUKkREBAAt9sNh8MxyXdycjLWrVuHuro6yLKMO3fuYP78+fBJTExEQkICAKC/vx9Pnz4FJ3z9uGm1WsiyDKvVCj+VQJBaABRwU6C6X8KRRjeq+2VgYrkiEawRgCzD6XRCrVbDz89vku+2tjY0NjZClmWQRGZmJrZt2waf1NRUmEwmqFQqAEBhYSHMZrMXoBACUVFR8PX1RVNTE2b5ChiDVd+KPgAIEAKf3QIT6fxVwCq9Cv39/ejs7ERYWBhCQ0O9wCRJQkFBAaqrqwEAy5cvx549exAREQGQ7JAkiceOHVOyZsGCBbx7965XUrS3t9NgMDA+Pp5v3rzhq88urvjX4NfyMSEJlFU8wJ21Qxx2j7GoqIgajYYmk4kej0fxKUkSz5w5o8QNDQ2dWCW+17m+vj7u3LlTyZq4uDjeuHHDq2ScPHmSQggePnyYY2NjvNft5Loqq3eWFg/Q9/4Ac2uH2DrkYX19PY1GI/V6PR89eqSAjY6OMi8vTyn4M2bM4IULFybXufGn9+/fc//+/cqXhISEMC8vjx8/fqQsy2xpaWF6ejqFEDx9+jTtI3Y229z8Z+sI//6fIW799xBN/x3mrU4nraNjrK+vZ3Z2NoUQPHr0KCXpa+lpaGjgvn37lDgRERG8dOnSH98Q4+ZwOHju3DmGh4crm7du3crbt2/TZrOxrKyMa9eupRCCubm5LCsro81mo9PtocMj0eEapcViodlsptFoJADu2LGD3d3d7O3tZX5+PlevXq10KatWreKtW7emvFv/sCt58OABzGYzHj9+DJLQarVITU3Fpk2bAAClpaWoqqrCzJkzsWTJEkRHR0On0+HLly949+4dmpub4e/vj6ysLKSnp6O1tRVlZWWora0FSeh0OmRnZ8NkMiE5OXl6XcnEO/PTp0/Mz8+n0WhUzoYQgrNnz+ayZcsYFBSknNFxJcafVSoVw8LCuGLFCur1euVdQEAAs7KyePfuXbpcLv7EDv6yEyaJvr4+lJeXo7y8HK9evcKHDx/g8XiUTvdnNq56TEwMUlNTkZGRgbS0NAQGBuIXdmhabfp4EI/Hg46ODtTX16OhoQHNzc3o7e2FzWabNODo9XrMmzcPCQkJSEpKwtKlSzF37lwIIaY7R0wf7kdQAMp15HA4vOC0Wq0ygY1PX78x2ChwagCdv7trPJCfnx/8/Pyg1+t/18V0zP5/e2toUtFSXC4AAAAASUVORK5CYII=" alt="" />';
+  			img = '<img width="20px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcA…fnx/8/Pyg1+t/18V0zP5/e2toUtFSXC4AAAAASUVORK5CYII=" alt="" />';
   			var link = opts["plotserver"]+"?server=" + opts["url"] + "&id=" + id + "&format=gallery";
   			var note = "<a target='_blank' href='" + link + "'>Visually check data and test performance</a>";
-  			RES.write("&nbsp&nbsp;" + img + ":&nbsp" + note + "<br>");
+  			RES.write("&nbsp" + img + ":&nbsp" + note + "<br>");
       }
 		}
 
@@ -904,7 +904,6 @@ function run(opts, REQ, RES) {
 					+ '&time.min=' + start2 
 					+ '&time.max=' + stop2;
 
-		version = versioncheck(url,version,opts["version"]);
 		report(r,url);
 		request(
 			{

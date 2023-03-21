@@ -11,10 +11,12 @@ const request = require('request');
 var is = require('./is.js'); // Test library
 var report = require('./report.js').report; // Logging 
 
+let headers = {"User-Agent": "HAPI verifier; https://github.com/hapi-server/verifier-nodejs"};
+
 function run(opts, REQ, RES) {
 
-  report.reqOpts = opts;
-  report.RES = RES;
+  // First object passed to report().
+  let r = {'res': RES, 'opts': opts};
 
 	function internalerror(err) {
 		console.log(err.stack);
@@ -45,7 +47,7 @@ function run(opts, REQ, RES) {
 		if (urlVersion) {
 			return urlVersion; // Use version given in URL
 		} else {
-			if (!report(url,is.HAPIVersion(metaVersion),{"stop":false})) {
+			if (!report(r,url,is.HAPIVersion(metaVersion),{"stop":false})) {
 				return is.versions().pop(); // Use latest version
 			} else {
 				return metaVersion;
@@ -74,17 +76,18 @@ function run(opts, REQ, RES) {
 		};
 
 		var url = opts["url"];
-		report(url);
+		report(r,url);
 		request(
 			{
 				"url": url,
 				"timeout": timeout(metaTimeout),
 				"time": true,
-				"agentOptions": agentOptions
+				"agentOptions": agentOptions,
+        "headers": headers
 			},
 			function (err,res,body) {
 				if (err) {
-					report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
+					report(r,url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 					if (root.tries == 0) {
 						root(); // Try again
 					} else {
@@ -93,13 +96,13 @@ function run(opts, REQ, RES) {
 					return;
 				}
 
-				report(url,is.RequestError(err,res,metaTimeout,timeout()));
+				report(r,url,is.RequestError(err,res,metaTimeout,timeout()));
 
 				// TODO: if (!body), warn.
 				//console.log(res);
-				report(url,is.HTTP200(res),{"warn":true});
-				report(url,is.ContentType(/^text\/html/,res.headers["content-type"]),{"warn":true});
-        //report();
+				report(r,url,is.HTTP200(res),{"warn":true});
+				report(r,url,is.ContentType(/^text\/html/,res.headers["content-type"]),{"warn":true});
+        //report(r);
         //process.exit(0);
 				capabilities();
 			})
@@ -122,7 +125,7 @@ function run(opts, REQ, RES) {
 		};
 
 		var url = opts["url"] + "/capabilities";
-		report(url);
+		report(r,url);
 
 		request(
 			{
@@ -130,12 +133,13 @@ function run(opts, REQ, RES) {
 				"timeout": timeout(metaTimeout),
 				"headers": {"Origin": origin(url)},
 				"time": true,
-				"agentOptions": agentOptions
+        "agentOptions": agentOptions,
+        "headers": headers
   			},
 			function (err,res,body) {
 
 				if (err) {
-					report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
+					report(r,url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 					if (capabilities.tries == 0) {
 						capabilities(); // Try again
 					} else {
@@ -144,20 +148,20 @@ function run(opts, REQ, RES) {
 					return;
 				}
 
-				report(url,is.RequestError(err,res,metaTimeout,timeout()));
-				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
-				report(url,is.CORSAvailable(res.headers),{"warn":true});
-				if (!report(url,is.HTTP200(res),{"stop":true})) {
+				report(r,url,is.RequestError(err,res,metaTimeout,timeout()));
+				report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
+				report(r,url,is.CORSAvailable(res.headers),{"warn":true});
+				if (!report(r,url,is.HTTP200(res),{"stop":true})) {
 					catalog(['csv']);
 					return;
 				}
-				if (!report(url,is.JSONParsable(body),{"stop":true})) {
+				if (!report(r,url,is.JSONParsable(body),{"stop":true})) {
 					catalog(['csv']);
 					return;
 				}
 				var json = JSON.parse(body);
 				var version = versioncheck(url,json.HAPI,opts["version"]);
-				if (!report(url,is.HAPIJSON(body,version,'capabilities'),{"stop":true})) {
+				if (!report(r,url,is.HAPIJSON(body,version,'capabilities'),{"stop":true})) {
 					catalog(['csv']);
 					return;
 				}
@@ -167,7 +171,7 @@ function run(opts, REQ, RES) {
 				// (Could be done using oneOf for outputFormats and have csv be in emum
 				// array for each of the objects in oneOf.)
 				// Possible solution?: https://stackoverflow.com/a/17940765
-				report(url,
+				report(r,url,
 						{
 							"description":"Expect outputFormats to have 'csv'",
 							"error": outputFormats.indexOf("csv") == -1,
@@ -190,32 +194,33 @@ function run(opts, REQ, RES) {
 		};
 
 		var url = opts["url"] + "/catalog";
-		report(url);
+		report(r,url);
 		request(
 			{
 				"url": url,
 				"timeout": timeout(metaTimeout),
 				"headers": {"Origin": origin(url)},
 				"time": true,
-				"agentOptions": agentOptions
+        "agentOptions": agentOptions,
+        "headers": headers
 			},
 			function (err,res,body) {
 
 				if (err) {
 					if (catalog.tries == 0) {
-						report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
+						report(r,url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 						catalog(formats); // Try again
 					} else {
-						report(url,is.RequestError(err,res,metaTimeout,timeout()),{"abort":true});
+						report(r,url,is.RequestError(err,res,metaTimeout,timeout()),{"abort":true});
 					}
 					return;
 				}
 
-				report(url,is.RequestError(err,res,metaTimeout,timeout()));
-				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
-				report(url,is.CORSAvailable(res.headers),{"warn":true});
-				if (!report(url,is.HTTP200(res),{"abort":true})) return;
-				if (!report(url,is.JSONParsable(body),{"abort":true})) return;
+				report(r,url,is.RequestError(err,res,metaTimeout,timeout()));
+				report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
+				report(r,url,is.CORSAvailable(res.headers),{"warn":true});
+				if (!report(r,url,is.HTTP200(res),{"abort":true})) return;
+				if (!report(r,url,is.JSONParsable(body),{"abort":true})) return;
 				var CATALOG = JSON.parse(body);
 				var cat = CATALOG["catalog"];
 				if (opts["id"]) {
@@ -226,19 +231,20 @@ function run(opts, REQ, RES) {
 						}
 					}
 					CATALOG["catalog"] = catr;
-          report.CATALOG = CATALOG; // TODO: Hacky way to pass CATALOG to report.
+          // TODO: Hacky way to pass CATALOG to report.
+          r['catalog'] = CATALOG;
 				}
 				var version = versioncheck(url,CATALOG.HAPI,opts["version"]);
-				report(url,is.HAPIJSON(body,version,'catalog'));
+				report(r,url,is.HAPIJSON(body,version,'catalog'));
 				var datasets = JSON.parse(body).catalog;
 				if (datasets) {
-					report(url,is.Unique(datasets,"datasets","id"));
+					report(r,url,is.Unique(datasets,"datasets","id"));
 					var datasets = removeDuplicates(datasets,'id');
-					report(url,is.TooLong(datasets,"catalog","id","title",40),{"warn":true});
-					report(url,is.CIdentifier(datasets,"dataset id"),{"warn":true});					
+					report(r,url,is.TooLong(datasets,"catalog","id","title",40),{"warn":true});
+					report(r,url,is.CIdentifier(datasets,"dataset id"),{"warn":true});					
 					infoerr(formats,datasets);
 				} else {
-					report(url,
+					report(r,url,
 						{
 							"description": "Expect datasets element in catalog",
 						 	"error": true,
@@ -265,18 +271,19 @@ function run(opts, REQ, RES) {
 		};
 
 		var url = opts["url"] + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
-		report(url);
+		report(r,url);
 		request(
 			{
 				"url": url,
 				"timeout": timeout(metaTimeout),
 				"time": true,
-				"agentOptions": agentOptions
+        "agentOptions": agentOptions,
+        "headers": headers
 			},
 			function (err,res,body) {
 
 				if (err) {
-					report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
+					report(r,url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 					if (infoerr.tries == 0) {
 						infoerr(formats,datasets); // Try again
 					} else {
@@ -285,17 +292,17 @@ function run(opts, REQ, RES) {
 					return;
 				}
 
-				report(url,is.RequestError(err,res,metaTimeout,timeout()));
-				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
-				report(url,is.ErrorCorrect(res.statusCode,404,"httpcode"));
+				report(r,url,is.RequestError(err,res,metaTimeout,timeout()));
+				report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
+				report(r,url,is.ErrorCorrect(res.statusCode,404,"httpcode"));
 				var err1406 = errors(1406);
-				report(url,is.StatusInformative(res.statusMessage,"HAPI error 1406",'httpstatus'),{"warn":true});
-				if (report(url,is.JSONParsable(body),{"stop":true})) {
+				report(r,url,is.StatusInformative(res.statusMessage,"HAPI error 1406",'httpstatus'),{"warn":true});
+				if (report(r,url,is.JSONParsable(body),{"stop":true})) {
 					var json = JSON.parse(body);
 					var version = versioncheck(url,json.HAPI,opts["version"]);
-					if (report(url,is.HAPIJSON(body,version,'HAPIStatus'),{"stop":true})) {
-						report(url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
-						report(url,is.StatusInformative(json.status.message,"HAPI error 1406",'hapistatus'),{"warn":true});
+					if (report(r,url,is.HAPIJSON(body,version,'HAPIStatus'),{"stop":true})) {
+						report(r,url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
+						report(r,url,is.StatusInformative(json.status.message,"HAPI error 1406",'hapistatus'),{"warn":true});
 					} 
 				}
 				info(formats,datasets);
@@ -308,7 +315,7 @@ function run(opts, REQ, RES) {
 
 		if (datasets.length == 0) {
 			// All datsets have been checked.
-			report();
+			report(r);
 			return;
 		}
 
@@ -321,7 +328,7 @@ function run(opts, REQ, RES) {
 			// Only check one dataset with id = opts["id"].
 			datasets = selectOne(datasets,'id',opts["id"]);
 			if (datasets.length == 0) {
-				if (!report(url,
+				if (!report(r,url,
 								{
 									"description": "Dataset " + opts["id"] + " is not in catalog",
 									"error": true,
@@ -346,13 +353,17 @@ function run(opts, REQ, RES) {
 			metaTimeout = "metapreviousfail";			
 		}
 
-		report(url);
+		report(r,url);
 
 		if (RES && opts["output"] === "html" && info.tries[datasets.length] == 0) {
-			img = '<img width="20px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAYCAYAAAB5j+RNAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5AUXFQ4li0WLMAAAB4pJREFUSMedl1tMU18Wxr9NS6EVcCrhIopcvopts["id"]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" alt="" />';
-			var link = opts["plotserver"]+"?server=" + opts["url"] + "&id=" + id + "&format=gallery";
-			var note = "<a target='_blank' href='" + link + "'>Visually check data and test performance</a>";
-			RES.write("&nbsp&nbsp;" + img + ":&nbsp" + note + "<br>");
+      let localplotserver = /localhost/.test(opts["plotserver"]);
+      let localtesturl = /localhost/.test(opts["url"]);
+      if ((localplotserver && localtesturl) || localtesturl == false) {
+  			img = '<img width="20px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAYCAYAAAB5j+RNAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5AUXFQ4li0WLMAAAB4pJREFUSMedl1tMU18Wxr9NS6EVcCrhIopcvopts["id"]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" alt="" />';
+  			var link = opts["plotserver"]+"?server=" + opts["url"] + "&id=" + id + "&format=gallery";
+  			var note = "<a target='_blank' href='" + link + "'>Visually check data and test performance</a>";
+  			RES.write("&nbsp&nbsp;" + img + ":&nbsp" + note + "<br>");
+      }
 		}
 
 		request(
@@ -361,12 +372,13 @@ function run(opts, REQ, RES) {
 				"timeout": timeout(metaTimeout),
 				"headers": {"Origin": origin(url)},
 				"time": true,
-				"agentOptions": agentOptions
+        "agentOptions": agentOptions,
+        "headers": headers
 			},
 			function (err,res,body) {
 
 				if (err) {
-					report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
+					report(r,url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 					if (info.tries[datasets.length] == 0) {
 						info(formats,datasets); // Try again
 					} else {
@@ -376,19 +388,19 @@ function run(opts, REQ, RES) {
 					return;
 				}
 
-				report(url,is.RequestError(err,res,metaTimeout,timeout()));
-				if (!report(url,is.HTTP200(res),{"abort":true})) return;
-				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
-				if (!report(url,is.JSONParsable(body),{"abort":true})) return;
+				report(r,url,is.RequestError(err,res,metaTimeout,timeout()));
+				if (!report(r,url,is.HTTP200(res),{"abort":true})) return;
+				report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
+				if (!report(r,url,is.JSONParsable(body),{"abort":true})) return;
 				var header = JSON.parse(body);
 				var version = versioncheck(url,header.HAPI,opts["version"]);
-				report(url,is.HAPIJSON(body,version,'info'));
+				report(r,url,is.HAPIJSON(body,version,'info'));
 				if (header.parameters) {
 					if (header.parameters[0].name) {
-						report(url,is.Unique(header.parameters,"parameters","name"));
+						report(r,url,is.Unique(header.parameters,"parameters","name"));
 						//header.parameters = removeDuplicates(header.parameters,'name');
 					} else {
-						report(url,
+						report(r,url,
 							{
 								"description":
 								"Expect first parameter object to have a key 'name'",
@@ -399,7 +411,7 @@ function run(opts, REQ, RES) {
 						return;						
 					}
 				} else {
-					report(url,
+					report(r,url,
 						{
 							"description": "Expect parameters element in catalog",
 							"error": true,
@@ -409,11 +421,11 @@ function run(opts, REQ, RES) {
 					return;
 				}
 
-				report(url,is.FormatInHeader(header, "nodata"));
-				report(url,is.FirstParameterOK(header, "name"),{"warn":true});
-				report(url,is.FirstParameterOK(header, "fill"));
-				report(url,is.TimeIncreasing(header,"{start,stop}Date"));
-				report(url,is.TimeIncreasing(header,"sample{Start,Stop}Date"));
+				report(r,url,is.FormatInHeader(header, "nodata"));
+				report(r,url,is.FirstParameterOK(header, "name"),{"warn":true});
+				report(r,url,is.FirstParameterOK(header, "fill"));
+				report(r,url,is.TimeIncreasing(header,"{start,stop}Date"));
+				report(r,url,is.TimeIncreasing(header,"sample{Start,Stop}Date"));
 								
 				for (var i = 0;i<header.parameters.length;i++) {
 					len  = header.parameters[i]["length"];
@@ -428,32 +440,32 @@ function run(opts, REQ, RES) {
 						size = [1];
 					}
 					//console.log(name,size,units)
-					report(url,is.UnitsOK(name,units,type,size,version),{"warn":false});
-					report(url,is.FillOK(fill,type,len,name,type),{"warn":true});
-					report(url,is.ArrayOK(name,units,size,"units",version),{"warn":false});
-					report(url,is.ArrayOK(name,label,size,"label",version),{"warn":false});
+					report(r,url,is.UnitsOK(name,units,type,size,version),{"warn":false});
+					report(r,url,is.FillOK(fill,type,len,name,type),{"warn":true});
+					report(r,url,is.ArrayOK(name,units,size,"units",version),{"warn":false});
+					report(r,url,is.ArrayOK(name,label,size,"label",version),{"warn":false});
 
 					if (type === "string") {
-						report(url,is.FillOK(fill,type,len,name,'nullstring'),{"warn":true});
-						report(url,is.FillOK(fill,type,len,name,'stringparse'),{"warn":true});
+						report(r,url,is.FillOK(fill,type,len,name,'nullstring'),{"warn":true});
+						report(r,url,is.FillOK(fill,type,len,name,'stringparse'),{"warn":true});
 					}
 
-					report(url,is.LengthAppropriate(len,type,name));
-					report(url,is.BinsOK(name,header.parameters[i]["bins"],size));
-					//report(url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
-					//report(url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
+					report(r,url,is.LengthAppropriate(len,type,name));
+					report(r,url,is.BinsOK(name,header.parameters[i]["bins"],size));
+					//report(r,url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
+					//report(r,url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
 				}
 				if (opts["parameter"]) {
 					var tmp = selectOne(header.parameters,'name',opts["parameter"]);
 					if (tmp.length != 1) {
-						if (!report(url,{"description": "Parameter " + opts["parameter"] + " given in URL or on command line is not in parameter array returned by " + url,"error":true,"got": "To abort"},{"abort":true})) return;
+						if (!report(r,url,{"description": "Parameter " + opts["parameter"] + " given in URL or on command line is not in parameter array returned by " + url,"error":true,"got": "To abort"},{"abort":true})) return;
 					}
 				}
 
 				var validCadence = false;
-				let ret = report(url,is.CadenceGiven(header["cadence"]),{"warn":true});
+				let ret = report(r,url,is.CadenceGiven(header["cadence"]),{"warn":true});
 				if (ret.error == false) {
-					report(url,is.CadenceValid(header["cadence"]));
+					report(r,url,is.CadenceValid(header["cadence"]));
 					var obj = is.CadenceValid(header["cadence"]);
 					validCadence = !obj.error;
 				}
@@ -467,12 +479,12 @@ function run(opts, REQ, RES) {
 					var start = header["sampleStartDate"];
 					var stop  = header["sampleStopDate"];
 					var dataTimeout = "datasamplesuggested";
-					report(url,is.CadenceOK(header["cadence"],start,stop,"sampleStart/sampleStop"),{"warn":true});
+					report(r,url,is.CadenceOK(header["cadence"],start,stop,"sampleStart/sampleStop"),{"warn":true});
 				} else {
 					var start = header["startDate"];
 					var stop = header["stopDate"];
 					if (header["cadence"] && validCadence) {
-						report(url,is.CadenceOK(header["cadence"],start,stop,"start/stop"));
+						report(r,url,is.CadenceOK(header["cadence"],start,stop,"start/stop"));
 						var moment = require('moment');
 						var md = moment.duration(header["cadence"]);
 						var stop = new Date(start).valueOf() + 10*md._milliseconds;
@@ -481,7 +493,7 @@ function run(opts, REQ, RES) {
 					} else {
 						var dataTimeout = "datadefault";
 						// Check one day
-						report(url,
+						report(r,url,
 							{
 								"description": "Not enough information to compute time.max to use for data tests. Using time.min = startDate and time.max = startDate + P1D.",
 								"error":true,
@@ -534,55 +546,56 @@ function run(opts, REQ, RES) {
 					+ "?id=" + datasets[0].id 
 					+ '&parameters=' + parameter;
 
-		report(url);
+		report(r,url);
 		request(
 			{
 				"url": url,
 				"timeout": timeout(metaTimeout),
 				"headers": {"Origin": origin(url)},
 				"time": true,
-				"agentOptions": agentOptions
+        "agentOptions": agentOptions,
+        "headers": headers
 			},
 			function (err,res,body) {
 				if (err) {
 					if (infor.tries[datasets.length] == 0) {
 						// Try again
-						report(url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
+						report(r,url,is.RequestError(err,res,metaTimeout,timeout()),{"warn":true});
 						infor(formats,datasets,header,start,stop,dataTimeout); 
 					} else {
-						report(url,is.RequestError(err,res,metaTimeout,timeout()),{"stop":true});
+						report(r,url,is.RequestError(err,res,metaTimeout,timeout()),{"stop":true});
 						dataAll1(formats,datasets,header,start,stop,dataTimeout);
 					}
 					return;
 				}
 
-				report(url,is.RequestError(err,res,metaTimeout,timeout()));
-				if (!report(url,is.HTTP200(res),{"stop":true})) {
+				report(r,url,is.RequestError(err,res,metaTimeout,timeout()));
+				if (!report(r,url,is.HTTP200(res),{"stop":true})) {
 					dataAll1(formats,datasets,header,start,stop,dataTimeout);
 					return;
 				}
-				report(url,is.ContentType(/^application\/json/,res.headers["content-type"]));
-				if (!report(url,is.JSONParsable(body),{"stop":true})) {
+				report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
+				if (!report(r,url,is.JSONParsable(body),{"stop":true})) {
 					dataAll1(formats,datasets,header,start,stop,dataTimeout);
 					return;
 				}
 				var headerReduced = JSON.parse(body); // Reduced header
 				var version = versioncheck(url,headerReduced.HAPI,opts["version"]);
-				if (!report(url,is.HAPIJSON(body,version,'info'))) {
+				if (!report(r,url,is.HAPIJSON(body,version,'info'))) {
 					if (headerReduced.parameters) {
 						if (headerReduced.parameters[0]) {
-							report(url,{"description":"Expect # parameters in JSON to be 2 when one non-time parameter is requested","error": headerReduced.parameters.length != 2,"got": headerReduced.parameters.length + " parameters."});
+							report(r,url,{"description":"Expect # parameters in JSON to be 2 when one non-time parameter is requested","error": headerReduced.parameters.length != 2,"got": headerReduced.parameters.length + " parameters."});
 						} else {
-							report(url,{"description":"Cannot count # of parameters because parameters element is not an array.","error": true,"got": "Non-array parameter element."});
+							report(r,url,{"description":"Cannot count # of parameters because parameters element is not an array.","error": true,"got": "Non-array parameter element."});
 						}
 					} else {
-						report(url,{"description":"Cannot count # of parameters because parameters element not found.","error": true,"got": "Missing parameter element."});
+						report(r,url,{"description":"Cannot count # of parameters because parameters element not found.","error": true,"got": "Missing parameter element."});
 					}
 				} else {
-					report(url,{"description":"Expect # parameters in JSON to be 2 when one non-time parameter is requested","error": headerReduced.parameters.length != 2,"got": headerReduced.parameters.length + " parameters."});
+					report(r,url,{"description":"Expect # parameters in JSON to be 2 when one non-time parameter is requested","error": headerReduced.parameters.length != 2,"got": headerReduced.parameters.length + " parameters."});
 				}
 				var equivalent = isEquivalent(header,headerReduced,headerReduced.parameters[1],true);
-				report(url,{"description":"Expect info response for one parameter to match content in response for all parameters","error": !equivalent, "got": (equivalent ? "Match." : "Mismatch.")});
+				report(r,url,{"description":"Expect info response for one parameter to match content in response for all parameters","error": !equivalent, "got": (equivalent ? "Match." : "Mismatch.")});
 				dataAll1(formats,datasets,header,start,stop,dataTimeout);
 			})
 	}
@@ -608,7 +621,7 @@ function run(opts, REQ, RES) {
 		};
 
 		if (!start || !stop) {
-			report(url,
+			report(r,url,
 					{
 						"description":"Need at least startDate and stopDate or sampleStartDate and sampleStopDate to continue.",
 						"error":true,
@@ -622,7 +635,7 @@ function run(opts, REQ, RES) {
 					+ '&time.min=' + start 
 					+ '&time.max=' + stop;
 
-		report(url);
+		report(r,url);
 		request(
 			{
 				"url": url,
@@ -630,31 +643,32 @@ function run(opts, REQ, RES) {
 				"timeout": timeout(useTimeout),
 				"headers": {"Origin": origin(url)},
 				"time": true,
-				"agentOptions": agentOptions
+        "agentOptions": agentOptions,
+        "headers": headers
 			},
 			function (err,res,bodyAll) {
 
 				if (err) {
 					if (useTimeout === "datapreviousfail") {
-						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
+						report(r,url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
 						// Start checking individual parameters. Skip test
 						// using different time format (dataAll2()) and request
 						// with header (dataAll_Header()).
 						datar(formats,datasets,header,start,stop,"",useTimeout,null,0);
 					} else {
-						report(url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true});
+						report(r,url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true});
 						// Try again
 						dataAll1(formats,datasets,header,start,stop,dataTimeout);
 					}
 					return;
 				}
 
-				report(url,is.RequestError(err,res,useTimeout,timeout()));
-				if (!report(url,is.HTTP200(res),{"stop":true})) {
+				report(r,url,is.RequestError(err,res,useTimeout,timeout()));
+				if (!report(r,url,is.HTTP200(res),{"stop":true})) {
 					dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
 				}
-				if (!report(url,is.FileStructureOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
+				if (!report(r,url,is.FileStructureOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
 					dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);					
 					return;
 				}
@@ -663,16 +677,16 @@ function run(opts, REQ, RES) {
 					return;					
 				}
 
-				report(url,is.CompressionAvailable(res.headers),{"warn":true});
-				report(url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
-				report(url,is.CORSAvailable(res.headers),{"warn":true});
+				report(r,url,is.CompressionAvailable(res.headers),{"warn":true});
+				report(r,url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
+				report(r,url,is.CORSAvailable(res.headers),{"warn":true});
 
-				report(url,is.FileStructureOK(bodyAll,"firstchar"));
-				report(url,is.FileStructureOK(bodyAll,"lastchar"));
-				report(url,is.FileStructureOK(bodyAll,"extranewline"));
-				report(url,is.FileStructureOK(bodyAll,"numlines"));
+				report(r,url,is.FileStructureOK(bodyAll,"firstchar"));
+				report(r,url,is.FileStructureOK(bodyAll,"lastchar"));
+				report(r,url,is.FileStructureOK(bodyAll,"extranewline"));
+				report(r,url,is.FileStructureOK(bodyAll,"numlines"));
 
-				report(url,is.FileLineOK(header,bodyAll,null,'Ncolumns'));
+				report(r,url,is.FileLineOK(header,bodyAll,null,'Ncolumns'));
 
 				dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 		})
@@ -707,32 +721,33 @@ function run(opts, REQ, RES) {
 					"timeout": timeout(useTimeout),
 					"headers": {"Origin": origin(url)},
 					"time": true,
-					"agentOptions": agentOptions
+          "agentOptions": agentOptions,
+          "headers": headers
 				},
 			function (err,res,body) {
 
 				// TODO: Code below is very similar to that in dataAll1()
 				if (err) {
 					if (useTimeout === "datapreviousfail") {
-						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
+						report(r,url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
 						// Start checking individual parameters. Skip test
 						// using different time format (dataAll2()) and request
 						// with header (dataAll_Header()).
 						datar(formats,datasets,header,start,stop,"",dataTimeout,null,0);
 					} else {
-						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true});
+						report(r,url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true});
 						// Try again
 						dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 					}
 					return;
 				}
 
-				report(url,is.RequestError(err,res,useTimeout,timeout()));
-				if (!report(url,is.HTTP200(res),{"stop":true})) {
+				report(r,url,is.RequestError(err,res,useTimeout,timeout()));
+				if (!report(r,url,is.HTTP200(res),{"stop":true})) {
 					dataAll_Header(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
 				}
-				if (!report(url,is.FileStructureOK(body,"empty",res.statusMessage),{"stop":true})) {
+				if (!report(r,url,is.FileStructureOK(body,"empty",res.statusMessage),{"stop":true})) {
 					dataAll_Header(formats,datasets,header,start,stop,dataTimeout,bodyAll);					
 					return;
 				}
@@ -742,7 +757,7 @@ function run(opts, REQ, RES) {
 				}
 				// End similar code.
 
-				report(url,is.FileContentSame(header,body,bodyAll,null,"contentsame"));
+				report(r,url,is.FileContentSame(header,body,bodyAll,null,"contentsame"));
 				dataAll_Header(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 			});		
 
@@ -790,7 +805,7 @@ function run(opts, REQ, RES) {
 					+ '&time.min=' + start 
 					+ '&time.max=' + stop
 					+ "&include=header";
-		report(url);
+		report(r,url);
 		request(
 			{
 				"url": url,
@@ -798,30 +813,31 @@ function run(opts, REQ, RES) {
 				"timeout": timeout(useTimeout),
 				"headers": {"Origin": origin(url)},
 				"time": true,
-				"agentOptions": agentOptions
+        "agentOptions": agentOptions,
+        "headers": headers
 			},
 			function (err,res,body) {
 
 				// TODO: Code below is very similar to that in dataAll1()
 				if (err) {
 					if (useTimeout === "datapreviousfail") {
-						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
+						report(r,url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
 						// Start next test
 						dataAll_1201(formats,datasets,header,start,stop,"",dataTimeout,bodyAll);
 					} else {
-						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true});
+						report(r,url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true});
 						// Try again
 						dataAll_Header(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 					}
 					return;
 				}
 
-				report(url,is.RequestError(err,res,useTimeout,timeout()));
-				if (!report(url,is.HTTP200(res),{"stop":true})) {
+				report(r,url,is.RequestError(err,res,useTimeout,timeout()));
+				if (!report(r,url,is.HTTP200(res),{"stop":true})) {
 					dataAll_1201(formats,datasets,header,start,stop,"",dataTimeout,bodyAll);
 					return;
 				}
-				if (!report(url,is.FileStructureOK(body,"empty",res.statusMessage),{"stop":true})) {
+				if (!report(r,url,is.FileStructureOK(body,"empty",res.statusMessage),{"stop":true})) {
 					dataAll_1201(formats,datasets,header,start,stop,"",dataTimeout,bodyAll);
 					return;
 				}
@@ -833,12 +849,12 @@ function run(opts, REQ, RES) {
 
 				var version = "";
 				let ret = is.HeaderParsable(body);
-				if (report(url,ret,{"stop": true})) {
+				if (report(r,url,ret,{"stop": true})) {
 					var headerJSON = JSON.parse(ret.csvparts.header);
-					report(url,is.FormatInHeader(headerJSON, "data"));
-					report(url,is.HeaderSame(header, headerJSON), {'warn': true});
+					report(r,url,is.FormatInHeader(headerJSON, "data"));
+					report(r,url,is.HeaderSame(header, headerJSON), {'warn': true});
 					var version = headerJSON.HAPI;
-					report(url,is.FileContentSame(header,bodyAll,ret.csvparts.data,null,"contentsame"));
+					report(r,url,is.FileContentSame(header,bodyAll,ret.csvparts.data,null,"contentsame"));
 				}	
 				dataAll_1201(formats,datasets,header,start,stop,version,dataTimeout,bodyAll);
 		})
@@ -889,7 +905,7 @@ function run(opts, REQ, RES) {
 					+ '&time.max=' + stop2;
 
 		version = versioncheck(url,version,opts["version"]);
-		report(url);
+		report(r,url);
 		request(
 			{
 				"url": url,
@@ -897,32 +913,33 @@ function run(opts, REQ, RES) {
 				"timeout": timeout(useTimeout),
 				"headers": {"Origin": origin(url)},
 				"time": true,
-				"agentOptions": agentOptions
+        "agentOptions": agentOptions,
+        "headers": headers
 			},
 			function (err,res,body) {
 
 				// TODO: Code below is very similar to that in dataAll1()
 				if (err) {
 					if (useTimeout === "datapreviousfail") {
-						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
+						report(r,url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
 						// Start next check
 						datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,0);
 					} else {
-						report(url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true});
+						report(r,url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true});
 						// Try again
 						dataAll_1201(formats,datasets,header,start,stop,version,dataTimeout,bodyAll);
 					}
 					return;
 				}
 
-				report(url,is.RequestError(err,res,useTimeout,timeout()));
-				if (!report(url,is.HTTP200(res),{"stop":true})) {
+				report(r,url,is.RequestError(err,res,useTimeout,timeout()));
+				if (!report(r,url,is.HTTP200(res),{"stop":true})) {
 					datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,0);
 					return;
 				}
 				// End similar code.
 
-				report(url,is.FileStructureOK(body,"empty",res.statusMessage,true),{"warn": true});
+				report(r,url,is.FileStructureOK(body,"empty",res.statusMessage,true),{"warn": true});
 				datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,0);
 		})		
 	}
@@ -956,7 +973,7 @@ function run(opts, REQ, RES) {
 		var parameter = header.parameters[pn].name;
 
 		if (!parameter) {
-			report(url,
+			report(r,url,
 						{
 							"description": "Parameter #" + pn + " does not have a name.",
 							"error": true,
@@ -970,7 +987,7 @@ function run(opts, REQ, RES) {
 		}
 
 		if (!start || !stop) {
-			report(url,
+			report(r,url,
 						{
 							"description": "Need at least startDate and stopDate or sampleStartDate and sampleStopDate to continue.",
 							"error":true,
@@ -988,7 +1005,7 @@ function run(opts, REQ, RES) {
 		if (!version && !opts["version"]) {
 			version = is.versions().pop();
 		}
-		report(url);
+		report(r,url);
 		request(
 			{
 					"url": url,
@@ -996,17 +1013,18 @@ function run(opts, REQ, RES) {
 					"timeout": timeout(dataTimeout),
 					"headers": {"Origin": origin(url)},
 					"time": true,
-					"agentOptions": agentOptions
+          "agentOptions": agentOptions,
+          "headers": headers
 			},
 			function (err,res,body) {
 
 				if (err) {
 					if (dataTimeout === "datapreviousfail") {
-						report(url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true,"stop":true});
+						report(r,url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true,"stop":true});
 						// Start on next parameter
 						datar(formats,datasets,header,start,stop,version,"datapreviousfail",bodyAll,++pn);
 					} else {
-						report(url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true});
+						report(r,url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true});
 						// Try again
 						datar(formats,datasets,header,start,stop,version,"datapreviousfail",bodyAll,++pn);
 					}
@@ -1014,13 +1032,17 @@ function run(opts, REQ, RES) {
 				}
 
 				if (RES && opts["output"] === "html") {
-					var link = opts["plotserver"]+"?usecache=false&usedatacache=false&server=" + url.replace("/data?","&");
-					var note = "<a target='_blank' href='" + link + "'>Direct link for following plot.</a>. Please report any plotting issues on <a target='_blank' href='https://github.com/hapi-server/client-python/issues'>the Python hapiclient GitHub page</a>.";
-					RES.write("&nbsp&nbsp;&nbsp&nbsp;<font style='color:black'>&#x261E</font>:&nbsp" + note + "<br><img src='" + link + "'/><br>");
+          let localplotserver = /localhost/.test(opts["plotserver"]);
+          let localtesturl = /localhost/.test(opts["url"]);
+          if ((localplotserver && localtesturl) || localtesturl == false) {
+  					var link = opts["plotserver"]+"?usecache=false&usedatacache=false&server=" + url.replace("/data?","&");
+	   				var note = "<a target='_blank' href='" + link + "'>Direct link for following plot.</a>. Please report any plotting issues on <a target='_blank' href='https://github.com/hapi-server/client-python/issues'>the Python hapiclient GitHub page</a>.";
+		  			RES.write("&nbsp&nbsp;&nbsp&nbsp;<font style='color:black'>&#x261E</font>:&nbsp" + note + "<br><img src='" + link + "'/><br>");
+          }
 				}
 
-				report(url,is.RequestError(err,res,dataTimeout,timeout()));
-				if (!report(url,is.HTTP200(res),{"stop":true})) {
+				report(r,url,is.RequestError(err,res,dataTimeout,timeout()));
+				if (!report(r,url,is.HTTP200(res),{"stop":true})) {
 					// Check next parameter
 					datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,++pn); 
 					return;
@@ -1028,9 +1050,9 @@ function run(opts, REQ, RES) {
 
 				var lines = body.split("\n");
 
-				report(url,is.FileStructureOK(body,"emptyconsistent",bodyAll));
+				report(r,url,is.FileStructureOK(body,"emptyconsistent",bodyAll));
 
-				if (!report(url,is.FileStructureOK(body,"empty",res.statusMessage),{"stop":true})) {
+				if (!report(r,url,is.FileStructureOK(body,"empty",res.statusMessage),{"stop":true})) {
 					// Check next parameter
 					datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,++pn);
 					return;
@@ -1041,14 +1063,14 @@ function run(opts, REQ, RES) {
 					return;					
 				}
 				
-				report(url,is.CompressionAvailable(res.headers),{"warn":true});
-				report(url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
-				report(url,is.CORSAvailable(res.headers),{"warn":true});
+				report(r,url,is.CompressionAvailable(res.headers),{"warn":true});
+				report(r,url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
+				report(r,url,is.CORSAvailable(res.headers),{"warn":true});
 
-				report(url,is.FileStructureOK(body,"firstchar"));
-				report(url,is.FileStructureOK(body,"lastchar"));
-				report(url,is.FileStructureOK(body,"extranewline"));
-				report(url,is.FileStructureOK(body,"numlines"));
+				report(r,url,is.FileStructureOK(body,"firstchar"));
+				report(r,url,is.FileStructureOK(body,"lastchar"));
+				report(r,url,is.FileStructureOK(body,"extranewline"));
+				report(r,url,is.FileStructureOK(body,"numlines"));
 
 				var line1 = lines[0].split(",");
 				var time1 = line1[0].trim();
@@ -1058,7 +1080,7 @@ function run(opts, REQ, RES) {
 				} else {
 					var time2 = null;
 				}
-				report(url,is.CadenceOK(header["cadence"],time1,time2,"consecsample"),{"warn":true});
+				report(r,url,is.CadenceOK(header["cadence"],time1,time2,"consecsample"),{"warn":true});
 
 				var timeLength = header.parameters[0].length;
 				
@@ -1067,26 +1089,26 @@ function run(opts, REQ, RES) {
 					// If wrong length and server can serve binary, then error.
 					warn = false;
 				}
-				report(url,is.CorrectLength(time1,timeLength,"Time",!warn),{"warn":warn});
+				report(r,url,is.CorrectLength(time1,timeLength,"Time",!warn),{"warn":warn});
 
-				report(url,is.HAPITime(lines,version));
-				report(url,is.TimeIncreasing(lines,"CSV"));
-				report(url,is.TimeInBounds(lines,start,stop));
+				report(r,url,is.HAPITime(lines,version));
+				report(r,url,is.TimeIncreasing(lines,"CSV"));
+				report(r,url,is.TimeInBounds(lines,start,stop));
 
 				if (pn == 0) {
 					// Time was requested parameter, no more columns to check
-					report(url,is.SizeCorrect(line1.length-1,0,header.parameters[pn]),{"warn":false});
+					report(r,url,is.SizeCorrect(line1.length-1,0,header.parameters[pn]),{"warn":false});
 					// Check next parameter
 					datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,++pn);
 					return;
 				}
 
-				report(url,is.FileLineOK(header, body, pn, 'Ncolumns'));
-				//report(url,is.FileLineOK(header, body, pn, 'fields'));
-				//report(url,is.SizeCorrect(line1.length-1,nf-1,header.parameters[pn]),{"warn":true});
+				report(r,url,is.FileLineOK(header, body, pn, 'Ncolumns'));
+				//report(r,url,is.FileLineOK(header, body, pn, 'fields'));
+				//report(r,url,is.SizeCorrect(line1.length-1,nf-1,header.parameters[pn]),{"warn":true});
 				
 				if (bodyAll) {
-					report(url,is.FileContentSame(header,body,bodyAll,pn,'subsetsame'));
+					report(r,url,is.FileContentSame(header,body,bodyAll,pn,'subsetsame'));
 				}
 
 				if (!opts["parameter"]) {

@@ -565,18 +565,18 @@ function FileStructureOK(body,what,other,emptyExpected) {
     var emptyIndicated = /HAPI 1201/.test(other);
     if (!body || body.length === 0) {
       if (emptyExpected && !emptyIndicated) {
-        return {"description": callerName() + ": If data part of response has zero length, want 'HAPI 1201' in HTTP header status message. " + l2,"error": true,"got": "Zero bytes and HTTP header status message of '" + other + "'"};
+        return {"description": callerName() + ": If data part of response has zero length, want 'HAPI 1201' (no data in time range) in HTTP header status message. " + l2,"error": true,"got": "Zero bytes and HTTP header status message of '" + other + "'"};
       }
       if (!emptyExpected) {
         if (emptyIndicated) {
-          return {"description": callerName() + ": A data part of response with zero bytes was not expected. " + l2,"error": true,"got": "Zero bytes (but 'HAPI 1201' is in HTTP header status message)."};
+          return {"description": callerName() + ": A data part of response with zero bytes was not expected because 'HAPI 1201' (no data in time range) found in HTTP header status message. " + l2,"error": true,"got": "Zero bytes an 'HAPI 1201' is in HTTP header status message."};
         } else {
-          return {"description": callerName() + ": Zero bytes was not expected. " + l2,"error": true,"got": "Zero bytes."};
+          return {"description": callerName() + ": The verifier should have enough information to make a request that returns data. Fix by adding or modifying sample{Start,Stop} in /info response (preferred) or set a start/stop where there are data in the verifier query parameters (or command-line arguments). " + l2,"error": true,"got": "Zero bytes."};
         }
       }
     }
     if (body && body.length != 0 && emptyIndicated) {
-      return {"description": callerName() + ": A data part of response with zero bytes was expected because 'HAPI 1201 in HTTP header status messsage." + l2,"error": false,"got": "'HAPI 1201' in HTTP header status message and " + body.length + " bytes."};
+      return {"description": callerName() + ": A data part of response with zero bytes was expected because 'HAPI 1201' (no data in time range) in HTTP header status messsage." + l2,"error": false,"got": "'HAPI 1201' in HTTP header status message and " + body.length + " bytes."};
     }
     return {"description": callerName() + ": Expect nonzero-length data part of response.", "error": false,"got": body.length + " bytes."};   
   }

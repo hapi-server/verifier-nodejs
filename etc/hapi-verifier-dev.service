@@ -13,7 +13,7 @@ Documentation=https://github.com/rweigel/hapi-server/verifier-nodejs
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/verifier-nodejs-dev
-ExecStart=cpulimit -l 5 -- nice -20 /home/ubuntu/.nvm/versions/node/v16.2.0/bin/node --max-old-space-size=96 verify.js --port 9996
+ExecStart=cpulimit -l 5 -- nice -20 /home/ubuntu/.nvm/versions/node/v18.10.0/bin/node --max-old-space-size=96 verify.js --port 9996
 Restart=always
 
 [Install]

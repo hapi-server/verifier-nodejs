@@ -3,7 +3,6 @@ const clc = require('chalk');
 
 function report(r,url,obj,opts) {
 
-  let CATALOG = r.catalog;
   let reqOpts = r.opts;
   let RES = r.res;
 

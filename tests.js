@@ -230,10 +230,12 @@ function run(opts, REQ, RES) {
 							break;
 						}
 					}
-					CATALOG["catalog"] = catr;
-          // TODO: Hacky way to pass CATALOG to report.
-          r['catalog'] = CATALOG;
-				}
+          CATALOG["catalog"] = catr;
+				} else {
+          CATALOG["catalog"] = cat;
+        }
+        // TODO: Hacky way to pass CATALOG to report.
+        r['catalog'] = CATALOG;
 				var version = versioncheck(url,CATALOG.HAPI,opts["version"]);
 				report(r,url,is.HAPIJSON(body,version,'catalog'));
 				var datasets = JSON.parse(body).catalog;

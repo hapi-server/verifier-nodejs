@@ -66,7 +66,7 @@ if (argv.url !== "" || argv.test) {
   let opts = {
     "url": argv["url"],
     "id": argv["id"] || argv["dataset"],
-    "param": argv["parameter"],
+    "parameter": argv["parameter"],
     "start": argv["timemin"],
     "stop": argv["timemax"],
     "version": argv["version"],
@@ -120,9 +120,9 @@ if (argv.url !== "" || argv.test) {
 			res.status(400).end("version must be one of " + JSON.stringify(versions()));
 		}
 
-    let param = req.query["parameter"] || req.query["parameters"] || "";
-		if (param) {
-			if (param.split(",").length > 1) {
+    let parameter = req.query["parameter"] || req.query["parameters"] || "";
+		if (parameter) {
+			if (parameter.split(",").length > 1) {
 				res.end("Only one parameter may be specified.");
 			}
 		}
@@ -130,7 +130,7 @@ if (argv.url !== "" || argv.test) {
     let opts = {
       "url": req.query["url"] || "",
       "id": req.query["id"] || req.query["dataset"] || "",
-      "param": param,
+      "parameter": parameter,
       "start": req.query["time.min"] || req.query["start"] || "",
       "stop": req.query["time.max"]  || req.query["start"] || "",
       "version": version,

@@ -361,10 +361,9 @@ function run(opts, REQ, RES) {
       let localplotserver = /localhost/.test(opts["plotserver"]);
       let localtesturl = /localhost/.test(opts["url"]);
       if ((localplotserver && localtesturl) || localtesturl == false) {
-  			img = '<img width="20px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcA…fnx/8/Pyg1+t/18V0zP5/e2toUtFSXC4AAAAASUVORK5CYII=" alt="" />';
   			var link = opts["plotserver"]+"?server=" + opts["url"] + "&id=" + id + "&format=gallery";
   			var note = "<a target='_blank' href='" + link + "'>Visually check data and test performance</a>";
-  			RES.write("&nbsp" + img + ":&nbsp" + note + "<br>");
+  			RES.write("&thinsp;&thinsp;&#128065;&nbsp;:" + note + "<br>");
       }
 		}
 

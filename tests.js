@@ -521,7 +521,7 @@ function run(opts, REQ, RES) {
 						var stop = new Date(stop).toISOString();
 					}
 				}
-        if (opts["parameters"]) {
+        if (opts["parameter"]) {
           dataAll1(formats,datasets,header,start,stop,dataTimeout);
         } else {
           infor(formats,datasets,header,start,stop,dataTimeout);

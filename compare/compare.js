@@ -63,7 +63,6 @@ async.series(seriesi,
         }
         report(argv, infos, data);
     });
-
 });
 
 

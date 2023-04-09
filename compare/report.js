@@ -1,21 +1,22 @@
 const clc  = require('chalk');
+function plural(v) {return v > 1 || v == 0 ? "s" : "";}
 
 function report(argv, infos, data) {
 
   log.argv = argv;
 
   let errs = 0;
-  //errs += timings(data[0]['timing'], data[1]['timing'], argv);
-  //errs += headers(data[0]['headers'], data[1]['headers'], argv)
+  errs += timings(data[0]['timing'], data[1]['timing'], argv);
+  errs += headers(data[0]['headers'], data[1]['headers'], argv)
 
   // Get matching info parameters until difference
-  infoc = info(infos, argv);
+  errs += info(infos, argv);
   process.exit(0);
   let ct1 = data[0]['headers']['content-type'];
   let ct2 = data[1]['headers']['content-type'];
 
   if (ct1.includes('csv') && ct2.includes('csv')) {
-    errs += csv(data[0]['body'], data[1]['body'], infoc, argv);
+    errs += csv(data[0]['body'], data[1]['body'], infos[0], argv);
   } else {
     log("content-types are not both csv",true);
     errs += 1;
@@ -60,7 +61,7 @@ function timings(timing1, timing2, argv) {
     log(`2 ${key} = ${val2}`,timingDiff);
   }
 
-  let msg = `${timingDiffs} |diff|/ave values >= ${TIMEFRACTION}`;
+  let msg = `${timingDiffs} |diff|/ave value${plural(timingDiffs)} >= ${TIMEFRACTION}`;
   console.log('-'.repeat(4));
   if (timingDiffs === 0) {
     log(msg,'pass-summary');
@@ -101,7 +102,7 @@ function headers(h1, h2, argv) {
     log(`2 ${key} = ${h2[key]}`,headerDiff);
   }
 
-  let msg = `${headerDiffs} differences`;
+  let msg = `${headerDiffs} difference${plural(headerDiffs)}`;
   console.log('-'.repeat(4));
   if (headerDiffs === 0) {
     log(msg,'pass-summary');
@@ -114,32 +115,53 @@ function headers(h1, h2, argv) {
 
 function info(infos, argv) {
 
+  let infoDiffs = 0;
+
   function equals(a,b,name) {
 
-    if (a === null && b === null) {
-      return true;
-    }
-
-    if ('string' == typeof a == typeof b) {
-      if (a == b) return true;
+    if (typeof a != typeof b) {
+      log(`1 ${name} type = ${typeof a}`,true);
+      log(`1 ${name} type = ${typeof b}`,true);
+      infoDiffs++;
       return false;
     }
 
+    if (a === null && b === null) {
+      log(`1 ${null}`,0);
+      log(`2 ${null}`,0);
+      return true;
+    }
+
+    if ('string' == typeof a || 'number' == typeof a) {
+      let diff = false;
+      if (a != b) {
+        diff = true;
+        infoDiffs++;
+      }
+      return diff == false;
+    }
+
     if (Array.isArray(a) && Array.isArray(b)) {
-      let diffs = 0;
+      let diff = false;
       for (let i = 0; i < Math.min(a.length,b.length); i++) {
-        let diff = false;
         if (!equals(a[i], b[i], `${name}[${i}]`)) {
-          let diff = true;
-          diffs += 1;
+          diff = true;
         }
         //log(`1 ${name}[${i}] = ${a[i]}`,diff);
         //log(`2 ${name}[${i}] = ${b[i]}`,diff);
       }
-      return diffs.length > 0;
+      let ldiff = false;
+      if (a.length != b.length) {
+        infoDiffs++;
+        ldiff = true;
+      }
+      log(`1 ${name}.length = ${a.length}`,ldiff);
+      log(`2 ${name}.length = ${b.length}`,ldiff);
+      return diff == true;
     }
 
     if (typeof a === 'object' && typeof b === 'object') {
+
       if (a === null || b === null) return 1;
 
       let diffs = 0;
@@ -148,7 +170,7 @@ function info(infos, argv) {
         let diff = false;
         if (!equals(a[key], b[key], `${name}[${key}]`)) {
           diff = true;
-          diffs = diffs + 1;
+          diffs++;
         }
         if (typeof a[key] !== 'object' && a !== null) {
           log(`1 ${name}['${key}'] = ${a[key]}`,diff);
@@ -157,9 +179,11 @@ function info(infos, argv) {
         seen.push(key);
       }
       for (let key of Object.keys(b)) {
+        let diff = false;
         if (seen.includes(key)) continue;
         diff = true;
-        diffs = diffs + 1;
+        diffs++;
+        infoDiffs++;
         log(`1 ${key} = ${a[key]}`,diff);
         log(`2 ${key} = ${b[key]}`,diff);
       }
@@ -174,10 +198,23 @@ function info(infos, argv) {
   if (argv['simulate']) {
     delete infos[0]['startDate'];
     infos[0]['parameters'][0]['name'] += 'x';
+    //delete infos[1]['parameters'][1];
+    infos[1]['parameters'] = infos[1]['parameters'].slice(0,1);
   }
   delete infos[0]['status'];
   delete infos[1]['status'];
-  return equals(infos[0],infos[1],'info');
+
+  equals(infos[0],infos[1],'info');
+
+  let msg = `${infoDiffs} difference${plural(infoDiffs)}`;
+  console.log('-'.repeat(4));
+  if (infoDiffs === 0) {
+    log(msg,'pass-summary');
+    return 0;
+  } else {
+    log(msg,'fail-summary');
+    return 1;
+  }
 }
 
 function csv(b1, b2, infoc, argv) {
@@ -196,7 +233,7 @@ function csv(b1, b2, infoc, argv) {
   }
 
   if (b1 === b2) {
-    log("No differences",'pass-summary');
+    log(`No differences${plural(infoDiffs)}`,'pass-summary');
     return 0;
   }
 
@@ -275,12 +312,16 @@ function csv(b1, b2, infoc, argv) {
   } else {
     if (bodyNLinesDiff === true)
       log("Number of lines differs",'fail-summary');
-    if (bodyLineDiffs > 0)
-      log(`${bodyLineDiffs} line(s) differs`,'fail-summary');
+    if (bodyLineDiffs > 0) {
+      let s = plural(bodyLineDiffs);
+      log(`${bodyLineDiffs} line${s} differ`,'fail-summary');      
+    }
     if (bodyNColsDiffs > 0)
       log(`Number of columns differ`,'fail-summary');
-    if (bodyValDiffs > 0)
-      log(`${bodyValDiffs} column value(s) differs`,'fail-summary');
+    if (bodyValDiffs > 0) {
+      let s = plural(bodyValDiffs);
+      log(`${bodyValDiffs} column value${s} differs`,'fail-summary');
+    }
     return 1;
   }
 }

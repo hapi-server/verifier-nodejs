@@ -29,11 +29,11 @@ cd verifier-nodejs; npm install
 ## Command-Line Usage
 
 ```
-node verify.js 
-  --url URL 
-  [--id DATASETID 
-  --parameter PARAMETERNAME 
-  --timemin HAPITIME 
+node verify.js
+  --url URL
+  [--id DATASETID
+  --parameter PARAMETERNAME
+  --timemin HAPITIME
   --timemax HAPITIME]
 ```
 
@@ -45,9 +45,13 @@ If `--url URL` is provided, output goes to stdout, and a web server is not start
 node verify.js [--port PORT] [--plotserver URL]
 ```
 
-If no arguments are provided, a web server is started on port `9999` and `plotserver=http://hapi-server.org/plot`. 
+If no arguments are provided, a web server is started on port `9999` and `plotserver=http://hapi-server.org/plot`.
 
 See http://localhost:9999/ for API documentation.
+
+# StackBlitz
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/edit/verify-nodejs-dev?file=README.md&file=md!README.md)
 
 # Contact
 

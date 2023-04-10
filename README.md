@@ -49,6 +49,10 @@ If no arguments are provided, a web server is started on port `9999` and `plotse
 
 See http://localhost:9999/ for API documentation.
 
+## StackBlitz
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/edit/verify-nodejs-dev?file=README.md&file=md!README.md)
+
 # Contact
 
 Submit questions, bug reports, and feature requests to the [issue tracker](https://github.com/hapi-server/verifier-nodejs/issues).

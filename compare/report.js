@@ -11,7 +11,7 @@ function report(argv, infos, data) {
 
   // Get matching info parameters until difference
   errs += info(infos, argv);
-  process.exit(0);
+
   let ct1 = data[0]['headers']['content-type'];
   let ct2 = data[1]['headers']['content-type'];
 
@@ -25,6 +25,7 @@ function report(argv, infos, data) {
 exports.report = report;
 
 function log(msg, msgType) {
+
   if (msgType === true)
     console.log(clc.red(' ✗ ') + msg);
   if (msgType === false && log.argv['showpasses'] === true)
@@ -232,8 +233,8 @@ function csv(b1, b2, infoc, argv) {
     //console.log(b2);
   }
 
-  if (b1 === b2) {
-    log(`No differences${plural(infoDiffs)}`,'pass-summary');
+  if (b1 === b2 && log.argv['showpasses'] === false) {
+    log(`No differences`,'pass-summary');
     return 0;
   }
 

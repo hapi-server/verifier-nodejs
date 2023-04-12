@@ -1,19 +1,20 @@
 const clc     = require('chalk');
 const request = require('request');
 const async   = require('async');
+const report  = require('./report.js').report;
 
 const argv =
         require('yargs')
           .help()
           .default({
-            "port": 9998,
             "server1": "https://hapi-server.org/servers/TestData2.0/hapi",
             "server2": "https://hapi-server.org/servers/TestData2.0/hapi",
-            "endpoint": "data",
-            "dataset": "dataset1",
-            "parameters": "scalar",
-            "start": "1970-01-01Z",
-            "stop": "1970-01-01T00:00:11.000Z",
+            "name1": "1 ",
+            "name2": "2 ",
+            "dataset": "",
+            "parameters": "",
+            "start": "",
+            "stop": "",
             "simulate": false,
             "showpasses": false,
             "timefraction": "0.5"
@@ -21,50 +22,103 @@ const argv =
           .option('simulate',{'type': 'boolean'})
           .argv;
 
-let report = require('./report.js').report;
+argv['server1'] = argv['server1'].replace(/\/$/,"");
+argv['server2'] = argv['server2'].replace(/\/$/,"");
 
-let args_a = `?id=${argv['dataset']}&parameters=${argv['parameters']}`;
-let args_b = `&time.min=${argv['start']}&time.max=${argv['stop']}`;
+if (argv['dataset'] === '') {
+  get(`${argv['server1']}/catalog`, "1 ", (err, res) => {
 
-let url1 = argv['server1'].replace(/\/$/,"") + "/" + argv['endpoint'];
-let url2 = argv['server2'].replace(/\/$/,"") + "/" + argv['endpoint'];
-url1 = url1 + args_a + args_b;
-url2 = url2 + args_a + args_b;
+    const body = parseResponse(err, res);
+    const datasets = body['catalog'];
 
-let url1i = argv['server1'].replace(/\/$/,"") + "/info";
-let url2i = argv['server1'].replace(/\/$/,"") + "/info";
-url1i = url1i + args_a;
-url2i = url2i + args_a;
-
-let seriesi = [(cb) => {get(url1i, "1 ", cb)}, (cb) => {get(url2i, "2 ", cb)}];
-let seriesd = [(cb) => {get(url1, "1 ", cb)}, (cb) => {get(url2, "2 ", cb)}];
-
-
-async.series(seriesi, 
-
-  (err, infos) => {
-    if (err) {
-      console.log("Error:")
-      console.error(err);
-      console.log("Exiting with code 1")
-      process.exit(1);
+    argv['dataset'] = datasets[0]['id'];    
+    if (argv['parameters'] === '' || argv['start'] === '' || argv['stop'] === '') {
+      get(`${argv['server1']}/info?id=${argv['dataset']}`, "1 ", 
+        (err, res) => {
+          const info = JSON.parse(res['body']);
+          startstop(argv, info);
+          argv['parameters'] = info['parameters'][1]['name'];
+          run(argv);
+      })      
+    } else {
+      run(argv);
     }
+  });
+} else {
+  run(argv);
+}
 
-    infos[0] = JSON.parse(infos[0]['body']);
-    infos[1] = JSON.parse(infos[1]['body']);
+function parseResponse(err, res) {
 
-    async.series(seriesd, 
-      (err, data) => {
-        if (err) {
-          console.log("Error:")
-          console.error(err);
-          console.log("Exiting with code 1")
-          process.exit(1);
-        }
-        report(argv, infos, data);
-    });
-});
+  const body = JSON.parse(res['body']);
+  if (parseInt(body['status']['code']) !== 1200) {
+    err = `HAPI status ${body['status']['code']} != 1200.`;
+  }
 
+  if (err) {
+    console.error(clc.red("Error."));
+    console.error("Response:");
+    console.error(res)
+    console.error("Error message:");
+    console.error(clc.red(err))
+    process.exit(1);
+  }
+  return body;
+}
+
+function startstop(argv, info) {
+  if (argv['start'] === '') {
+    argv['start'] = info['sampleStartDate'];
+  }
+  if (argv['stop'] === '') {
+    argv['stop'] = info['sampleStopDate'];
+  }  
+}
+
+function run(argv) {
+
+  const args_a = `?id=${argv['dataset']}&parameters=${argv['parameters']}`;
+
+  const seriesInfo = [
+    (cb) => {get(argv['server1'] + "/info" + args_a, argv['name1'], cb)}, 
+    (cb) => {get(argv['server2'] + "/info" + args_a, argv['name2'], cb)}
+  ];
+
+  async.series(seriesInfo, 
+
+    (err, infos) => {
+      if (err) {
+        console.log("Error:")
+        console.error(err);
+        console.log("Exiting with code 1")
+        process.exit(1);
+      }
+
+      infos[0] = JSON.parse(infos[0]['body']);
+      infos[1] = JSON.parse(infos[1]['body']);
+
+      let args_b = `&time.min=${argv['start']}&time.max=${argv['stop']}`;
+
+      url1 = argv['server1'] + "/data" + args_a + args_b;
+      url2 = argv['server2'] + "/data" + args_a + args_b;
+
+      let seriesData = [
+          (cb) => {get(url1, argv['name1'], cb)},
+          (cb) => {get(url2, argv['name2'], cb)}
+      ];
+
+      async.series(seriesData, 
+        (err, data) => {
+          if (err) {
+            console.log("Error:");
+            console.error(err);
+            console.log("Exiting with code 1.");
+            process.exit(1);
+          }
+          report(argv, infos, data);
+      });
+  });
+}
 
 function get(url, msgPrefix, cb) {
 

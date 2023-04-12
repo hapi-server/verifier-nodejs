@@ -716,7 +716,7 @@ function run(opts, REQ, RES) {
             // Start checking individual parameters. Skip test
             // using different time format (dataAll2()) and request
             // with header (dataAll_Header()).
-            datar(formats,datasets,header,start,stop,"",useTimeout,null,0);
+            datar(formats,datasets,header,start,stop,useTimeout,null,0);
           } else {
             report(r,url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true});
             // Try again
@@ -727,7 +727,7 @@ function run(opts, REQ, RES) {
 
         function next(formats,datasets,header,start,stop,dataTimeout,bodyAll) {
           if (opts['parameter']) {
-            datar(formats,datasets,header,start,stop,"",useTimeout,bodyAll,0);
+            datar(formats,datasets,header,start,stop,useTimeout,bodyAll,0);
           } else {
             dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);
           }
@@ -803,7 +803,7 @@ function run(opts, REQ, RES) {
             // Start checking individual parameters. Skip test
             // using different time format (dataAll2()) and request
             // with header (dataAll_Header()).
-            datar(formats,datasets,header,start,stop,"",dataTimeout,null,0);
+            datar(formats,datasets,header,start,stop,dataTimeout,null,0);
           } else {
             report(r,url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true});
             // Try again
@@ -902,35 +902,37 @@ function run(opts, REQ, RES) {
           return;
         }
 
+
         report(r,url,is.RequestError(err,res,useTimeout,timeout()));
         if (!report(r,url,is.HTTP200(res),{"stop":true})) {
-          dataAll_1201(formats,datasets,header,start,stop,"",dataTimeout,bodyAll);
+          dataAll_1201(formats,datasets,header,start,stop,dataTimeout,bodyAll);
           return;
         }
         if (!report(r,url,is.FileStructureOK(body,"empty",res.statusMessage),{"stop":true})) {
-          dataAll_1201(formats,datasets,header,start,stop,"",dataTimeout,bodyAll);
+          dataAll_1201(formats,datasets,header,start,stop,dataTimeout,bodyAll);
           return;
         }
         if (!body || body.length === 0) {
-          dataAll_1201(formats,datasets,header,start,stop,"",dataTimeout,bodyAll);
+          dataAll_1201(formats,datasets,header,start,stop,dataTimeout,bodyAll);
           return;         
         }
         // End similar code.
 
-        var version = "";
         let ret = is.HeaderParsable(body);
         if (report(r,url,ret,{"stop": true})) {
           var headerJSON = JSON.parse(ret.csvparts.header);
           report(r,url,is.FormatInHeader(headerJSON, "data"));
           report(r,url,is.HeaderSame(header, headerJSON), {'warn': true});
-          var version = headerJSON.HAPI;
           report(r,url,is.FileContentSame(header,bodyAll,ret.csvparts.data,null,"contentsame"));
+          // TODO: Compare versions.
+          //var version = headerJSON.HAPI;
+          //var versionLast = versioncheck(url,header.HAPI,opts["version"]);
         } 
-        dataAll_1201(formats,datasets,header,start,stop,version,dataTimeout,bodyAll);
+        dataAll_1201(formats,datasets,header,start,stop,dataTimeout,bodyAll);
     })
   }
 
-  function dataAll_1201(formats,datasets,header,start,stop,version,dataTimeout,bodyAll) {
+  function dataAll_1201(formats,datasets,header,start,stop,dataTimeout,bodyAll) {
 
     // Attempt to create a HAPI 1201 response (no data in interval) by setting
     // start time to be 1 ms after reported dataset start and stop time to be
@@ -992,28 +994,28 @@ function run(opts, REQ, RES) {
           if (useTimeout === "datapreviousfail") {
             report(r,url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true,"stop":true});
             // Start next check
-            datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,0);
+            datar(formats,datasets,header,start,stop,dataTimeout,bodyAll,0);
           } else {
             report(r,url,is.RequestError(err,res,useTimeout,timeout()),{"warn":true});
             // Try again
-            dataAll_1201(formats,datasets,header,start,stop,version,dataTimeout,bodyAll);
+            dataAll_1201(formats,datasets,header,start,stop,dataTimeout,bodyAll);
           }
           return;
         }
 
         report(r,url,is.RequestError(err,res,useTimeout,timeout()));
         if (!report(r,url,is.HTTP200(res),{"stop":true})) {
-          datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,0);
+          datar(formats,datasets,header,start,stop,dataTimeout,bodyAll,0);
           return;
         }
         // End similar code.
 
         report(r,url,is.FileStructureOK(body,"empty",res.statusMessage,true),{"warn": true});
-        datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,0);
+        datar(formats,datasets,header,start,stop,dataTimeout,bodyAll,0);
     })    
   }
 
-  function datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,pn) {
+  function datar(formats,datasets,header,start,stop,dataTimeout,bodyAll,pn) {
 
     // Reduced data request. Request one parameter at a time.
 
@@ -1052,7 +1054,7 @@ function run(opts, REQ, RES) {
             {"stop":true}
           );
       // Check next parameter
-      datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,++pn);
+      datar(formats,datasets,header,start,stop,dataTimeout,bodyAll,++pn);
       return;
     }
 
@@ -1074,10 +1076,6 @@ function run(opts, REQ, RES) {
           + '&time.min=' + start
           + '&time.max=' + stop;
 
-    if (!version && !opts["version"]) {
-      version = is.versions().pop();
-    }
-
     report(r,url);
     request(
       {
@@ -1095,22 +1093,22 @@ function run(opts, REQ, RES) {
           if (dataTimeout === "datapreviousfail") {
             report(r,url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true,"stop":true});
             // Start on next parameter
-            datar(formats,datasets,header,start,stop,version,"datapreviousfail",bodyAll,++pn);
+            datar(formats,datasets,header,start,stop,"datapreviousfail",bodyAll,++pn);
           } else {
             report(r,url,is.RequestError(err,res,dataTimeout,timeout()),{"warn":true});
             // Try again
-            datar(formats,datasets,header,start,stop,version,"datapreviousfail",bodyAll,++pn);
+            datar(formats,datasets,header,start,stop,"datapreviousfail",bodyAll,++pn);
           }
           return;
         }
 
-        function next(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,pn) {
+        function next(formats,datasets,header,start,stop,dataTimeout,bodyAll,pn) {
           if (!opts["parameter"]) {
             // Check next parameter
-            datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,++pn);
+            datar(formats,datasets,header,start,stop,dataTimeout,bodyAll,++pn);
           } else {
             // Case where one parameter given. See TODO above.
-            datar(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,-1);
+            datar(formats,datasets,header,start,stop,dataTimeout,bodyAll,-1);
           }
         }
 
@@ -1129,7 +1127,7 @@ function run(opts, REQ, RES) {
         report(r,url,is.RequestError(err,res,dataTimeout,timeout()));
         if (!report(r,url,is.HTTP200(res), {"stop": true})) {
           // Check next parameter
-          next(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,pn);
+          next(formats,datasets,header,start,stop,dataTimeout,bodyAll,pn);
           return;
         }
 
@@ -1139,12 +1137,12 @@ function run(opts, REQ, RES) {
 
         if (!report(r,url,is.FileStructureOK(body,"empty",res.statusMessage),{"stop": true})) {
           // Check next parameter
-          next(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,pn);
+          next(formats,datasets,header,start,stop,dataTimeout,bodyAll,pn);
           return;
         }
         if (!body || body.length === 0) {
           // Check next parameter
-          next(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,pn);
+          next(formats,datasets,header,start,stop,dataTimeout,bodyAll,pn);
           return;         
         }
         
@@ -1176,6 +1174,7 @@ function run(opts, REQ, RES) {
         }
         report(r,url,is.CorrectLength(time1,timeLength,"Time",!warn),{"warn":warn});
 
+        let version = versioncheck(url,header.HAPI,opts["version"]);
         report(r,url,is.HAPITime(lines,version));
         report(r,url,is.TimeIncreasing(lines,"CSV"));
         report(r,url,is.TimeInBounds(lines,start,stop));
@@ -1184,7 +1183,7 @@ function run(opts, REQ, RES) {
           // Time was requested parameter, no more columns to check
           report(r,url,is.SizeCorrect(line1.length-1,0,header.parameters[pn]),{"warn":false});
           // Check next parameter
-          next(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,pn);
+          next(formats,datasets,header,start,stop,dataTimeout,bodyAll,pn);
           return;
         }
 
@@ -1196,7 +1195,7 @@ function run(opts, REQ, RES) {
           report(r,url,is.FileContentSame(header,body,bodyAll,pn,'subsetsame'));
         }
 
-        next(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,pn);
+        next(formats,datasets,header,start,stop,dataTimeout,bodyAll,pn);
       });
   }
 

@@ -393,7 +393,7 @@ function FileLineOK(header,body,pn,what) {
 }
 exports.FileLineOK = FileLineOK;
 
-function FileContentSame(header,body,bodyAll,pn,what) {
+function FileContentSame(header, body, bodyAll, pn, what) {
 
   var nf = nFields(header, pn);
 
@@ -455,34 +455,44 @@ function FileContentSame(header,body,bodyAll,pn,what) {
 
     var lines = body.split("\n");
 
-    var desc = callerName() + ": Expect data from one parameter request to match data from all parameter request.";
-    var t = false;
-    var got = "Match";
-
     if (lines.length != linesAll.length) {
       let desc = "Expect number of rows from one parameter request to"
                + " match data from all parameter request.";
       //console.log(lines)
       //console.log(linesAll)
-      got = " # rows in single parameter request = " + lines.length 
-          + " # in all parameter request = " + linesAll.length;
+      let got = " # rows in single parameter request = " + lines.length 
+              + " # in all parameter request = " + linesAll.length;
       return {
         "description": callerName() + ": " + desc,
         "error": true,
         "got": got
       };
     }
-
-    var desc = callerName() + ": Expect content from one parameter request to match content from all parameter request.";
-    t = false;
-
     var line = "";
     var lineAll = "";
-    for (var i = 0;i < lines.length-1;i++) {
+
+    // Find first column of parameter being checked.
+    var fc = 0; // First column of parameter.
+    for (let i = 0;i < header.parameters.length;i++) {
+      if (header.parameters[i]["name"] === header.parameters[pn]["name"]) {
+        break;
+      }
+      if (!header.parameters[i]["size"]) {
+        fc = fc + 1;
+      } else {
+        fc = fc + prod(header.parameters[i]["size"]);
+      }
+    }
+
+    let desc = ": Expect content from one parameter request to"
+             + " match content from all parameter request.";
+    let t = false;
+    let got = "Match";
+
+    for (let i = 0;i < lines.length-1;i++) {
 
       line = lines[i].split(",");
       lineAll = linesAll[i].split(",");
-
 
       // Time
       if (line[0].trim() !== lineAll[0].trim()) {
@@ -497,40 +507,23 @@ function FileContentSame(header,body,bodyAll,pn,what) {
       }
 
       // Number of columns
-      var desc = "Expect number of columns from one parameter request to be equal to or less than number of columns in all parameter request.";
-      var t = line.length > lineAll.length;
-      got = " # columns in single parameter request = " + line.length 
-          + " # in all parameter request = " + lineAll.length;
-      if (t) {
+      if (line.length > lineAll.length) {
+        desc = "Expect number of columns from one parameter request to be"
+                 + " equal to or less than number of columns in all parameter request.";
+        got = " # columns in single parameter request = " + line.length 
+            + " # in all parameter request = " + lineAll.length;
         return {
           "description": callerName() + ": " + desc,
-          "error": t,
+          "error": true,
           "got": got
         };
-      }
-
-
-      var desc = "Expect data from one parameter request to match data from all parameter request.";
-      got = "Match";
-      t = false;
-
-      // Find first column of parameter being checked.
-      var fc = 0; // First column of parameter.
-      for (var i = 0;i < header.parameters.length;i++) {
-        if (header.parameters[i]["name"] === header.parameters[pn]["name"]) {
-          break;
-        }
-        if (!header.parameters[i]["size"]) {
-          fc = fc + 1;
-        } else {
-          fc = fc + prod(header.parameters[i]["size"]);
-        }
       }
 
       // Parameter
       // nf = number of fields for parameter
       // fc = first column of field for parameter
-      for (var j=0;j < nf-1;j++) {
+      for (let j = 0;j < nf - 1; j++) {
+
         if (!line[1+j] || !lineAll[fc+j]) {
           t = true;
           got = "Problem with line " + (j) + ":\n"
@@ -538,12 +531,15 @@ function FileContentSame(header,body,bodyAll,pn,what) {
               + "All parameter request: " + lineAll[fc+j];
           break;
         }
+
         if (line[1+j].trim() !== lineAll[fc+j].trim()) {
+
           if (header.parameters[pn].name) {
             var name = "'" + header.parameters[pn].name + "'";
           } else {
             var name = "#" + header.parameters[pn].name;
           }
+
           if (nf == 2) {
             t = true;
             got = got + ". Parameter " + name + " does not match at time " 
@@ -555,6 +551,7 @@ function FileContentSame(header,body,bodyAll,pn,what) {
                 + ": Single parameter request: " + line[1+j] 
                 + "; All parameter request: " + lineAll[fc+j] + ".";
           }
+
         }
       }
     }

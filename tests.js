@@ -1180,10 +1180,6 @@ function run(opts, REQ, RES) {
         report(r,url,is.TimeIncreasing(lines,"CSV"));
         report(r,url,is.TimeInBounds(lines,start,stop));
 
-        if (bodyAll) {
-          report(r,url,is.FileContentSame(header,body,bodyAll,pn,'subsetsame'));
-        }
-
         if (pn === 0) {
           // Time was requested parameter, no more columns to check
           report(r,url,is.SizeCorrect(line1.length-1,0,header.parameters[pn]),{"warn":false});

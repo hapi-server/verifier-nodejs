@@ -171,7 +171,7 @@ function CadenceValid(cadence) {
 }
 exports.CadenceValid = CadenceValid;
 
-function CadenceOK(cadence,start,stop,what) {
+function CadenceOK(cadence, start, stop, what) {
   if (!cadence) return; // Don't do test; no cadence given.
   if (!stop) return {"description":"is.CadenceOK(): Need more than two lines to do cadence comparison with consecutive samples.","error":true,"got":"One line."}
   //console.log(start)
@@ -229,7 +229,11 @@ function CIdentifier(arr,type) {
     got = No + " datasets ids that are not c identfiers:\n\n" + arr_fail.join("\n");
   }
 
-  return {"description": "is.CIdentifier(): Prefer " + type + " to match c identifier regex '" + re_str + "'.", "error": arr_fail.length > 0, "got": got};
+  return {
+    "description": "is.CIdentifier(): Prefer " + type + " to match c identifier regex '" + re_str + "'.",
+    "error": arr_fail.length > 0,
+    "got": got
+  };
 
 }
 exports.CIdentifier = CIdentifier;

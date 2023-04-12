@@ -452,32 +452,25 @@ function FileContentSame(header,body,bodyAll,pn,what) {
   }
 
   if (what === "subsetsame") {
+
     var lines = body.split("\n");
 
     var desc = callerName() + ": Expect data from one parameter request to match data from all parameter request.";
     var t = false;
     var got = "Match";
 
-    var fc = 0; // First column of parameter.
-    for (var i = 0;i < header.parameters.length;i++) {
-      if (header.parameters[i]["name"] === header.parameters[pn]["name"]) {
-        break;
-      }
-      if (!header.parameters[i]["size"]) {
-        fc = fc + 1;
-      } else {
-        fc = fc + prod(header.parameters[i]["size"]);
-      }
-    }
-
-    var desc = "Expect number of rows from one parameter request to match data from all parameter request.";
-    var t = lines.length != linesAll.length;
-    //console.log(lines)
-    //console.log(linesAll)   
-    var got = "Match";
-    if (t) {
-      got = " # rows in single parameter request = " + lines.length + " # in all parameter request = " + linesAll.length;
-      return {"description": callerName() + ": " + desc,"error":t,"got":got};
+    if (lines.length != linesAll.length) {
+      let desc = "Expect number of rows from one parameter request to"
+               + " match data from all parameter request.";
+      //console.log(lines)
+      //console.log(linesAll)
+      got = " # rows in single parameter request = " + lines.length 
+          + " # in all parameter request = " + linesAll.length;
+      return {
+        "description": callerName() + ": " + desc,
+        "error": true,
+        "got": got
+      };
     }
 
     var desc = callerName() + ": Expect content from one parameter request to match content from all parameter request.";
@@ -485,37 +478,64 @@ function FileContentSame(header,body,bodyAll,pn,what) {
 
     var line = "";
     var lineAll = "";
-    for (var i=0;i<lines.length-1;i++) {
+    for (var i = 0;i < lines.length-1;i++) {
 
       line = lines[i].split(",");
       lineAll = linesAll[i].split(",");
 
-      if (line.length != lineAll.length) {
-        // This error will be caught by Ncolumns test.
-        return;
-      }
 
       // Time
       if (line[0].trim() !== lineAll[0].trim()) {
         t = true;
-        got = "Time column for parameter " + name + " does not match at time " + line[0] + ": Single parameter request: " + line[1] + "; All parameter request: " + lineAll[0] + ".";
+        got = "Time column for parameter " + name + " does not match at time " 
+            + line[0] + ": Single parameter request: " + line[1] 
+            + "; All parameter request: " + lineAll[0] + ".";
       }
 
+      if (pn == 0) {
+        continue;
+      }
+
+      // Number of columns
       var desc = "Expect number of columns from one parameter request to be equal to or less than number of columns in all parameter request.";
       var t = line.length > lineAll.length;
-      got = " # columns in single parameter request = " + line.length + " # in all parameter request = " + lineAll.length;
+      got = " # columns in single parameter request = " + line.length 
+          + " # in all parameter request = " + lineAll.length;
       if (t) {
-        return {"description": callerName() + ": " + desc,"error":t,"got":got};
+        return {
+          "description": callerName() + ": " + desc,
+          "error": t,
+          "got": got
+        };
       }
+
 
       var desc = "Expect data from one parameter request to match data from all parameter request.";
       got = "Match";
       t = false;
+
+      // Find first column of parameter being checked.
+      var fc = 0; // First column of parameter.
+      for (var i = 0;i < header.parameters.length;i++) {
+        if (header.parameters[i]["name"] === header.parameters[pn]["name"]) {
+          break;
+        }
+        if (!header.parameters[i]["size"]) {
+          fc = fc + 1;
+        } else {
+          fc = fc + prod(header.parameters[i]["size"]);
+        }
+      }
+
       // Parameter
-      for (var j=0;j<nf-1;j++) {
-        if (!line[1+j] || !lineAll[fc+1]) {
-          t = false;
-          got = "Problem with line " + (j) + ": " + line[1+j];
+      // nf = number of fields for parameter
+      // fc = first column of field for parameter
+      for (var j=0;j < nf-1;j++) {
+        if (!line[1+j] || !lineAll[fc+j]) {
+          t = true;
+          got = "Problem with line " + (j) + ":\n"
+              + "Single parameter request: " + line[1+j]
+              + "All parameter request: " + lineAll[fc+j];
           break;
         }
         if (line[1+j].trim() !== lineAll[fc+j].trim()) {
@@ -526,14 +546,24 @@ function FileContentSame(header,body,bodyAll,pn,what) {
           }
           if (nf == 2) {
             t = true;
-            got = got + ". Parameter " + name + " does not match at time " + line[0] + ": Single parameter request: " + line[1] + "; All parameter request: " + lineAll[fc+j] + ".";
+            got = got + ". Parameter " + name + " does not match at time " 
+                + line[0] + ": Single parameter request: " + line[1] 
+                + "; All parameter request: " + lineAll[fc+j] + ".";
           } else {
-            got = got + ". Parameter " + name + " field #" + j + " does not match at time " + line[0] + ": Single parameter request: " + line[1+j] + "; All parameter request: " + lineAll[fc+j] + ".";
+            got = got + ". Parameter " + name + " field #" + j 
+                + " does not match at time " + line[0] 
+                + ": Single parameter request: " + line[1+j] 
+                + "; All parameter request: " + lineAll[fc+j] + ".";
           }
         }
       }
     }
-    return {"description": callerName() + ": " + desc, "error": t,"got": got};
+
+    return {
+      "description": callerName() + ": " + desc,
+      "error": t,
+      "got": got
+    };
   }
 }
 exports.FileContentSame = FileContentSame;
@@ -548,9 +578,23 @@ function FileStructureOK(body,what,other,emptyExpected) {
     }
     if (body.length == 0 || other.length == 0) {
       if (body.length == 0 && other.length != 0) {
-        return {"description": callerName() + ': If empty response for single parameter, expect empty response for all parameters.',"error": true,"got": "Single parameter body: " + body.length + " bytes. All parameter body: " + other.length + " bytes."};
+        let msg = ': If empty response for single parameter, expect empty'
+                + ' response for all parameters.';
+        let got = "Single parameter body: " + body.length + " bytes."
+                + " All parameter body: " + other.length + " bytes.";
+        return {
+          "description": callerName() + msg,
+          "error": true,
+          "got": got
+        };
       } else {
-        return {"description": callerName() + ': If empty response for single parameter, expect empty response for all parameters.',"error": false,"got": "Both empty."};
+        let msg = ': If empty response for single parameter, expect empty'
+                  ' response for all parameters.';
+        return {
+          "description": callerName() + msg,
+          "error": false,
+          "got": "Both empty."
+        };
       }
     } else {
       return; // Test is not relevant.
@@ -559,26 +603,48 @@ function FileStructureOK(body,what,other,emptyExpected) {
 
   if (what === "empty") {
 
-    var l = "<a href='https://github.com/hapi-server/verifier-nodejs/wiki#status-informative'>(Explanation.)</a>";
-    var l2 = "<a href='https://github.com/hapi-server/verifier-nodejs/wiki#empty-body'>(Explanation.)</a>";
+    let wiki = 'https://github.com/hapi-server/verifier-nodejs/wiki';
+    let link = `<a href='${wiki}#empty-body'> (Details.)</a>`;
 
-    var emptyIndicated = /HAPI 1201/.test(other);
+    let emptyIndicated = /HAPI 1201/.test(other);
     if (!body || body.length === 0) {
-      if (emptyExpected && !emptyIndicated) {
-        return {"description": callerName() + ": If data part of response has zero length, want 'HAPI 1201' (no data in time range) in HTTP header status message. " + l2,"error": true,"got": "Zero bytes and HTTP header status message of '" + other + "'"};
-      }
-      if (!emptyExpected) {
-        if (emptyIndicated) {
-          return {"description": callerName() + ": A data part of response with zero bytes was not expected because 'HAPI 1201' (no data in time range) found in HTTP header status message. " + l2,"error": true,"got": "Zero bytes an 'HAPI 1201' is in HTTP header status message."};
-        } else {
-          return {"description": callerName() + ": The verifier should have enough information to make a request that returns data. Fix by adding or modifying sample{Start,Stop} in /info response (preferred) or set a start/stop where there are data in the verifier query parameters (or command-line arguments). " + l2,"error": true,"got": "Zero bytes."};
-        }
+      if (emptyExpected) {
+        let msg = ": If data part of response has zero length, prefer 'HAPI 1201'"
+                + " (no data in time range) in HTTP header status message"
+                + " (if possible)." + link;
+        return {
+          "description": callerName() + msg,
+          "error": emptyIndicated == false,
+          "got": "Zero bytes and HTTP header status message of '" + other + "'"
+        };
+      } else {
+        let msg = ": The verifier should have enough information to make a"
+                + " request that returns data. Avoid this error by adding or"
+                + " modifying sample{Start,Stop} in /info response (preferred)"
+                + " or set a start/stop where there are data in the verifier"
+                + " query parameters (or command-line arguments). " + link;
+        return {
+          "description": callerName() + msg,
+          "error": true,
+          "got": "Zero bytes."
+        };
       }
     }
     if (body && body.length != 0 && emptyIndicated) {
-      return {"description": callerName() + ": A data part of response with zero bytes was expected because 'HAPI 1201' (no data in time range) in HTTP header status messsage." + l2,"error": false,"got": "'HAPI 1201' in HTTP header status message and " + body.length + " bytes."};
+      let msg = ": A data part of response with zero bytes was expected"
+              + " because 'HAPI 1201' (no data in time range) in HTTP header"
+              + " status messsage." + link;
+      return {
+        "description": callerName() + msg,
+        "error": false,
+        "got": "'HAPI 1201' in HTTP header status message and " + body.length + " bytes."
+      };
     }
-    return {"description": callerName() + ": Expect nonzero-length data part of response.", "error": false,"got": body.length + " bytes."};   
+    return {
+      "description": callerName() + ": Expect nonzero length for data part of response.",
+      "error": false,
+      "got": body.length + " bytes."
+    };   
   }
 
   if (what === "firstchar") {
@@ -621,18 +687,34 @@ function FileStructureOK(body,what,other,emptyExpected) {
     t = lines.length == 0
   }
 
-  return {"description": callerName() + ": " + desc, "error": t,"got": got};
+  return {
+    "description": callerName() + ": " + desc,
+    "error": t,
+    "got": got
+  };
 }
 exports.FileStructureOK = FileStructureOK;
 
 function LengthAppropriate(len,type,name) {
   var got = "Type = " + type + " and length = " + len + " for parameter " + name;
   if (/isotime|string/.test(type) && !len) {
-    obj = {"description": "If type = string or isotime, length must be given", "error":true, "got": got};
+    obj = {
+            "description": "If type = string or isotime, length must be given",
+            "error":true,
+            "got": got
+          };
   } else if (!/isotime|string/.test(type) && len) {
-    obj = {"description": "If type = string or isotime, length must not be given", "error":true, "got": got};
+    obj = {
+            "description": "If type = string or isotime, length must not be given",
+            "error":true,
+            "got": got
+          };
   } else {
-    obj = {"description": "Length may only be given for types string and isotime", "error":false, "got": got};
+    obj = {
+            "description": "Length may only be given for types string and isotime",
+            "error":false,
+            "got": got
+          };
   }
   obj["description"] = "is.LengthAppropriate(): " + obj["description"];
   return obj;
@@ -944,7 +1026,7 @@ function SizeCorrect(nc,nf,header) {
     var got = nc + " commas and " + extra + " = " + nf;
   } else {
     if (nf == 0) {
-      var extra = "0 because only Time requested.";
+      var extra = "0 because only first parameter (time) requested.";
     } else {
       var extra = "1 because no size given.";
     }

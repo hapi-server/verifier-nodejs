@@ -41,7 +41,11 @@ function run(opts, REQ, RES) {
 	// from command line or localhost.
 	let agentOptions = {"rejectUnauthorized": false};
 
-	root();
+  if (opts["parameter"]) {
+    capabilities();
+  } else {
+    root();    
+  }
 
 	function versioncheck(url,metaVersion,urlVersion) {
 		if (urlVersion) {
@@ -244,7 +248,11 @@ function run(opts, REQ, RES) {
 					var datasets = removeDuplicates(datasets,'id');
 					report(r,url,is.TooLong(datasets,"catalog","id","title",40),{"warn":true});
 					report(r,url,is.CIdentifier(datasets,"dataset id"),{"warn":true});					
-					infoerr(formats,datasets);
+          if (opts["parameter"]) {
+            info(formats,datasets);
+          } else {
+            infoerr(formats,datasets);
+          }
 				} else {
 					report(r,url,
 						{
@@ -263,6 +271,10 @@ function run(opts, REQ, RES) {
 	function infoerr(formats,datasets) {
 
 		if (CLOSED) {return;}
+
+    if (opts["parameter"]) {
+      info(formats,datasets);
+    }
 
 		if (typeof(infoerr.tries) === "undefined") {
 			infoerr.tries = 0
@@ -713,17 +725,25 @@ function run(opts, REQ, RES) {
 					return;
 				}
 
+        function next(formats,datasets,header,start,stop,dataTimeout,bodyAll) {
+          if (opts['parameter']) {
+            datar(formats,datasets,header,start,stop,"",useTimeout,bodyAll,0);
+          } else {
+            dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);
+          }
+        }
+
 				report(r,url,is.RequestError(err,res,useTimeout,timeout()));
 				if (!report(r,url,is.HTTP200(res),{"stop":true})) {
-					dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);
+          next(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 					return;
 				}
 				if (!report(r,url,is.FileStructureOK(bodyAll,"empty",res.statusMessage),{"stop":true})) {
-					dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);					
+					next(formats,datasets,header,start,stop,dataTimeout,bodyAll);					
 					return;
 				}
 				if (!bodyAll || bodyAll.length === 0) {
-					dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);
+					next(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 					return;					
 				}
 
@@ -738,7 +758,7 @@ function run(opts, REQ, RES) {
 
 				report(r,url,is.FileLineOK(header,bodyAll,null,'Ncolumns'));
 
-				dataAll2(formats,datasets,header,start,stop,dataTimeout,bodyAll);
+				next(formats,datasets,header,start,stop,dataTimeout,bodyAll);
 		})
 	}
 
@@ -1101,7 +1121,7 @@ function run(opts, REQ, RES) {
   					var link = opts["plotserver"]+"?usecache=false&usedatacache=false&server=" + url.replace("/data?","&");
 	   				var note = "<a target='_blank' href='" + link + "'>Direct link for following plot.</a>. "
                      + "Please report any plotting issues at "
-                     + "<a target='_blank' href='https://github.com/hapi-server/client-python/issues'>the Python <code>hapiclient</code> GitHub page</a>.";
+                     + "<a target='_blank' href='https://github.com/hapi-server/plot-python/issues'>the Python <code>hapiplot</code> GitHub page</a>.";
 		  			RES.write("&nbsp&nbsp;&nbsp&nbsp;<font style='color:black'>&#x261E</font>:&nbsp" + note + "<br><img src='" + link + "'/><br>");
           }
 				}
@@ -1160,6 +1180,10 @@ function run(opts, REQ, RES) {
 				report(r,url,is.TimeIncreasing(lines,"CSV"));
 				report(r,url,is.TimeInBounds(lines,start,stop));
 
+        if (bodyAll) {
+          report(r,url,is.FileContentSame(header,body,bodyAll,pn,'subsetsame'));
+        }
+
 				if (pn === 0) {
 					// Time was requested parameter, no more columns to check
 					report(r,url,is.SizeCorrect(line1.length-1,0,header.parameters[pn]),{"warn":false});
@@ -1172,9 +1196,6 @@ function run(opts, REQ, RES) {
 				//report(r,url,is.FileLineOK(header, body, pn, 'fields'));
 				//report(r,url,is.SizeCorrect(line1.length-1,nf-1,header.parameters[pn]),{"warn":true});
 				
-				if (bodyAll) {
-					report(r,url,is.FileContentSame(header,body,bodyAll,pn,'subsetsame'));
-				}
         next(formats,datasets,header,start,stop,version,dataTimeout,bodyAll,pn);
 			});
 	}

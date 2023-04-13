@@ -11,7 +11,9 @@ const request = require('request');
 var is = require('./is.js'); // Test library
 var report = require('./report.js').report; // Logging 
 
-let headers = {"User-Agent": "HAPI verifier; https://github.com/hapi-server/verifier-nodejs"};
+let headers = {
+  "User-Agent": "HAPI verifier; https://github.com/hapi-server/verifier-nodejs"
+};
 
 function run(opts, REQ, RES) {
 
@@ -47,16 +49,33 @@ function run(opts, REQ, RES) {
     root();    
   }
 
-  function versioncheck(url,metaVersion,urlVersion) {
-    if (urlVersion) {
-      return urlVersion; // Use version given in URL
+  function version(metaVersion) {
+    if (opts["version"]) {
+      return opts["version"]; // Use version given in URL
     } else {
-      if (!report(r,url,is.HAPIVersion(metaVersion),{"stop":false})) {
+      if (!is.HAPIVersion(metaVersion)) {
         return is.versions().pop(); // Use latest version
       } else {
         return metaVersion;
       }
-    }   
+    }
+  }
+
+  function versionCheck(url,metaVersion) {
+
+    if (versionCheck.lastVersion !== undefined) {
+      let obj = is.HAPIVersionSame(url, metaVersion,
+                                   versionCheck.lastURL, versionCheck.lastVersion);
+      report(r,url,obj,{"warn": true})
+    }
+    versionCheck.lastVersion = metaVersion;
+    versionCheck.lastURL = url;
+
+    if (!report(r,url,is.HAPIVersion(metaVersion),{"stop":false})) {
+      return is.versions().pop(); // Use latest version
+    } else {
+      return metaVersion;
+    }
   }
 
   function origin(urlstr) {
@@ -163,14 +182,14 @@ function run(opts, REQ, RES) {
           catalog(['csv']);
           return;
         }
-        var json = JSON.parse(body);
-        var version = versioncheck(url,json.HAPI,opts["version"]);
-        if (!report(r,url,is.HAPIJSON(body,version,'capabilities'),{"stop":true})) {
+        let json = JSON.parse(body);
+        versionCheck(url, json.HAPI);
+        if (!report(r,url,is.HAPIJSON(body,version(json.HAPI),'capabilities'),{"stop":true})) {
           catalog(['csv']);
           return;
         }
 
-        var outputFormats = json.outputFormats || "No outputFormats element."
+        let outputFormats = json.outputFormats || "No outputFormats element."
         // Existence of 'csv' can't be checked easily with schema using enum.
         // (Could be done using oneOf for outputFormats and have csv be in emum
         // array for each of the objects in oneOf.)
@@ -182,7 +201,7 @@ function run(opts, REQ, RES) {
               "got": outputFormats.toString()
             });
         catalog(outputFormats);
-      })
+      });
   }
 
   function catalog(formats) {
@@ -238,10 +257,11 @@ function run(opts, REQ, RES) {
         } else {
           CATALOG["catalog"] = cat;
         }
+
         // TODO: Hacky way to pass CATALOG to report.
         r['catalog'] = CATALOG;
-        var version = versioncheck(url,CATALOG.HAPI,opts["version"]);
-        report(r,url,is.HAPIJSON(body,version,'catalog'));
+        versionCheck(url,CATALOG.HAPI);
+        report(r,url,is.HAPIJSON(body,version(CATALOG.HAPI),'catalog'));
         var datasets = JSON.parse(body).catalog;
         if (datasets) {
           report(r,url,is.Unique(datasets,"datasets","id"));
@@ -259,13 +279,13 @@ function run(opts, REQ, RES) {
               "description": "Expect datasets element in catalog",
               "error": true,
               "got": datasets
-             },
-             {
-                "abort": true
-              });
-          return
+            },
+            {
+              "abort": true
+            });
+          return;
         }
-      })
+      });
   }
 
   function infoerr(formats,datasets) {
@@ -312,9 +332,9 @@ function run(opts, REQ, RES) {
         var err1406 = errors(1406);
         report(r,url,is.StatusInformative(res.statusMessage,"HAPI error 1406",'httpstatus'),{"warn":true});
         if (report(r,url,is.JSONParsable(body),{"stop":true})) {
-          var json = JSON.parse(body);
-          var version = versioncheck(url,json.HAPI,opts["version"]);
-          if (report(r,url,is.HAPIJSON(body,version,'HAPIStatus'),{"stop":true})) {
+          let json = JSON.parse(body);
+          versionCheck(url,json.HAPI);
+          if (report(r,url,is.HAPIJSON(json,version(json.HAPI),'HAPIStatus'),{"stop":true})) {
             report(r,url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
             report(r,url,is.StatusInformative(json.status.message,"HAPI error 1406",'hapistatus'),{"warn":true});
           } 
@@ -406,20 +426,21 @@ function run(opts, REQ, RES) {
         if (!report(r,url,is.HTTP200(res),{"abort":true})) return;
         report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
         if (!report(r,url,is.JSONParsable(body),{"abort":true})) return;
-        var header = JSON.parse(body);
-        var version = versioncheck(url,header.HAPI,opts["version"]);
-        report(r,url,is.HAPIJSON(body,version,'info'));
-        if (header.parameters) {
-          if (header.parameters[0].name) {
-            report(r,url,is.Unique(header.parameters,"parameters","name"));
-            //header.parameters = removeDuplicates(header.parameters,'name');
+        let json = JSON.parse(body);
+        versionCheck(url,json.HAPI);
+        let ver = version(json.HAPI);
+        report(r,url,is.HAPIJSON(json,ver,'info'));
+        if (json.parameters) {
+          if (json.parameters[0].name) {
+            report(r,url,is.Unique(json.parameters,"parameters","name"));
+            //json.parameters = removeDuplicates(header.parameters,'name');
           } else {
             report(r,url,
               {
                 "description":
                 "Expect first parameter object to have a key 'name'",
                 "error": true,
-                "got": JSON.stringify(header.parameters[0])
+                "got": JSON.stringify(json.parameters[0])
               },
               {"abort":true});
             return;           
@@ -429,20 +450,20 @@ function run(opts, REQ, RES) {
             {
               "description": "Expect parameters element in catalog",
               "error": true,
-              "got": header.parameters
+              "got": json.parameters
             },
             {"abort":true});
           return;
         }
 
-        report(r,url,is.FormatInHeader(header, "nodata"));
-        report(r,url,is.FirstParameterOK(header, "name"),{"warn":true});
-        report(r,url,is.FirstParameterOK(header, "fill"));
-        report(r,url,is.TimeIncreasing(header,"{start,stop}Date"));
-        report(r,url,is.TimeIncreasing(header,"sample{Start,Stop}Date"));
+        report(r,url,is.FormatInHeader(json, "nodata"));
+        report(r,url,is.FirstParameterOK(json, "name"),{"warn":true});
+        report(r,url,is.FirstParameterOK(json, "fill"));
+        report(r,url,is.TimeIncreasing(json,"{start,stop}Date"));
+        report(r,url,is.TimeIncreasing(json,"sample{Start,Stop}Date"));
 
         if (opts["parameter"]) {
-          var tmp = selectOne(header.parameters,'name',opts["parameter"]);
+          var tmp = selectOne(json.parameters,'name',opts["parameter"]);
           if (tmp.length !== 1) {
             if (!report(r,url,
                 {
@@ -457,28 +478,28 @@ function run(opts, REQ, RES) {
           }
         }
 
-        for (var i = 0;i < header.parameters.length;i++) {
+        for (var i = 0;i < json.parameters.length;i++) {
 
-          if (header.parameters[i]['name'] !== opts["parameter"]) {
+          if (opts["parameter"] && (json.parameters[i]['name'] !== opts["parameter"])) {
             continue;
           }
 
-          len  = header.parameters[i]["length"];
-          type = header.parameters[i]["type"];
-          name = header.parameters[i]["name"];
-          size = header.parameters[i]["size"];
-          fill = header.parameters[i]["fill"];
-          units = header.parameters[i]["units"];
-          label = header.parameters[i]["label"]
+          len  = json.parameters[i]["length"];
+          type = json.parameters[i]["type"];
+          name = json.parameters[i]["name"];
+          size = json.parameters[i]["size"];
+          fill = json.parameters[i]["fill"];
+          units = json.parameters[i]["units"];
+          label = json.parameters[i]["label"]
 
           if (!size) {
             size = [1];
           }
           //console.log(name,size,units)
-          report(r,url,is.UnitsOK(name,units,type,size,version),{"warn":false});
+          report(r,url,is.UnitsOK(name,units,type,size),{"warn":false});
           report(r,url,is.FillOK(fill,type,len,name,type),{"warn":true});
-          report(r,url,is.ArrayOK(name,units,size,"units",version),{"warn":false});
-          report(r,url,is.ArrayOK(name,label,size,"label",version),{"warn":false});
+          report(r,url,is.ArrayOK(name,units,size,"units",ver),{"warn":false});
+          report(r,url,is.ArrayOK(name,label,size,"label",ver),{"warn":false});
 
           if (type === "string") {
             report(r,url,is.FillOK(fill,type,len,name,'nullstring'),{"warn":true});
@@ -486,16 +507,16 @@ function run(opts, REQ, RES) {
           }
 
           report(r,url,is.LengthAppropriate(len,type,name));
-          report(r,url,is.BinsOK(name,header.parameters[i]["bins"],size));
+          report(r,url,is.BinsOK(name,json.parameters[i]["bins"],size));
           //report(r,url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
           //report(r,url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
         }
 
         var validCadence = false;
-        let ret = report(r,url,is.CadenceGiven(header["cadence"]),{"warn":true});
+        let ret = report(r,url,is.CadenceGiven(json["cadence"]),{"warn":true});
         if (ret.error == false) {
-          report(r,url,is.CadenceValid(header["cadence"]));
-          var obj = is.CadenceValid(header["cadence"]);
+          report(r,url,is.CadenceValid(json["cadence"]));
+          var obj = is.CadenceValid(json["cadence"]);
           validCadence = !obj.error;
         }
 
@@ -504,39 +525,44 @@ function run(opts, REQ, RES) {
           var start = opts["start"];
           var stop  = opts["stop"];
           var dataTimeout = "datasamplechosen";
-        } else if (header["sampleStartDate"] && header["sampleStopDate"]) {
-          var start = header["sampleStartDate"];
-          var stop  = header["sampleStopDate"];
+        } else if (json["sampleStartDate"] && json["sampleStopDate"]) {
+          var start = json["sampleStartDate"];
+          var stop  = json["sampleStopDate"];
           var dataTimeout = "datasamplesuggested";
-          report(r,url,is.CadenceOK(header["cadence"],start,stop,"sampleStart/sampleStop"),{"warn":true});
+          report(r,url,is.CadenceOK(json["cadence"],start,stop,"sampleStart/sampleStop"),{"warn":true});
         } else {
-          var start = header["startDate"];
-          var stop = header["stopDate"];
-          if (header["cadence"] && validCadence) {
-            report(r,url,is.CadenceOK(header["cadence"],start,stop,"start/stop"));
+          var start = json["startDate"];
+          var stop = json["stopDate"];
+          if (json["cadence"] && validCadence) {
+            report(r,url,is.CadenceOK(json["cadence"],start,stop,"start/stop"));
             var moment = require('moment');
-            var md = moment.duration(header["cadence"]);
+            var md = moment.duration(json["cadence"]);
             var stop = new Date(start).valueOf() + 10*md._milliseconds;
             var stop = new Date(stop).toISOString();
             var dataTimeout = "datasample10xcadence";
           } else {
             var dataTimeout = "datadefault";
             // Check one day
+            let desc = "Expect enough information to compute time.max to use for data sample tests.";
+            let got = "No cadence and no sampleStartDate and sampleStopDate."
+                    + " Will use time.min = startDate and time.max = startDate + P1D.";
             report(r,url,
               {
-                "description": "Not enough information to compute time.max to use for data tests. Using time.min = startDate and time.max = startDate + P1D.",
-                "error":true,
-                "got":"No cadence and no sampleStartDate and sampleStopDate."
+                "description": desc,
+                "error": true,
+                "got": got
               },
-              {"warn":true});
+              {
+                "warn": true
+              });
             var stop  = new Date(start).valueOf() + 86400*1000;
             var stop = new Date(stop).toISOString();
           }
         }
         if (opts["parameter"]) {
-          dataAll1(formats,datasets,header,start,stop,dataTimeout);
+          dataAll1(formats,datasets,json,start,stop,dataTimeout);
         } else {
-          infor(formats,datasets,header,start,stop,dataTimeout);
+          infor(formats,datasets,json,start,stop,dataTimeout);
         }
       })
   }
@@ -615,8 +641,8 @@ function run(opts, REQ, RES) {
         }
 
         var headerReduced = JSON.parse(body); // Reduced header
-        var version = versioncheck(url,headerReduced.HAPI,opts["version"]);
-        if (!report(r,url,is.HAPIJSON(body,version,'info'))) {
+        versionCheck(url,headerReduced.HAPI);
+        if (!report(r,url,is.HAPIJSON(body,version(headerReduced.HAPI),'info'))) {
           if (headerReduced.parameters) {
             if (headerReduced.parameters[0]) {
               report(r,url,
@@ -924,9 +950,6 @@ function run(opts, REQ, RES) {
           report(r,url,is.FormatInHeader(headerJSON, "data"));
           report(r,url,is.HeaderSame(header, headerJSON), {'warn': true});
           report(r,url,is.FileContentSame(header,bodyAll,ret.csvparts.data,null,"contentsame"));
-          // TODO: Compare versions.
-          //var version = headerJSON.HAPI;
-          //var versionLast = versioncheck(url,header.HAPI,opts["version"]);
         } 
         dataAll_1201(formats,datasets,header,start,stop,dataTimeout,bodyAll);
     })
@@ -1174,8 +1197,8 @@ function run(opts, REQ, RES) {
         }
         report(r,url,is.CorrectLength(time1,timeLength,"Time",!warn),{"warn":warn});
 
-        let version = versioncheck(url,header.HAPI,opts["version"]);
-        report(r,url,is.HAPITime(lines,version));
+        versionCheck(url,header.HAPI);
+        report(r,url,is.HAPITime(lines,version(header.HAPI)));
         report(r,url,is.TimeIncreasing(lines,"CSV"));
         report(r,url,is.TimeInBounds(lines,start,stop));
 

@@ -547,8 +547,10 @@ function FileContentSame(header, body, bodyAll, pn, what) {
       var e2 = false;
       for (var i = 0;i < lines.length - 1; i++) {
 
-        line = lines[i].split(",");
-        lineAll = linesAll[i].split(",");
+        //line = lines[i].split(",");
+        //lineAll = linesAll[i].split(",");
+        line = lines[i];
+        lineAll = linesAll[i];
 
         if (line.length != lineAll.length) {
           e1 = true;
@@ -875,7 +877,7 @@ function HeaderSame(headerInfo, headerBody) {
       }
     }
   }
-  var desc = "is.HeaderSame(): Expect header in info response to match header"
+  var desc = "is.HeaderSame(): Expect info response to match header"
            + " in data response when 'include=header' requested.";
   if (keptDiffs.length == 0) {
     return {

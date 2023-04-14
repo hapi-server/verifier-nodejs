@@ -45,10 +45,10 @@ function HAPIVersionWarning(version) {
 
 function HAPIVersionSame(url, version, urlLast, versionLast) {
   let des = ": Expect HAPI version to match that from last requests where found.";
-  let got = `Current: '${version}' and Last: '${versionLast}'`;
+  let got = `Current: '<code>${version}</code>' and Last: '<code>${versionLast}</code>'`;
   let err = false;
   if (version !== versionLast) {
-    got = `${version} for ${url}\n${versionLast} for ${urlLast}`;
+    got = `<code>${version}</code> for ${url}\n<code>${versionLast}</code> for ${urlLast}`;
     err = true;
   }
   return {
@@ -69,7 +69,9 @@ function HAPIVersion(version) {
   }
 
   let des = ": Expect HAPI version in JSON response to be one of "
-          + JSON.stringify(versions());
+          + "<code>"
+          + JSON.stringify(versions())
+          + "</code>";
   return {
     "description": callerName() + des,
     "error": err,
@@ -276,7 +278,7 @@ function CadenceOK(cadence, start, stop, what) {
     var got = "(sampleStartDate-sampleStopDate)/cadence = "
             + (stopms-startms)/md._milliseconds;
     let desc = callerName() 
-             + ": Expect (sampleStopDate-sampleStartDate)/cadence > 10";
+             + ": Expect (sampleStopDate-sampleStartDate)/cadence &gt; 10";
     return {
       "description": desc,
       "error": t != true,
@@ -287,7 +289,7 @@ function CadenceOK(cadence, start, stop, what) {
     t = R > 10;
     var got = "Cadence/(time[i+1]-time[i]) = " + (stopms-startms)/md._milliseconds;
     return {
-      "description": callerName() + ": Expect (t[i+1]-t[i])/cadence > 10",
+      "description": callerName() + ": Expect (t[i+1]-t[i])/cadence &gt; 10",
       "error": t != true,
       "got":got
     };
@@ -325,7 +327,7 @@ function CIdentifier(arr,type) {
     got = No + " datasets ids that are not c identfiers:\n\n" + arr_fail.join("\n");
   }
 
-  let desc = `: Prefer ${type} to match c identifier regex '${re_str}'.`;
+  let desc = `: Prefer ${type} to match c identifier regex '<code>${re_str}</code>'.`;
   return {
     "description": callerName() + desc,
     "error": arr_fail.length > 0,
@@ -1172,7 +1174,7 @@ function FillOK(fill,type,len,name,what) {
     }
   }
   if (what === "string") {
-    desc = "Expect length of fill value for a string parameter to be <= length of the string parameter";
+    desc = "Expect length of fill value for a string parameter to be &lt;= length of the string parameter";
     if (len < fill.length) {
       t = true;
       got  = got + " string length = " + len + "; fill length = " + fill.length;
@@ -1279,7 +1281,7 @@ function HTTP200(res){
   return {
     "description": callerName() + ": Expect HTTP status code to be 200",
     "error": 200 != res.statusCode,
-    "got": "HTTP status " + res.statusCode + body
+    "got": "HTTP status code <code>" + res.statusCode + "</code>" + body
   };
 }
 exports.HTTP200 = HTTP200;
@@ -1313,7 +1315,7 @@ function TimeInBounds(lines,start,stop) {
   var firstTime = lines[0].split(",").shift().trim().replace(/Z$/,"");
   var lastTime = firstTime;
   // Find the last line with content.
-  for (var i = 0;i<lines.length-1;i++) {
+  for (var i = 0;i < lines.length-1; i++) {
     if (lines[lines.length-i-1] !== '') {
       lastTime = lines[lines.length-i-1].split(",").shift().trim().replace(/Z$/,"");
       break;
@@ -1323,8 +1325,8 @@ function TimeInBounds(lines,start,stop) {
   let a = moment(firstTime).valueOf() >= moment(start).valueOf();
   let b = moment(lastTime).valueOf() <  moment(stop).valueOf();
   var t = a && b;
-  let desc = callerName() + ": Expect first time in CSV >= " 
-           + start + " and last time in CSV < " + stop + " (only checks to ms)";
+  let desc = callerName() + ": Expect first time in CSV &gt;= " 
+           + start + " and last time in CSV &lt; " + stop + " (only checks to ms)";
   return {
     "description": desc,
     "error": t != true,
@@ -1366,7 +1368,7 @@ function TimeIncreasing(header,what) {
       //console.log(linenext[0].trim())
       //console.log(moment.valueOf(linenext[0].trim()))
       if (!t) {
-        var ts = "Time(line="+(i+1)+") > Time(line="+i+")";
+        var ts = "Time(line="+(i+1)+") &gt; Time(line="+i+")";
         var got = "line " + (i+1) + " = "+ linenext[0] + "; line " 
                 + (i) + " = " + line[0];
         break;      
@@ -1382,7 +1384,7 @@ function TimeIncreasing(header,what) {
   if (what === "{start,stop}Date") {
     var start = trailingZfix(header.startDate);
     var stop  = trailingZfix(header.stopDate);
-    var ts = "info.startDate < info.stopDate";
+    var ts = "info.startDate &lt; info.stopDate";
     //var t = new Date(start).getTime() < new Date(stop).getTime();
     var t = moment(start).valueOf() < moment(stop).valueOf();
     var got = "startDate = " + start + "; stopDate = " + stop;
@@ -1395,7 +1397,7 @@ function TimeIncreasing(header,what) {
     if (start && stop) {
       //var t = new Date(start).getTime() < new Date(stop).getTime();
       var t = moment(start).valueOf() < moment(stop).valueOf();
-      var ts = "info.sampleStartDate < info.sampleStopDate";
+      var ts = "info.sampleStartDate &lt; info.sampleStopDate";
       var got = "sampleStartDate = " + start + "; sampleStopDate = " + stop;
     } else {
       if (!stop) {
@@ -1410,7 +1412,7 @@ function TimeIncreasing(header,what) {
     }
   }
   if (t) {
-    got = got.replace(">","<");
+    got = got.replace("&gt;","&lt;");
   }
   return {
     "description": callerName() + ": Expect " + ts,
@@ -1553,7 +1555,7 @@ exports.HAPITime = HAPITime;
 function Integer(str,extra) {
   var extra = extra || ""
   var t  = isinteger(str);
-  var ts = "(parseInt('"+str+"') < 2^31 - 1 || parseInt('"+str+"') > -2^31) && parseInt(" + str + ") == parseFloat(" + str + ")"+extra;
+  var ts = "(parseInt('"+str+"') &lt; 2^31 - 1 || parseInt('"+str+"') &lt; -2^31) && parseInt(" + str + ") == parseFloat(" + str + ")"+extra;
   return {
     "description": callerName() + ": Expect " + ts,
     "error": t != true,
@@ -1565,7 +1567,10 @@ exports.Integer = Integer;
 function Float(str,extra) {
   var extra = extra || ""
   var t  = isfloat(str);
-  var ts = "Math.abs(parseFloat('"+str+"')) < " + Number.MAX_VALUE + " && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('"+str+"'.trim()) == true"+extra;
+  var ts = "Math.abs(parseFloat('"+str+"')) &lt; " 
+         + Number.MAX_VALUE 
+         + " && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('" + str + "'.trim()) == true"
+         + extra;
   return {
     "description": callerName() + ": Expect " + ts,
     "error": t != true,
@@ -1597,7 +1602,7 @@ function Unique(arr,arrstr,idstr){
 
   var ids = [];
   var rids = [];
-  for (var i = 0;i<arr.length;i++) {
+  for (var i = 0;i < arr.length; i++) {
     if (!arr[i][idstr]) continue;
     if (ids.indexOf(arr[i][idstr]) > -1 && rids.indexOf(arr[i][idstr])) {
       rids.push(arr[i][idstr]);
@@ -1625,7 +1630,7 @@ exports.Unique = Unique;
 function TooLong(arr,arrstr,idstr,elstr,N){
   // idstr = "id" for datasets and "name" for parameter.
   var ids = [];
-  for (var i = 0;i<arr.length;i++) {
+  for (var i = 0;i < arr.length; i++) {
     if (!arr[i][elstr]) continue;
     if (arr[i][elstr]) {
       if (arr[i][elstr].length > N) {
@@ -1644,7 +1649,7 @@ function TooLong(arr,arrstr,idstr,elstr,N){
         + N + " characters: \n\n" + ids.join("\n");
   }
   return {
-    "description": callerName() + ": Prefer " + elstr + "s in objects to be <= 40 characters",
+    "description": callerName() + ": Prefer " + elstr + "s in objects to be &lt;= 40 characters",
     "error": ids.length != 0,
     "got": got
   };
@@ -1697,8 +1702,8 @@ function CompressionAvailable(headers){
     var available = re.test(headers["content-encoding"]);
     if (available) {got = headers["content-encoding"]}
   }
-  let desc = callerName() + ": Expect HTTP Accept-Encoding to match " 
-           + re + ". (Note, only compression tested for is gzip.)";
+  let desc = callerName() + ": Expect HTTP Accept-Encoding to match <code>" 
+           + re + "</code>. (Note, only compression tested for is gzip.)";
   return {
     "description": desc,
     "error": !available,
@@ -1709,7 +1714,7 @@ exports.CompressionAvailable = CompressionAvailable;
 
 function ContentType(re,given){
   return {
-    "description": callerName() + ": Expect HTTP Content-Type to match " + re,
+    "description": callerName() + ": Expect HTTP Content-Type to match <code>" + re + "</code>",
     "error": !re.test(given),
     "got": given || "No Content-Type header."
   };
@@ -1773,8 +1778,8 @@ function HAPIJSON(text,version,part){
 
   if (!s) {
     let known = JSON.stringify(Object.keys(schemas));
-    let desc = callerName() + ": Expect HAPI version to be one of " + known; 
-    let got = "Schema version " + version + " not one of " + known;
+    let desc = callerName() + ": Expect HAPI version to be one of <code>" + known + "</code>"; 
+    let got = "Schema version " + version + " not one of <code>" + known + "</code>";
     return {
         "description": desc,
         "error": true,
@@ -1811,7 +1816,7 @@ function HAPIJSON(text,version,part){
   var got = "is valid"
   if (ve.length != 0) {
     var err = [];
-    for (var i = 0;i< ve.length;i++) {
+    for (var i = 0;i < ve.length; i++) {
       //err[i] = ve[i].property.replace("instance","object") 
       //       + " " + ve[i].message.replace(/\"/g,"'");
       err[i] = ve[i].property.replace("instance.","") 

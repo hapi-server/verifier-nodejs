@@ -165,6 +165,8 @@ function writeResult(obj, status, res) {
     if (status === "error") {
       clc.inverse.red("✗");
     }
+    let got = got.replace(/&lt;/g,"<").replace(/&gt;/g,">");
+
     let desc = obj.description;
     console.log("  " + icon + ": " + desc + "; Got: " + clc.bold(obj.got));
     return;
@@ -183,7 +185,9 @@ function writeResult(obj, status, res) {
   var key = obj.description.replace(/^is\.(.*?)\(.*/,"$1");
   let description = obj.description.replace(/^(is.*?):/,"<a href='https://github.com/hapi-server/verifier-nodejs/blob/master/is.js#L__LINE__'>$1</a>: ");
   description = description.replace(/__LINE__/,report.lineobj[key]);
-  let got = obj.got.toString().replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  let got = obj.got
+              .toString()
+              .replace(/\n/g,"<br>");
 
   let line = `
               <table>

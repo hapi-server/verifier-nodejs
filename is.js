@@ -3,11 +3,13 @@ var moment    = require('moment');
 var Validator = require('jsonschema').Validator;
 var diff      = require('deep-diff').diff;
 
-let wiki = 'https://github.com/hapi-server/verifier-nodejs/wiki';
-let requestLink = 'https://github.com/request/request#requestoptions-callback';
 
-// Note that for reporting to have correct line numbers, must start functions with
-// function FNAME( and start description with 'is.FNAME()'.
+let schemaURL = "https://github.com/hapi-server/verifier-nodejs/tree/master/schemas";
+let wikiURL   = 'https://github.com/hapi-server/verifier-nodejs/wiki';
+let requestURL   = 'https://github.com/request/request#requestoptions-callback';
+let jsonLintLink = "<a href='http://jsonlint.org/'>http://jsonlint.org/</a>";
+// Note that for reporting to have correct line numbers, must start 
+// functions with function FNAME( and start description with 'is.FNAME()'.
 
 // TODO: Get this list by reading directory.
 var schemas = {};
@@ -24,94 +26,8 @@ function prod(arr) {
 }
 
 function callerName() {
-  return "is." + callerName.caller.name + "()";
+  return "is." + callerName.caller.name + "(): ";
 }
-
-function versions() {
-  let arr = [];
-  for (key in schemas) {
-    arr.push(key);
-  }
-  return arr.sort();
-}
-exports.versions = versions;
-
-function HAPIVersionWarning(version) {
-  if (parseFloat(version) >= 3.0) {
-    return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. Some errors reported by schema check may not actually be errors and not all features are checked.</span>`;
-  }
-  return "";
-}
-
-function HAPIVersionSame(url, version, urlLast, versionLast) {
-  let des = ": Expect HAPI version to match that from last requests where found.";
-  let got = `Current: '<code>${version}</code>' and Last: '<code>${versionLast}</code>'`;
-  let err = false;
-  if (version !== versionLast) {
-    got = `<code>${version}</code> for ${url}\n<code>${versionLast}</code> for ${urlLast}`;
-    err = true;
-  }
-  return {
-    "description": callerName() + des,
-    "error": err,
-    "got": got
-  };
-}
-exports.HAPIVersionSame = HAPIVersionSame;
-
-function HAPIVersion(version) {
-  let got = version;
-  let err = false;
-  if (!versions().includes(version)) {
-    err = true;
-    got = "'" + version + "', which is not valid or not implemented by verifier. "
-        + "Will use latest version implemented by verifier: " + versions().pop();
-  }
-
-  let des = ": Expect HAPI version in JSON response to be one of "
-          + "<code>"
-          + JSON.stringify(versions())
-          + "</code>";
-  return {
-    "description": callerName() + des,
-    "error": err,
-    "got": got
-  };
-}
-exports.HAPIVersion = HAPIVersion;
-
-function schema(version) {
-  var json = schemas[version];
-  if (!json) {
-    return false;
-  } else {
-    return schemas[version];
-  }
-}
-exports.schema = schema;
-
-function timeregexes(version) {
-  let json = schemas[version];
-  if (!json) {
-    return false;
-  }
-  let tmp = json.HAPIDateTime.anyOf;
-  let regexes = [];
-  for (let i = 0; i < tmp.length; i++) {
-    regexes[i] = tmp[i].pattern;
-  }
-  return regexes;
-}
-exports.timeregexes = timeregexes;
-
-function trailingZfix(str) {
-  // moment.js does not consider date only with trailing Z to be valid ISO8601
-  if (/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]Z$|^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9]Z$/.test(str)) {
-    str = str.slice(0, -1) + "T00Z";
-  } 
-  return str;
-}
-exports.trailingZfix = trailingZfix;
 
 function isinteger(str) {
   return parseInt(str) < 2^31 - 1 &&
@@ -119,266 +35,11 @@ function isinteger(str) {
          parseInt(str) == parseFloat(str) &&
          /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim());
 }
+
 function isfloat(str) {
   return Math.abs(parseFloat(str)) < Number.MAX_VALUE &&
          /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
 }
-
-function RequestError(err,res,timeoutType,timeoutObj) {
-
-  var tout = timeoutObj[timeoutType]["timeout"];
-  var when = timeoutObj[timeoutType]["when"];
-
-  if (!err) {
-    // Remove extra precision on timings.
-    var timings = res.timings;
-    for (var key in timings) {
-      timings[key] = timings[key].toFixed(1);
-    }
-    var timingPhases = res.timingPhases;
-    for (var key in timingPhases) {
-      timingPhases[key] = timingPhases[key].toFixed(1);
-    }
-
-    let timeInfo = "";
-    if (timingPhases && timings) {
-      timeInfo = JSON.stringify(timings) + ", " + JSON.stringify(timingPhases);
-      timeInfo = ` <a href='${requestLink}'>Timing info [ms]</a>: ${timeInfo}`;
-    }
-    return {
-      "description": callerName() + ": Expect no request error for timeout of " + tout + " ms used when " + when,
-      "error": false,
-      "got": "No error." + timeInfo
-    };
-  }
-
-  if (err.code === "ETIMEDOUT") {
-    // https://github.com/request/request/blob/master/request.js#L846
-    return {
-      "description": callerName() + ": Expect HTTP headers and start of response body in less than " + tout + " ms when " + when,
-      "error": true,
-      "got": err.code
-    };
-  } else if (err.code === "ESOCKETTIMEDOUT") {
-    //https://github.com/request/request/blob/master/request.js#L811
-    return {
-      "description": callerName() + ": Expect time interval between bytes sent to be less than " + tout + " ms when " + when,
-      "error": true,
-      "got": err.code
-    };
-  } else if (err.code === "ECONNRESET") {
-    return {
-      "description": callerName() + ": Expect connection to not be reset by server",
-      "error": true,
-      "got": "ECONNRESET"
-    };
-  } else if (err.code === "ECONNREFUSED") {
-    return {
-      "description": callerName() + ": Expect connection to not be refused by server",
-      "error": true,
-      "got": err.code
-    };
-  } else {
-    return {
-      "description": callerName() + ": Probably URL is malformed.",
-      "error": true,
-      "got": err
-    };
-  }
-}
-exports.RequestError = RequestError;
-
-function CadenceGiven(cadence) {
-  let base = "https://github.com/hapi-server/data-specification/";
-  let url = base + "blob/master/hapi-dev/HAPI-data-access-spec-dev.md";
-  let desc = ": Expect the nominal cadence to be given "
-           + `(see <a href='${url}'>`
-           + "the HAPI spec for definition</a>). A nominal cadence is useful "
-           + "for clients and obviates the need for it to be inferred programatically."
-  return {
-    "description": callerName() + desc,
-    "error": typeof(cadence) !== "string",
-    "got": cadence || "no cadence"
-  };
-}
-
-exports.CadenceGiven = CadenceGiven;
-
-function CadenceValid(cadence) {
-  // https://stackoverflow.com/a/53140944/1491619
-  // TODO: Move to JSON schema.
-  var re = /^P(?!$)((\d+Y)|(\d+\.\d+Y$))?((\d+M)|(\d+\.\d+M$))?((\d+W)|(\d+\.\d+W$))?((\d+D)|(\d+\.\d+D$))?(T(?=\d)((\d+H)|(\d+\.\d+H$))?((\d+M)|(\d+\.\d+M$))?(\d+(\.\d+)?S)?)??$/;
-  var t = re.test(cadence) == true;
-  var got = cadence + " valid.";
-  if (t == false) {
-    var got = cadence + " is invalid.";
-    if (typeof(cadence) === "string" && cadence.toUpperCase() === cadence) {
-      got = got + " (Letters in cadence should be uppercase.)";
-    }
-  }
-
-  if (0) {
-    // Old code. moment.js is too permissive.
-    var md = moment.duration(cadence);
-    // moment.js claims duration with lowercase if valid
-    //var md2 = moment.duration(cadence.toUpperCase()); 
-    var t = md._isValid;
-    var got = cadence;
-    if (t == true && cadence.toUpperCase() !== cadence) {
-      t = false;
-    }
-    // moment.duration("PT720") gives md._isValid = true and
-    // md._milliseconds = 0. (Need H, M, S at end)
-    if (md._milliseconds == 0 && md._days == 0 && md._months == 0) {
-      t = false;
-    }
-  }
-  let desc = ": Expect cadence to be a valid ISO8601 duration "
-           + "(regular expression tested: " + re.toString() + ").";
-  return {
-          "description": callerName() + desc,
-          "error": t == false,
-          "got": got
-        };
-}
-exports.CadenceValid = CadenceValid;
-
-function CadenceOK(cadence, start, stop, what) {
-
-  if (!cadence) return; // Don't do test; no cadence given.
-
-  if (!stop) {
-    let desc = callerName() + ": Need more than two lines to do cadence "
-             + " comparison with consecutive samples.";
-    return {
-      "description": desc,
-      "error": true,
-      "got":"One line."
-    };
-  }
-  //console.log(start)
-  //console.log(stop)
-  start = trailingZfix(start);
-  stop = trailingZfix(stop);
-  var startms = moment(start).valueOf();
-  var stopms = moment(stop).valueOf();
-  var md = moment.duration(cadence);
-  var R = (stopms-startms)/md._milliseconds;
-  if (what === "start/stop") {
-    t = R > 1;
-    var got = "(stopDate-startDate)/cadence = " + (stopms-startms)/md._milliseconds;
-    return {
-      "description": callerName() + ": Expect (stopDate-startDate)/cadence > 1",
-      "error": t != true,
-      "got": got
-    };
-  }
-  if (what === "sampleStart/sampleStop") {
-    t = R > 10;
-    var got = "(sampleStartDate-sampleStopDate)/cadence = "
-            + (stopms-startms)/md._milliseconds;
-    let desc = callerName() 
-             + ": Expect (sampleStopDate-sampleStartDate)/cadence &gt; 10";
-    return {
-      "description": desc,
-      "error": t != true,
-      "got": got
-    };
-  }
-  if (what === "consecsamples") {
-    t = R > 10;
-    var got = "Cadence/(time[i+1]-time[i]) = " + (stopms-startms)/md._milliseconds;
-    return {
-      "description": callerName() + ": Expect (t[i+1]-t[i])/cadence &gt; 10",
-      "error": t != true,
-      "got":got
-    };
-  }
-
-}
-exports.CadenceOK = CadenceOK;
-
-function CIdentifier(arr,type) {
-  // https://stackoverflow.com/questions/14953861/
-  // representing-identifiers-using-regular-expression
-  var re_str = "[_a-zA-Z][_a-zA-Z0-9]{1,30}";
-
-  var arr_fail = [];
-  var re = new RegExp(re_str);
-  for (var i = 0; i < arr.length;i++) {
-    var m = arr[i]["id"].match(re);
-    if (m) {
-      var t = m[0] == m["input"];
-      if (!t) {
-        arr_fail.push(arr[i]["id"]);
-      }
-    } else {
-      // Happens with Unicode in id.
-      arr_fail.push(arr[i]["id"]);
-    }
-  }
-  var got = "All " + type + "(s) match.";
-  if (arr_fail.length > 0) {
-    let No = arr_fail.length;
-    if (arr_fail.length > 10) {
-      arr_fail = arr_fail.slice(0, 10);
-      arr_fail.push("\n ... (" + (No - 10) + ") more.");
-    }
-    got = No + " datasets ids that are not c identfiers:\n\n" + arr_fail.join("\n");
-  }
-
-  let desc = `: Prefer ${type} to match c identifier regex '<code>${re_str}</code>'.`;
-  return {
-    "description": callerName() + desc,
-    "error": arr_fail.length > 0,
-    "got": got
-  };
-
-}
-exports.CIdentifier = CIdentifier;
-
-function ErrorCorrect(code,wanted,what) {
-
-  if (what === "httpcode") {
-    return {
-      "description": callerName() + ": Expect HTTP code in JSON to be " + wanted,
-      "error": code != wanted,
-      "got": code
-    };
-  }
-  if (what === "hapicode") {
-    t = code == wanted
-    var got = code;
-    if (t != true) {got = code + "."}
-    return {
-      "description": callerName() + ": Expect HAPI code in JSON to be " + wanted,
-      "error": t != true,
-      "got": got
-    };
-  }
-
-}
-exports.ErrorCorrect = ErrorCorrect;
-
-function StatusInformative(message,wanted,what) {
-
-  let re = new RegExp(wanted);
-  let err = re.test(message) == false;
-  let got = `'${message}'.`;
-
-  let link = `<a href='${wiki}#status-informative'>(Explanation.)</a>`;
-  let post = `to contain the string '${wanted}' (default HAPI error message). ${link}`;
-  let desc = ": Want HAPI status message in JSON response" + post;
-  if (what === "httpstatus") {
-    desc = ": Want HTTP status message " + post;
-  }
-  return {
-    "description": callerName() + desc,
-    "error": err,
-    "got": "'" + message + "'"
-  };
-}
-exports.StatusInformative = StatusInformative;
 
 function nFields(header, pn) {
 
@@ -440,7 +101,475 @@ function splitCSV(bodyString) {
   };
 }
 
-function FileLineOK(header,body,pn,what) {
+function versionWarning(version) {
+  if (parseFloat(version) >= 3.0) {
+    return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. Some errors reported by schema check may not actually be errors and not all features are checked.</span>`;
+  }
+  return "";
+}
+
+function versions() {
+  let arr = [];
+  for (key in schemas) {
+    arr.push(key);
+  }
+  return arr.sort();
+}
+exports.versions = versions;
+
+
+function HAPIVersionSame(url, version, urlLast, versionLast) {
+  let des = "Expect HAPI version to match that from last requests where found.";
+  let got = `Current: '<code>${version}</code>' and Last: '<code>${versionLast}</code>'`;
+  let err = false;
+  if (version !== versionLast) {
+    got = `<code>${version}</code> for ${url}\n<code>${versionLast}</code> for ${urlLast}`;
+    err = true;
+  }
+  return {
+    "description": callerName() + des,
+    "error": err,
+    "got": got
+  };
+}
+exports.HAPIVersionSame = HAPIVersionSame;
+
+function HAPIVersion(version) {
+
+  let got = version;
+  let err = false;
+  if (!versions().includes(version)) {
+    err = true;
+    got = "'<code>" + version + "</code>', which is not valid or not implemented by verifier. "
+        + "Will use latest version implemented by verifier: " + versions().pop();
+  }
+
+  let des = "Expect HAPI version in JSON response to be one of "
+          + "<code>"
+          + JSON.stringify(versions())
+          + "</code>";
+  return {
+    "description": callerName() + des,
+    "error": err,
+    "got": got
+  };
+}
+exports.HAPIVersion = HAPIVersion;
+
+function schema(version) {
+  let json = schemas[version];
+  if (!json) {
+    return false;
+  } else {
+    return schemas[version];
+  }
+}
+exports.schema = schema;
+
+function JSONParsable(text) {
+
+  let ret = {
+    "description": callerName() + "Expect <code>JSON.parse(response)</code> to not throw error",
+    "error": false,
+    "got": ""
+  };
+
+  try {
+    let json = JSON.parse(text);
+    ret['json'] = json;
+    return ret;
+  } catch (error) {
+    ret.got = "JSON.parse of:\n\n" + text + "\n\nresulted in " + error 
+            + ". Use " + jsonLintURL
+            + " for a more detailed error report. ";
+    ret.error = true;
+    return ret;
+  }
+}
+exports.JSONParsable = JSONParsable;
+
+function HAPIJSON(text, version, part, ignoreVersionError) {
+
+  let s = schema(version);
+
+  if (schema == false) {
+    let known = JSON.stringify(Object.keys(schemas));
+    let desc = "Expect HAPI version to be one of <code>" + known + "</code>"; 
+    let got = `Schema version '<code>${version}</code>' is not one of <code>${known}</code>`;
+    return {
+        "description": callerName() + desc,
+        "error": true,
+        "got": got
+      };
+  }
+
+  if (typeof(text) === "object") {
+    var json = text;
+  } else {
+    var json = JSON.parse(text);
+  }
+
+  var v = new Validator();
+  // Look for all top-level elements that have an id starting with a /.
+  // These are subschemas that are used.
+  for (key in s) {
+    if (s[key]["id"] && s[key]["id"][0] === "/") {
+      //console.log("Adding schema " + s[key]["id"]);
+      v.addSchema(s[key], s[key]["id"]);
+    }
+  }
+
+  try {
+    var vr = v.validate(json, s[part]);
+  } catch (e) {
+    console.log(e)
+    return {
+        "description": callerName() + "Call to JSON validator failed.",
+        "error": true,
+        "got": "Schema error: " + e
+      };
+  }
+
+  let ve = vr.errors;
+  let got = ""
+  let err = [];
+  if (ve.length != 0) {
+    for (let i = 0; i < ve.length; i++) {
+      if (ignoreVersionError && ve[i].property == "instance.HAPI") {
+        continue;
+      }
+      err[i] = ve[i].property.replace("instance.","") 
+             + " " + ve[i].message.replace(/\"/g,"'");
+    }
+    if (err.length > 0) {
+      got = "\n  " + JSON.stringify(err,null,4).replace(/\n/g,"\n  ");
+    }
+  }
+
+  let url = schemaURL + "/HAPI-data-access-schema-" + version + ".json";
+  let desc = "Expect body to be valid "
+           + "<a href='" + url + "'>HAPI " 
+           + version + " '" + part + "' schema</a>."
+           + versionWarning(version);
+
+  return {
+    "description": callerName() + desc,
+    "error": err.length != 0,
+    "got": got
+  };
+}
+exports.HAPIJSON = HAPIJSON;
+
+function timeregexes(version) {
+  let json = schemas[version];
+  if (!json) {
+    return false;
+  }
+  let tmp = json.HAPIDateTime.anyOf;
+  let regexes = [];
+  for (let i = 0; i < tmp.length; i++) {
+    regexes[i] = tmp[i].pattern;
+  }
+  return regexes;
+}
+exports.timeregexes = timeregexes;
+
+function trailingZfix(str) {
+  // moment.js does not consider date only with trailing Z to be valid ISO8601
+  if (/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]Z$|^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9]Z$/.test(str)) {
+    str = str.slice(0, -1) + "T00Z";
+  } 
+  return str;
+}
+exports.trailingZfix = trailingZfix;
+
+function RequestError(err, res, timeoutType, timeoutObj) {
+
+  var tout = timeoutObj[timeoutType]["timeout"];
+  var when = timeoutObj[timeoutType]["when"];
+
+  if (!err) {
+    // Remove extra precision on timings.
+    var timings = res.timings;
+    for (var key in timings) {
+      timings[key] = timings[key].toFixed(1);
+    }
+    var timingPhases = res.timingPhases;
+    for (var key in timingPhases) {
+      timingPhases[key] = timingPhases[key].toFixed(1);
+    }
+
+    let timeInfo = "";
+    if (timingPhases && timings) {
+      timeInfo = JSON.stringify(timings) + ", " + JSON.stringify(timingPhases);
+      timeInfo = ` <a href='${requestURL}'>Timing info [ms]</a>: ${timeInfo}`;
+    }
+    return {
+      "description": callerName() + "Expect no request error for timeout of " + tout + " ms used when " + when,
+      "error": false,
+      "got": timeInfo
+    };
+  }
+
+  if (err.code === "ETIMEDOUT") {
+    // https://github.com/request/request/blob/master/request.js#L846
+    return {
+      "description": callerName() + "Expect HTTP headers and start of response body in less than " + tout + " ms when " + when,
+      "error": true,
+      "got": err.code
+    };
+  } else if (err.code === "ESOCKETTIMEDOUT") {
+    //https://github.com/request/request/blob/master/request.js#L811
+    return {
+      "description": callerName() + "Expect time interval between bytes sent to be less than " + tout + " ms when " + when,
+      "error": true,
+      "got": err.code
+    };
+  } else if (err.code === "ECONNRESET") {
+    return {
+      "description": callerName() + "Expect connection to not be reset by server",
+      "error": true,
+      "got": "ECONNRESET"
+    };
+  } else if (err.code === "ECONNREFUSED") {
+    return {
+      "description": callerName() + "Expect connection to not be refused by server",
+      "error": true,
+      "got": err.code
+    };
+  } else {
+    return {
+      "description": callerName() + "Probably URL is malformed.",
+      "error": true,
+      "got": err
+    };
+  }
+}
+exports.RequestError = RequestError;
+
+function CadenceGiven(cadence) {
+  let base = "https://github.com/hapi-server/data-specification/";
+  let url = base + "blob/master/hapi-dev/HAPI-data-access-spec-dev.md";
+  let desc = "Expect the nominal cadence to be given "
+           + `(see <a href='${url}'>`
+           + "the HAPI spec for definition</a>). A nominal cadence is useful "
+           + "for clients and obviates the need for it to be inferred programatically."
+  return {
+    "description": callerName() + desc,
+    "error": typeof(cadence) !== "string",
+    "got": cadence || "no cadence"
+  };
+}
+exports.CadenceGiven = CadenceGiven;
+
+function CadenceValid(cadence) {
+  // https://stackoverflow.com/a/53140944/1491619
+  // TODO: Move to JSON schema.
+  var re = /^P(?!$)((\d+Y)|(\d+\.\d+Y$))?((\d+M)|(\d+\.\d+M$))?((\d+W)|(\d+\.\d+W$))?((\d+D)|(\d+\.\d+D$))?(T(?=\d)((\d+H)|(\d+\.\d+H$))?((\d+M)|(\d+\.\d+M$))?(\d+(\.\d+)?S)?)??$/;
+  var t = re.test(cadence) == true;
+  var got = cadence + " valid.";
+  if (t == false) {
+    var got = cadence + " is invalid.";
+    if (typeof(cadence) === "string" && cadence.toUpperCase() === cadence) {
+      got = got + " (Letters in cadence should be uppercase.)";
+    }
+  }
+
+  if (0) {
+    // Old code. moment.js is too permissive.
+    var md = moment.duration(cadence);
+    // moment.js claims duration with lowercase if valid
+    //var md2 = moment.duration(cadence.toUpperCase()); 
+    var t = md._isValid;
+    var got = cadence;
+    if (t == true && cadence.toUpperCase() !== cadence) {
+      t = false;
+    }
+    // moment.duration("PT720") gives md._isValid = true and
+    // md._milliseconds = 0. (Need H, M, S at end)
+    if (md._milliseconds == 0 && md._days == 0 && md._months == 0) {
+      t = false;
+    }
+  }
+  let desc = "Expect cadence to be a valid ISO8601 duration "
+           + "(regular expression tested: " + re.toString() + ").";
+  return {
+          "description": callerName() + desc,
+          "error": t == false,
+          "got": got
+        };
+}
+exports.CadenceValid = CadenceValid;
+
+function CadenceOK(cadence, start, stop, what) {
+
+  if (!cadence) return; // Don't do test; no cadence given.
+
+  if (!stop) {
+    let desc = "Need more than two lines to do cadence "
+             + "comparison with consecutive samples.";
+    return {
+      "description": callerName() + desc,
+      "error": true,
+      "got":"One line."
+    };
+  }
+  //console.log(start)
+  //console.log(stop)
+  start = trailingZfix(start);
+  stop = trailingZfix(stop);
+  var startms = moment(start).valueOf();
+  var stopms = moment(stop).valueOf();
+  var md = moment.duration(cadence);
+  var R = (stopms-startms)/md._milliseconds;
+  if (what === "start/stop") {
+    t = R > 1;
+    var got = "(stopDate-startDate)/cadence = " + (stopms-startms)/md._milliseconds;
+    return {
+      "description": callerName() + "Expect (stopDate-startDate)/cadence > 1",
+      "error": t != true,
+      "got": got
+    };
+  }
+  if (what === "sampleStart/sampleStop") {
+    t = R > 10;
+    var got = "(sampleStartDate-sampleStopDate)/cadence = "
+            + (stopms-startms)/md._milliseconds;
+    let desc = "Expect (sampleStopDate-sampleStartDate)/cadence &gt; 10";
+    return {
+      "description": callerName() + desc,
+      "error": t != true,
+      "got": got
+    };
+  }
+  if (what === "consecsamples") {
+    t = R > 10;
+    var got = "Cadence/(time[i+1]-time[i]) = " + (stopms-startms)/md._milliseconds;
+    return {
+      "description": callerName() + "Expect (t[i+1]-t[i])/cadence &gt; 10",
+      "error": t != true,
+      "got":got
+    };
+  }
+}
+exports.CadenceOK = CadenceOK;
+
+function CIdentifier(arr, type) {
+  // https://stackoverflow.com/questions/14953861/
+  // representing-identifiers-using-regular-expression
+  var re_str = "[_a-zA-Z][_a-zA-Z0-9]{1,30}";
+
+  var arr_fail = [];
+  var re = new RegExp(re_str);
+  for (var i = 0; i < arr.length;i++) {
+    var m = arr[i]["id"].match(re);
+    if (m) {
+      var t = m[0] == m["input"];
+      if (!t) {
+        arr_fail.push(arr[i]["id"]);
+      }
+    } else {
+      // Happens with Unicode in id.
+      arr_fail.push(arr[i]["id"]);
+    }
+  }
+  var got = "All " + type + "(s) match.";
+  if (arr_fail.length > 0) {
+    let No = arr_fail.length;
+    if (arr_fail.length > 10) {
+      arr_fail = arr_fail.slice(0, 10);
+      arr_fail.push("\n ... (" + (No - 10) + ") more.");
+    }
+    got = No + " datasets ids that are not c identfiers:\n\n" + arr_fail.join("\n");
+  }
+
+  let desc = `Prefer ${type} to match c identifier regex '<code>${re_str}</code>'.`;
+  return {
+    "description": callerName() + desc,
+    "error": arr_fail.length > 0,
+    "got": got
+  };
+}
+exports.CIdentifier = CIdentifier;
+
+function ErrorCorrect(code, wanted, what) {
+
+  if (what === "httpcode") {
+    let desc = "Expect HTTP code in JSON to be <code>" + wanted + "</code>";
+    return {
+      "description": callerName() + desc,
+      "error": code != wanted,
+      "got": code != wanted ? code : ""
+    };
+  }
+  if (what === "hapicode") {
+    t = code == wanted
+    var got = code;
+    if (t != true) {got = code + "."}
+    let desc = "Expect HAPI code in JSON to be <code>" + wanted + "</code>";
+    return {
+      "description": callerName() + desc,
+      "error": t != true,
+      "got": code != wanted ? code : ""
+    };
+  }
+}
+exports.ErrorCorrect = ErrorCorrect;
+
+function StatusInformative(message, wanted, what) {
+
+  let re = new RegExp(wanted);
+  let err = re.test(message) == false;
+  let got = `'${message}'.`;
+
+  let link = `<a href='${wikiURL}#status-informative'>(Explanation.)</a>`;
+  let post = `to contain the string '${wanted}' (default HAPI error message). ${link}`;
+  let desc = "Want HAPI status message in JSON response" + post;
+  if (what === "httpstatus") {
+    desc = "Want HTTP status message " + post;
+  }
+  return {
+    "description": callerName() + desc,
+    "error": err,
+    "got": "'" + message + "'"
+  };
+}
+exports.StatusInformative = StatusInformative;
+
+function HeaderParsable(body) {
+  let desc = "Expect header lines in data stream to"
+           + " be JSON parsable after removal of leading #s.";
+  let ret = {
+    "description": callerName() + desc,
+    "error": false,
+    "got": ""
+  };
+
+  let csvparts;
+  try {
+    csvparts = splitCSV(body)
+  } catch (error) {
+    ret.got = "Could not split CSV into header and data parts.";
+    ret.error = true;
+    return ret;
+  }
+  ret.csvparts = csvparts;
+
+  try {
+    JSON.parse(csvparts.header);
+    return ret;
+  } catch (error) {
+    ret.got = "<code>JSON.parse()</code> of \n\n" + csvparts.header + "\n\nresulted in "
+            + error + `. Use ${jsonLintLink} for a more detailed error report.`;
+    ret.error = true;
+    return ret;
+  }
+
+  return ret;
+}
+exports.HeaderParsable = HeaderParsable;
+
+function FileLineOK(header, body, pn, what) {
 
   var nf = nFields(header, pn);
 
@@ -448,22 +577,22 @@ function FileLineOK(header,body,pn,what) {
 
   if (what === "Ncolumns") {
     let t = false;
-    let got = "(" + nf + ")" + " - (" + nf + ")";
+    let got = "<code>(" + nf + ")" + " - (" + nf + ")</code>";
     if (lines.length == 0) {
-      got = "(0)" + " - (" + nf + ")";
+      got = "<code>(0)" + " - (" + nf + ")</code>";
     }
     for (var i = 0;i<lines.length-1;i++) {
       t = nf != lines[i].length;
       if (t) {
-        got = "(" + lines[i].length + ")" + " - (" + nf + ")";
-        got = got + " on line " + (i+1);
+        got = "<code>(" + lines[i].length + ")" + " - (" + nf + ")</code>";
+        got = got + " on line <code>" + (i+1) + "</code>";
         break;
       }
     }
-    let desc = callerName() + ": Expect (# of columns in CSV) - "
-             + " (# computed from length and size metadata) = 0."
+    let desc = "Expect (# of columns in CSV) - "
+             + "(# computed from length and size metadata) = 0."
     return {
-      "description": desc,
+      "description": callerName() + desc,
       "error": t,
       "got": got
     };
@@ -516,7 +645,6 @@ function FileLineOK(header,body,pn,what) {
     // Note line.length - 1 = because split() adds extra empty
     // element at end if trailing newline.
   }
-
 }
 exports.FileLineOK = FileLineOK;
 
@@ -531,15 +659,20 @@ function FileContentSame(header, body, bodyAll, pn, what) {
 
   if (what === "contentsame") {
     var e = false;
-    var got = "Match";
-    var desc = callerName() + ": Expect data response to be same as previous request given differing request URLs.";
+    var got = "";
+    var desc = "Expect data response to be same as previous request given differing request URLs.";
 
     if (bodyAll !== body) { // byte equivalent
 
-      if (lines.length != linesAll.length) { // # lines not same.
+      if (lines.length != linesAll.length) {
         e = true;
-        got = lines.length + " rows here vs. " + linesAll.length + " rows previously.";
-        return {"description": desc, "error": e, "got": got};   
+        got = "<code>" + lines.length + "</code> rows here vs. <code>" 
+            + linesAll.length + "</code> rows previously.";
+        return {
+          "description": callerName() + desc,
+          "error": e,
+          "got": got
+        };
       }
 
       // Look for location of difference.
@@ -571,16 +704,28 @@ function FileContentSame(header, body, bodyAll, pn, what) {
         got = line.length + " columns vs. " 
             + lineAll.length + " columns on line " + (i+1) + ".";
         e = true;
-        return {"description":desc, "error": e, "got": got};    
+        return {
+          "description": callerName() + desc,
+          "error": e,
+          "got": got
+        };
       }
       if (e2) {
         got = "Difference on line " + (i+1) + " column " + (nf+1) + ".";
         e = true;
-        return {"description":desc, "error": e, "got": got};    
+        return {
+          "description": callerName() + desc,
+          "error": e,
+          "got": got
+        };
       }
       // TODO: Can e1 and e2 be false?
     }
-    return {"description": desc, "error": e, "got": got};   
+    return {
+      "description": callerName() + desc,
+      "error": e,
+      "got": got
+    };
   }
 
   if (what === "subsetsame") {
@@ -590,10 +735,10 @@ function FileContentSame(header, body, bodyAll, pn, what) {
     if (lines.length != linesAll.length) {
       let desc = "Expect number of rows from one parameter request to"
                + " match data from all parameter request.";
-      let got = " # rows in single parameter request = " + lines.length 
-              + " # in all parameter request = " + linesAll.length;
+      let got = " # rows in single parameter request = <code>" + lines.length + "</code>"
+              + " # in all parameter request = <code>" + linesAll.length + "</code>";
       return {
-        "description": callerName() + ": " + desc,
+        "description": callerName() + desc,
         "error": true,
         "got": got
       };
@@ -612,7 +757,7 @@ function FileContentSame(header, body, bodyAll, pn, what) {
       }
     }
 
-    let desc = ": Expect content from one parameter request to"
+    let desc = "Expect content from one parameter request to"
              + " match content from all parameter request.";
     let t = false;
     for (let i = 0;i < lines.length-1;i++) {
@@ -640,10 +785,10 @@ function FileContentSame(header, body, bodyAll, pn, what) {
         desc = "Expect number of columns from one parameter request to be"
              + " equal to or less than number of columns in all parameter request.";
         got += "# columns in single parameter request = " + line.length 
-             + " # in all parameter request = " + lineAll.length
-             + ".\n";
+             + " # in all parameter request = <code>" + lineAll.length
+             + "</code>.\n";
         return {
-          "description": callerName() + ": " + desc,
+          "description": callerName() + desc,
           "error": true,
           "got": got
         };
@@ -656,10 +801,10 @@ function FileContentSame(header, body, bodyAll, pn, what) {
 
         if (!line[1+j] || !lineAll[fc+j]) {
           t = true;
-          got += "Problem with line " + (j) + ":\n"
-              +  "Single parameter request: " + line[1+j]
-              +  "All parameter request: " + lineAll[fc+j]
-              +  ".\n";
+          got += "Problem with line <code>" + (j) + "</code>:\n"
+              +  "Single parameter request: <code>" + line[1+j]
+              +  "</code>.\nAll parameter request: <code>" + lineAll[fc+j]
+              +  "</code>.\n";
           break;
         }
 
@@ -673,16 +818,16 @@ function FileContentSame(header, body, bodyAll, pn, what) {
 
           if (nf == 2) {
             t = true;
-            got += got + ". Parameter " + name + " does not match at time " 
-                +  line[0] + ": Single parameter request: " + line[1] 
-                +  "; All parameter request: " + lineAll[fc+j]
-                +  ".\n";
+            got += got + ". Parameter <code>" + name + "</code> does not match at time " 
+                +  line[0] + ": Single parameter request: <code>" + line[1] 
+                +  "</code>; All parameter request: <code>" + lineAll[fc+j]
+                +  "</code>.\n";
           } else {
-            got += got + ". Parameter " + name + " field #" + j 
-                +  " does not match at time " + line[0] 
-                +  ": Single parameter request: " + line[1+j] 
-                +  "; All parameter request: " + lineAll[fc+j]
-                +  ".\n";
+            got += got + ". Parameter <code>" + name + "</code> field #<code>" + j 
+                +  "</code> does not match at time <code>" + line[0] 
+                +  "</code>: Single parameter request: <code>" + line[1+j] 
+                +  "</code>; All parameter request: <code>" + lineAll[fc+j]
+                +  "</code>.\n";
           }
 
         }
@@ -690,9 +835,8 @@ function FileContentSame(header, body, bodyAll, pn, what) {
 
     }
 
-    if (got === "") got = "Match";
     return {
-      "description": callerName() + ": " + desc,
+      "description": callerName() + desc,
       "error": t,
       "got": got
     };
@@ -700,7 +844,7 @@ function FileContentSame(header, body, bodyAll, pn, what) {
 }
 exports.FileContentSame = FileContentSame;
 
-function FileStructureOK(body,what,other,emptyExpected) {
+function FileStructureOK(body, what, other, emptyExpected) {
   
   var desc,t,got;
 
@@ -710,17 +854,17 @@ function FileStructureOK(body,what,other,emptyExpected) {
     }
     if (body.length == 0 || other.length == 0) {
       if (body.length == 0 && other.length != 0) {
-        let msg = ': If empty response for single parameter, expect empty'
+        let msg = 'If empty response for single parameter, expect empty'
                 + ' response for all parameters.';
-        let got = "Single parameter body: " + body.length + " bytes."
-                + " All parameter body: " + other.length + " bytes.";
+        let got = "Single parameter body: <code>" + body.length + "</code> bytes."
+                + " All parameter body: <code>" + other.length + "</code> bytes.";
         return {
           "description": callerName() + msg,
           "error": true,
           "got": got
         };
       } else {
-        let msg = ': If empty response for single parameter, expect empty'
+        let msg = 'If empty response for single parameter, expect empty'
                   ' response for all parameters.';
         return {
           "description": callerName() + msg,
@@ -735,21 +879,21 @@ function FileStructureOK(body,what,other,emptyExpected) {
 
   if (what === "empty") {
 
-    let link = `<a href='${wiki}#empty-body'> (Details.)</a>`;
+    let link = `<a href='${wikiURL}#empty-body'> (Details.)</a>`;
 
     let emptyIndicated = /HAPI 1201/.test(other);
     if (!body || body.length === 0) {
       if (emptyExpected) {
-        let msg = ": If data part of response has zero length, prefer 'HAPI 1201'"
+        let msg = "If data part of response has zero length, prefer '<code>HAPI 1201</code>'"
                 + " (no data in time range) in HTTP header status message"
                 + " (if possible)." + link;
         return {
           "description": callerName() + msg,
           "error": emptyIndicated == false,
-          "got": "Zero bytes and HTTP header status message of '" + other + "'"
+          "got": "Zero bytes and HTTP header status message of '<code>" + other + "</code>'"
         };
       } else {
-        let msg = ": The verifier should have enough information to make a"
+        let msg = "The verifier should have enough information to make a"
                 + " request that returns data. Avoid this error by adding or"
                 + " modifying sample{Start,Stop} in /info response (preferred)"
                 + " or set a start/stop where there are data in the verifier"
@@ -762,26 +906,26 @@ function FileStructureOK(body,what,other,emptyExpected) {
       }
     }
     if (body && body.length != 0 && emptyIndicated) {
-      let msg = ": A data part of response with zero bytes was expected"
-              + " because 'HAPI 1201' (no data in time range) in HTTP header"
+      let msg = "A data part of response with zero bytes was expected"
+              + " because '<code>HAPI 1201</code>' (no data in time range) in HTTP header"
               + " status messsage." + link;
       return {
         "description": callerName() + msg,
         "error": false,
-        "got": "'HAPI 1201' in HTTP header status message and " + body.length + " bytes."
+        "got": "'<code>HAPI 1201</code>' in HTTP header status message and <code>" + body.length + "</code> bytes."
       };
     }
     return {
-      "description": callerName() + ": Expect nonzero length for data part of response.",
+      "description": callerName() + "Expect nonzero length for data part of response.",
       "error": false,
-      "got": body.length + " bytes."
+      "got": `<code>${body.length}</code> bytes.`
     };   
   }
 
   if (what === "firstchar") {
     desc = "Expect first character of CSV response to be an integer.";
     t    = !/^[0-9]/.test(body.substring(0,1));
-    got  = body.substring(0,1);
+    got  = `<code>${body.substring(0,1)}</code>`;
   }
 
   if (what === "lastchar") {
@@ -789,9 +933,9 @@ function FileStructureOK(body,what,other,emptyExpected) {
     t = !/\n$/.test(body.slice(-1));
     got = body.slice(-1).replace(/\n/g,"\\n");
     if (t) {
-      got = "The character '" + got + "'";
+      got = "The character '<code>" + got + "'</code>";
     } else {
-      got = "A newline.";
+      got = "";
     }
   }
 
@@ -800,9 +944,9 @@ function FileStructureOK(body,what,other,emptyExpected) {
     t    = /\n\n$/.test(body.slice(-2));
     got  = body.slice(-2).replace(/\n/g,"\\n");
     if (t) {
-      got = "Two newlines.";
+      got = "";
     } else {
-      got = "The characters '" + got + "'";
+      got = "The characters '<code>" + got + "</code>'";
     }
   }
 
@@ -819,35 +963,38 @@ function FileStructureOK(body,what,other,emptyExpected) {
   }
 
   return {
-    "description": callerName() + ": " + desc,
+    "description": callerName() + desc,
     "error": t,
     "got": got
   };
 }
 exports.FileStructureOK = FileStructureOK;
 
-function LengthAppropriate(len,type,name) {
-  var got = "Type = " + type + " and length = " + len + " for parameter " + name;
+function LengthAppropriate(len, type, name) {
+  var got = "Type = <code>" + type + "</code> and length = <code>" 
+          + len + "</code> for parameter '<code>" + name + "</code>'";
+  let desc = "If <code>type = string</code> or <code>isotime</code>, length must be given";
   if (/isotime|string/.test(type) && !len) {
     obj = {
-            "description": "If type = string or isotime, length must be given",
+            "description": desc,
             "error":true,
             "got": got
           };
   } else if (!/isotime|string/.test(type) && len) {
     obj = {
-            "description": "If type = string or isotime, length must not be given",
+            "description": desc,
             "error":true,
             "got": got
           };
   } else {
+    desc = "Length may only be given for types <code>string</code> and <code>isotime</code>";
     obj = {
-            "description": "Length may only be given for types string and isotime",
+            "description": desc,
             "error":false,
             "got": got
           };
   }
-  obj["description"] = "is.LengthAppropriate(): " + obj["description"];
+  obj["description"] = callerName() + obj["description"];
   return obj;
 }
 exports.LengthAppropriate = LengthAppropriate;
@@ -879,18 +1026,18 @@ function HeaderSame(headerInfo, headerBody) {
       }
     }
   }
-  var desc = "is.HeaderSame(): Expect info response to match header"
-           + " in data response when 'include=header' requested.";
+  var desc = "Expect <code>/info</code> response to match header"
+           + " in data response when '<code>include=header</code>' requested.";
   if (keptDiffs.length == 0) {
     return {
-      "description": desc,
+      "description": callerName() + desc,
       "error": false,
-      "got": "Matching headers."
+      "got": ""
     };
   } else {
     var got = "Differences:\n" + JSON.stringify(keptDiffs, null, 2);
     return {
-      "description": desc,
+      "description": callerName() + desc,
       "error": true,
       "got": got
     };
@@ -898,7 +1045,7 @@ function HeaderSame(headerInfo, headerBody) {
 }
 exports.HeaderSame = HeaderSame;
 
-function FormatInHeader(header,type) {
+function FormatInHeader(header, type) {
 
   // https://github.com/hapi-server/data-specification/blob/master/
   // hapi-2.1.1/HAPI-data-access-spec-2.1.1.md#info
@@ -906,11 +1053,11 @@ function FormatInHeader(header,type) {
     var t = 'format' in header;
     var got = 'No format given.'
     if (t) {
-      got = "Format of '" + header.format + "' specified."
+      got = "Format of '<code>" + header.format + "</code>' specified."
     }
-    let desc = callerName() + ": /info response should not have 'format' specified.";
+    let desc = "<code>/info</code> response should not have '<code>format</code>' specified.";
     return {
-      "description": desc,
+      "description": callerName() + desc,
       "error": t,
       "got": got
     };
@@ -919,12 +1066,12 @@ function FormatInHeader(header,type) {
     var t = !('format' in header);
     var got = 'No format given.'
     if (!t) {
-      got = "Format of '" + header.format + "' specified."
+      got = "Format of '<code>" + header.format + "</code>' specified."
     }
-    let desc = callerName() + ": Header in csv response should have"
-             + " 'format: csv' specified.";
+    let desc = "Header in CSV response should have"
+             + " '<code>format: csv</code>' specified.";
     return {
-      "description": desc,
+      "description": callerName() + desc,
       "error": t,
       "got": got
     };
@@ -932,16 +1079,16 @@ function FormatInHeader(header,type) {
 }
 exports.FormatInHeader = FormatInHeader;
 
-function FirstParameterOK(header,what) {
+function FirstParameterOK(header, what) {
   if (what == "name") {
-    let desc = callerName() + ": First parameter should (not must) be named"
-             + " 'Time' b/c clients will likely label first parameter as 'Time'"
+    let desc = "First parameter should (not must) be named"
+             + " '<code>Time</code>' b/c clients will likely label first parameter as '<code>Time</code>'"
              + " on plot to protect against first parameter names that are"
              + " not sensible."
     return {
-      "description": desc,
+      "description": callerName() + desc,
       "error": header.parameters[0].name !== "Time",
-      "got": header.parameters[0].name
+      "got": "<code>header.parameters[0].name</code>"
     };
   }
   if (what == "fill") {
@@ -954,10 +1101,10 @@ function FirstParameterOK(header,what) {
       t = true;
       got = header.parameters[0].fill;
     }
-    let desc = callerName() + ": First parameter must have a fill of null"
+    let desc = "First parameter must have a fill of null"
              + " or it should not be specified.";
     return {
-      "description": desc,
+      "description": callerName() + desc,
       "error": t,
       "got": got
     };
@@ -965,8 +1112,7 @@ function FirstParameterOK(header,what) {
 }
 exports.FirstParameterOK = FirstParameterOK;
 
-
-function BinsOK(name,bins,size) {
+function BinsOK(name, bins, size) {
   if (!bins) {
     return;
   }
@@ -1024,11 +1170,15 @@ function BinsOK(name,bins,size) {
     got = "<span style='background-color:yellow'>size.length &gt; 2 for parameter " + name + ". Check not implemented.</span>"    
   }
 
-  return {"description": "is.BinsOK(): " + desc, "error": err, "got": got};
+  return {
+    "description": callerName() + desc,
+    "error": err,
+    "got": got
+  };
 }
 exports.BinsOK = BinsOK;
 
-function ArrayOK(name,units,size,type,version) {
+function ArrayOK(name, units, size, type, version) {
 
   if (parseFloat(version) < 2.1) {
     return;
@@ -1081,13 +1231,17 @@ function ArrayOK(name,units,size,type,version) {
       got = spanOpen + "size.length &gt; 2 for parameter " + name 
           + ". Check not implemented.</span>"    
     }
-    return {"description": "is.ArrayOK(): " + desc, "error": err, "got": got};
+    return {
+      "description": callerName() + desc,
+      "error": err,
+      "got": got
+    };
   }
 }
 exports.ArrayOK = ArrayOK;
 
 // TODO: Use this
-function checkdims(units,size,version) {
+function checkdims(units, size, version) {
   var err = false;
   if (units && units !== null && typeof(units) !== "string") {
     // units is an array.
@@ -1119,7 +1273,7 @@ function checkdims(units,size,version) {
   }
 }
 
-function UnitsOK(name,units,type,size) {
+function UnitsOK(name, units, type, size) {
 
   if (type === 'isotime') {
     var err = false;
@@ -1141,7 +1295,7 @@ function UnitsOK(name,units,type,size) {
     }
 
     return {
-      "description": callerName() + ": Expect isotime units to be 'UTC'.",
+      "description": callerName() + "Expect parameter of type <code>isotime</code> to have units of '<code>UTC</code>'.",
       "error": err,
       "got": got
     };
@@ -1149,7 +1303,7 @@ function UnitsOK(name,units,type,size) {
 }
 exports.UnitsOK = UnitsOK;
 
-function FillOK(fill,type,len,name,what) {
+function FillOK(fill, type, len, name, what) {
 
   if (!fill) {return;} // No fill or fill=null so no test needed.
   var t = false;
@@ -1203,14 +1357,14 @@ function FillOK(fill,type,len,name,what) {
     }
   }
   return {
-    "description": callerName() + ": " + desc,
+    "description": callerName() + desc,
     "error": t,
     "got": got
   };
 }
 exports.FillOK = FillOK;
 
-function SizeCorrect(nc,nf,header) {
+function SizeCorrect(nc, nf, header) {
   var t = nc == nf
   if (header.size) {
     var extra = "product of elements in size array " + JSON.stringify(header.size);
@@ -1224,14 +1378,14 @@ function SizeCorrect(nc,nf,header) {
     var got = nc + " commas";
   }
   return {
-    "description": callerName() + ": Expect number of commas on first line to be " + extra,
-    "error": t !=true,
+    "description": callerName() + "Expect number of commas on first line to be " + extra,
+    "error": t != true,
     "got": got
   };
 }
 exports.SizeCorrect = SizeCorrect;
 
-function SizeAppropriate(size,name,what) {
+function SizeAppropriate(size, name, what) {
   if (!size) return; // Test not appropriate.
   if (typeof(size) !== 'object') return; // Test not appropriate.
 
@@ -1243,9 +1397,9 @@ function SizeAppropriate(size,name,what) {
     }
     t = t == size.length;
     return {
-      "description": callerName() + ": Size is not needed if all elements are 1.",
+      "description": callerName() + "Size is not needed if all elements are 1.",
       "error": t,
-      "got": "size = " + JSON.stringify(size) + " for parameter " + name
+      "got": "size = <code>" + JSON.stringify(size) + "</code> for parameter '<code>" + name + "'</code>"
     };
   }
   if (what === "2D+") {
@@ -1255,9 +1409,9 @@ function SizeAppropriate(size,name,what) {
       t = (size.length > 1)
     }
     return {
-      "description": callerName() + ": Size arrays with more than one element are experimental.",
+      "description": callerName() + "Size arrays with more than one element are experimental.",
       "error": t,
-      "got": "size = " + JSON.stringify(size) + " for parameter " + name
+      "got": "size = " + JSON.stringify(size) + " for parameter '<code>" + name + "</code>'"
     };
   }
 }
@@ -1265,7 +1419,9 @@ exports.SizeAppropriate = SizeAppropriate;
 
 function HTTP200(res){
   var body = "";
+  let got = "";
   if (res.statusCode != 200) {
+    got = "HTTP status code <code>" + res.statusCode + "</code>" + body;
     try {
       var json = JSON.parse(res.body);
       var body = " and JSON body\n\t" + JSON.stringify(body,null,4).replace(/\n/g,"\n\t");
@@ -1279,14 +1435,14 @@ function HTTP200(res){
     }
   }
   return {
-    "description": callerName() + ": Expect HTTP status code to be 200",
+    "description": callerName() + "Expect HTTP status code to be <code>200</code>",
     "error": 200 != res.statusCode,
-    "got": "HTTP status code <code>" + res.statusCode + "</code>" + body
+    "got": got
   };
 }
 exports.HTTP200 = HTTP200;
 
-function CorrectLength(str,len,name,required) {
+function CorrectLength(str, len, name, required) {
   var extra = extra || ""
   var required = required || false
   var got = "(" + (str.length) + ") - (" + (len) + ")"
@@ -1295,17 +1451,17 @@ function CorrectLength(str,len,name,required) {
     got = got + extra + " Not an error for format=csv, but will "
         + " cause error for format=binary."
   }
-  let desc = callerName() + ': Expect (trimmed length of ' 
+  let desc = 'Expect (trimmed length of ' 
            + name + ' string parameter in CSV) - (parameters.'+ name + '.length) = 0.'
   return {
-    "description": desc,
+    "description": callerName() + desc,
     "error": t,
     "got": got
   };
 }
 exports.CorrectLength = CorrectLength;
 
-function TimeInBounds(lines,start,stop) {
+function TimeInBounds(lines, start, stop) {
   // Remove Z from all times so Date().getTime() gives local timezone time for all.
   // Javascript Date assumes all date/times are in local timezone.
 
@@ -1321,24 +1477,26 @@ function TimeInBounds(lines,start,stop) {
       break;
     }
   }
-  var got = "First time = " + firstTime + "; LastTime = " + lastTime;
+  let got = "First time = <code>" + firstTime + "</code>; "
+          + "LastTime = <code>" + lastTime + "</code>";
   let a = moment(firstTime).valueOf() >= moment(start).valueOf();
-  let b = moment(lastTime).valueOf() <  moment(stop).valueOf();
+  let b = moment(lastTime).valueOf()  <  moment(stop).valueOf();
   var t = a && b;
-  let desc = callerName() + ": Expect first time in CSV &gt;= " 
-           + start + " and last time in CSV &lt; " + stop + " (only checks to ms)";
+  let desc = "Expect first time in CSV ≥ " 
+           + start + " and last time in CSV &lt; " 
+           + stop + " (only checks to ms)";
   return {
-    "description": desc,
+    "description": callerName() + desc,
     "error": t != true,
     "got": got
   };
 }
 exports.TimeInBounds = TimeInBounds;
 
-function TimeIncreasing(header,what) {
+function TimeIncreasing(header, what) {
 
   if (what === "CSV") {
-    var got = "Monotonically increasing time in CSV"
+    var got = "";
     var starttest = new Date().getTime();
     var ts = got;
     // Remove blanks (caused by extra newlines)
@@ -1387,7 +1545,8 @@ function TimeIncreasing(header,what) {
     var ts = "info.startDate &lt; info.stopDate";
     //var t = new Date(start).getTime() < new Date(stop).getTime();
     var t = moment(start).valueOf() < moment(stop).valueOf();
-    var got = "startDate = " + start + "; stopDate = " + stop;
+    var got = "startDate = <code>" + start + "</code>; "
+            + "stopDate = <code>" + stop + "</code>";
   }
 
   if (what === "sample{Start,Stop}Date") {
@@ -1415,14 +1574,14 @@ function TimeIncreasing(header,what) {
     got = got.replace("&gt;","&lt;");
   }
   return {
-    "description": callerName() + ": Expect " + ts,
+    "description": callerName() + "Expect " + ts,
     "error": t != true,
     "got":got
   };
 }
 exports.TimeIncreasing = TimeIncreasing;
 
-function ISO8601(str,extra) {
+function ISO8601(str, extra) {
   // TODO: Change to HAPIISO8601.
   // https://github.com/hapi-server/data-specification/issues/54
   var extra = extra || ""
@@ -1430,14 +1589,14 @@ function ISO8601(str,extra) {
   var ts = "moment('" + trailingZfix(str) 
          + "',moment.ISO_8601).isValid() == true" + extra;
   return {
-    "description": callerName() + ": Expect " + ts,
+    "description": callerName() + "Expect " + ts,
     "error": t != true,
     "got": "moment(" + trailingZfix(str) + ",moment.ISO_8601).isValid() = " + t
   };
 }
 exports.ISO8601 = ISO8601;
 
-function HAPITime(isostr,version) {
+function HAPITime(isostr, version) {
 
   schemaregexes = timeregexes(version);
   // schemaregexes come from list in a schema file in ./schemas.
@@ -1445,7 +1604,7 @@ function HAPITime(isostr,version) {
   var t = true;
   if (typeof(isostr) === 'object') {
     var starttest = new Date().getTime();
-    got = "Valid HAPI Time strings";
+    got = "";
     for (var i = 0; i < isostr.length; i++) {
       if (isostr[i] === '') {break};
       str = isostr[i].split(",")[0].trim();
@@ -1468,11 +1627,11 @@ function HAPITime(isostr,version) {
       }
       //console.log(isostr[i] + " " + t)
     }
-    var url = "https://github.com/hapi-server/verifier-nodejs/tree/master/schemas/HAPI-data-access-schema-"+version+".json";
-    let desc = callerName() + ": Expect time column to contain valid "
+    var url = schemaURL + "/HAPI-data-access-schema-" + version + ".json";
+    let desc = "Expect time column to contain valid "
              + "<a href='"+url+"'>HAPI " + version + " HAPITime strings</a>";
     return {
-      "description": desc,
+      "description": callerName() + desc,
       "error": t != true,
       "got": got};
   }
@@ -1545,56 +1704,59 @@ function HAPITime(isostr,version) {
   var e = !(regex_pass && semantic_pass);
   //if (t==false) {console.log("x" + isostr)}
   return {
-    "description": callerName() + ": Expect time value to be a valid HAPI time string.",
+    "description": callerName() + "Expect time value to be a valid HAPI time string.",
     "error": e,
     "got": got
   };
 }
 exports.HAPITime = HAPITime;
 
-function Integer(str,extra) {
-  var extra = extra || ""
-  var t  = isinteger(str);
-  var ts = "(parseInt('"+str+"') &lt; 2^31 - 1 || parseInt('"+str+"') &lt; -2^31) && parseInt(" + str + ") == parseFloat(" + str + ")"+extra;
+function Integer(str, extra) {
+  extra = extra || ""
+  let t  = isinteger(str);
+  let ts = `(parseInt("${str}") &lt; 2^31 - 1 || `
+      ts += `parseInt("${str}") &lt; -2^31) && `
+      ts += `parseInt(${str}) == parseFloat(${str})`
+      ts += extra;
   return {
-    "description": callerName() + ": Expect " + ts,
+    "description": callerName() + "Expect " + ts,
     "error": t != true,
     "got": "parseInt(" + str + ") = " + parseInt(str) + " and " + "parseFloat(" + str + ") = " + parseFloat(str)
   };
 }
 exports.Integer = Integer;
 
-function Float(str,extra) {
-  var extra = extra || ""
-  var t  = isfloat(str);
-  var ts = "Math.abs(parseFloat('"+str+"')) &lt; " 
-         + Number.MAX_VALUE 
-         + " && /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('" + str + "'.trim()) == true"
+function Float(str, extra) {
+  extra = extra || ""
+  let t  = isfloat(str);
+  let ts = "Math.abs(parseFloat('"+str+"')) &lt; " 
+         + Number.MAX_VALUE + " && "
+         + "/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('" + str + "'.trim()) == true"
          + extra;
   return {
-    "description": callerName() + ": Expect " + ts,
+    "description": callerName() + "Expect " + ts,
     "error": t != true,
     "got": t
   };
 }
 exports.Float = Float;
 
-function NaN(str,extra) {
+function NaN(str, extra) {
   var extra = extra || ""
   t = str.trim().toLowerCase();
   ts = "'" + str + "'.trim().toLowerCase() === 'nan'"+extra;
   return {
-    "description": callerName() + ": Expect " + ts,
+    "description": callerName() + "Expect " + ts,
     "error": t !== "nan",
     "got":"'" + str + "'.trim().toLowerCase() = " + t
   };
 }
 exports.NaN = NaN;
 
-function Unique(arr,arrstr,idstr){
+function Unique(arr, arrstr, idstr){
   if (!arr.length) {
     return {
-      "description": callerName() + ": Expect " + arrstr + " to be an array",
+      "description": callerName() + "Expect " + arrstr + " to be an array",
       "error":true,
       "got": typeof(arr)
     };
@@ -1615,19 +1777,19 @@ function Unique(arr,arrstr,idstr){
   if (e) {
     var got ="Repeated at least once: " + rids.join(",");
   } else {
-    var got ="All unique.";
+    var got ="";
   }
-  let desc = callerName() + ": Expect all '" + idstr 
+  let desc = "Expect all '" + idstr 
            + "' values in objects in " + arrstr + " array to be unique";
   return {
-    "description": desc,
+    "description": callerName() + desc,
     "error": e,
     "got": got
   };
 }
 exports.Unique = Unique;
 
-function TooLong(arr,arrstr,idstr,elstr,N){
+function TooLong(arr, arrstr, idstr, elstr, N){
   // idstr = "id" for datasets and "name" for parameter.
   var ids = [];
   for (var i = 0;i < arr.length; i++) {
@@ -1645,11 +1807,11 @@ function TooLong(arr,arrstr,idstr,elstr,N){
       ids = ids.slice(0, 10);
       ids.push("\n ... (" + (No - 10) + ") more.");
     }
-    got = arrstr + " has " + No+ " datasets with a " + elstr + " > " 
+    got = arrstr + " has " + No + " datasets with a " + elstr + " &gt; " 
         + N + " characters: \n\n" + ids.join("\n");
   }
   return {
-    "description": callerName() + ": Prefer " + elstr + "s in objects to be &lt;= 40 characters",
+    "description": callerName() + "Prefer " + elstr + "s in objects to be ≤ 40 characters",
     "error": ids.length != 0,
     "got": got
   };
@@ -1657,6 +1819,7 @@ function TooLong(arr,arrstr,idstr,elstr,N){
 exports.TooLong = TooLong;
 
 function CORSAvailable(head) {
+
   var ahead = "Access-Control-Allow-Origin";
   var astr  = head[ahead.toLowerCase()];
   var a     = /\*/.test(astr);
@@ -1670,19 +1833,18 @@ function CORSAvailable(head) {
     b = /GET/.test(bstr);
   }
 
-  var want = "Access-Control-Allow-Origin = '*' and, if given, "
-           + "Access-Control-Allow-Methods to include 'GET'";
-  var got = `Access-Control-Allow-Origin = '${astr}' and, `
+  var want = "<code>Access-Control-Allow-Origin = '*'</code> and, if given, "
+           + "<code>Access-Control-Allow-Methods</code> to include <code>'GET'</code>";
+  var got = `<code>Access-Control-Allow-Origin = '${astr}'</code> and, `
   if (bstr) {
-    got = got + `Access-Control-Allow-Methods '${bstr}'`;
+    got = got + `<code>Access-Control-Allow-Methods '${bstr}'</code>`;
   } else {
-    got = got + "No Access-Control-Allow-Methods header."
+    got = got + "No <code>Access-Control-Allow-Methods</code> header."
   }
   var e = !(a && b);
-  let desc = callerName() 
-           + ": To enable AJAX clients, want CORS HTTP Headers: " + want;
+  let desc = "To enable AJAX clients, want CORS HTTP Headers: " + want;
   return {
-    "description": desc,
+    "description": callerName() + desc,
     "error": e,
     "got": got
   };
@@ -1695,143 +1857,27 @@ function CompressionAvailable(headers){
   // be specified in Accept-Encoding, so error here may be misleading
   // if server can use compress or deflate compression algorithms but
   // not gzip (should be a rare occurence).
-  var got = "No gzip in Content-Encoding header. "
+  var got = "No <code>gzip</code> in <code>Content-Encoding</code> header. "
           + "Compression will usually speed up transfer of data."
   var re = /gzip/;
   if (headers["content-encoding"]) {
     var available = re.test(headers["content-encoding"]);
     if (available) {got = headers["content-encoding"]}
   }
-  let desc = callerName() + ": Expect HTTP Accept-Encoding to match <code>" 
-           + re + "</code>. (Note, only compression tested for is gzip.)";
+  let desc = "Expect HTTP Accept-Encoding to match <code>" + re + "</code>.";
   return {
-    "description": desc,
+    "description": callerName() + desc,
     "error": !available,
-    "got": got
+    "got": !available ? got : ""
   };
 }
 exports.CompressionAvailable = CompressionAvailable;
 
-function ContentType(re,given){
+function ContentType(re, given){
   return {
-    "description": callerName() + ": Expect HTTP Content-Type to match <code>" + re + "</code>",
+    "description": callerName() + "Expect HTTP <code>Content-Type</code> to match <code>" + re + "</code>",
     "error": !re.test(given),
-    "got": given || "No Content-Type header."
+    "got": re.test(given) ? `<code>${given}</code>` : "No match."
   };
 }
 exports.ContentType = ContentType;
-
-function JSONParsable(text) {
-  var ret = {
-      "description": callerName() + ": Expect JSON.parse(response) to not throw error",
-      "error": false,
-      "got": "no error"
-    };
-  try {
-    JSON.parse(text);
-    return ret;
-  } catch (error) {
-    ret.got = "JSON.parse of:\n\n" + text + "\n\nresulted in " + error 
-            + ". Use http://jsonlint.org/ for a more detailed error report. ";
-    ret.error = true;
-    return ret;
-  }
-}
-exports.JSONParsable = JSONParsable;
-
-function HeaderParsable(body) {
-  let description = callerName() + ": Expect header lines in data stream to"
-                  + " be JSON parsable after removal of leading #s.";
-  let ret = {
-    "description": description,
-    "error": false,
-    "got": "no error"
-  };
-
-  let csvparts;
-  try {
-    csvparts = splitCSV(body)
-  } catch (error) {
-    ret.got = "Could not split CSV into header and data parts.";
-    ret.error = true;
-    return ret;
-  }
-  ret.csvparts = csvparts;
-
-  try {
-    JSON.parse(csvparts.header);
-    return ret;
-  } catch (error) {
-    ret.got = "JSON.parse of \n\n" + csvparts.header + "\n\nresulted in "
-            + error + ". Use http://jsonlint.org/ for a more detailed error report. ";
-    ret.error = true;
-    return ret;
-  }
-
-  return ret;
-}
-exports.HeaderParsable = HeaderParsable;
-
-function HAPIJSON(text,version,part){
-
-  let s = schema(version);
-
-  if (!s) {
-    let known = JSON.stringify(Object.keys(schemas));
-    let desc = callerName() + ": Expect HAPI version to be one of <code>" + known + "</code>"; 
-    let got = "Schema version " + version + " not one of <code>" + known + "</code>";
-    return {
-        "description": desc,
-        "error": true,
-        "got": got
-      };
-  }
-
-  if (typeof(text) === "object") {
-    var json = text;
-  } else {
-    var json = JSON.parse(text);
-  }
-  var v = new Validator();
-  // Look for all top-level elements that have an id starting with a /.
-  // These are subschemas that are used.
-  for (key in s) {
-    if (s[key]["id"] && s[key]["id"][0] === "/") {
-      //console.log("Adding schema " + s[key]["id"]);
-      v.addSchema(s[key], s[key]["id"]);
-    }
-  }
-  try {
-    var vr = v.validate(json, s[part]);
-  } catch (e) {
-    console.log(e)
-    return {
-        "description": "is.HAPIJSON(): Call to JSON validator failed.",
-        "error": true,
-        "got": "Schema error: " + e
-      };
-  }
-
-  var ve = vr.errors;
-  var got = "is valid"
-  if (ve.length != 0) {
-    var err = [];
-    for (var i = 0;i < ve.length; i++) {
-      //err[i] = ve[i].property.replace("instance","object") 
-      //       + " " + ve[i].message.replace(/\"/g,"'");
-      err[i] = ve[i].property.replace("instance.","") 
-             + " " + ve[i].message.replace(/\"/g,"'");
-    }
-    got = "\n\t" + JSON.stringify(err,null,4).replace(/\n/g,"\n\t")
-  }
-  let base = "https://github.com/hapi-server/verifier-nodejs/tree/master/";
-  var url = base + "schemas/HAPI-data-access-schema-" + version + ".json";
-  let desc = callerName() + ": Expect body to be valid <a href='" + url + "'>HAPI " 
-           + version + " " + part + " schema</a>. " + HAPIVersionWarning(version);
-  return {
-    "description": desc,
-    "error": ve.length != 0,
-    "got": got
-  };
-}
-exports.HAPIJSON = HAPIJSON;

@@ -11,6 +11,7 @@
 	var testURLs = [
 		"http://hapi-server.org/servers/TestData2.0/hapi",
 		"http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
+    "http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&parameter=scalar&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
 		"http://hapi-server.org/servers/TestData2.1/hapi&version=2.1",
 		"http://hapi-server.org/servers/TestData3.0/hapi&version=2.1",
 		"http://hapi-server.org/servers/SSCWeb/hapi&id=ace",
@@ -60,7 +61,7 @@
 					<code>?url=URL&id={id,dataset}&amp;parameter=PARAMETER</code>&nbsp;&nbsp;(note <code>parameter</code> is not plural - only a single parameter may be specified)
 				</li>
 				<li>
-					<code>?url=URL&id={id,dataset}&amp;parameter=PARAMETER&{time.min,start}=HAPITIME&{time.max,start}=HAPITIME</code>&nbsp;&nbsp;where <code>HAPITIME</code> is decribed in the <a href="https://github.com/hapi-server/data-specification/blob/master/hapi-3.1.0/HAPI-data-access-spec-3.1.0.md#376-representation-of-time">HAPI specification</a>.
+					<code>?url=URL&id={id,dataset}&amp;parameter=PARAMETER&{time.min,start}=HAPIDATETIME&{time.max,start}=HAPIDATETIME</code>&nbsp;&nbsp;where <code>HAPIDATETIME</code> is decribed in the <a href="https://github.com/hapi-server/data-specification/blob/master/hapi-3.1.0/HAPI-data-access-spec-3.1.0.md#376-representation-of-time">HAPI specification</a>.
 				</li>
 				<li>
 					<code>?url=URL&...&metatimeout=MILLISECONDS</code>&nbsp;&nbsp;See below for additional details.

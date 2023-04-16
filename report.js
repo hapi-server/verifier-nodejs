@@ -50,7 +50,7 @@ function report(r,url,obj,opts) {
     r.stats = {"fails": [], "passes": [], "warns": []};
 
     if (reqOpts["output"] === "html") {
-      res.write("<html><body>");
+      res.write("<html><meta charset='UTF-8'><body>");
     }
 
     if (reqOpts["version"]) {
@@ -141,10 +141,19 @@ function writeURL(url, res) {
     return;
   }
 
-  res.write("<br>" 
+  res.write("<hr style='border-bottom: 0px; border-top: 1px solid black'>" 
             + "<font style='color:blue'><a href='" + url + "'>" 
             + url.replace(/\&parameters/,"&amp;parameters") 
             + "</a></font></br>");
+}
+
+function rmHTML(str) {
+  if (typeof str !== 'string') {
+    return str;
+  }
+  return str.replace(/&lt;/g,"<").replace(/&gt;/g,">")
+            .replace(/<code>/g,"").replace(/<\/code>/g,"")
+            .replace(/<a .*?>(.*)<\/a>/gi,"$1")
 }
 
 function writeNote(msg, style, res) {
@@ -157,34 +166,45 @@ function writeNote(msg, style, res) {
 
 function writeResult(obj, status, res) {
 
+  if (status === undefined) {
+    status = obj.error == false ? "pass" : "error";
+  }
+
   if (res === undefined) {
     let icon = clc.green.inverse("✓");
     if (status === "warn") {
-      clc.yellowBright.inverse("⚠");
+      icon = clc.yellowBright.inverse("⚠");
     }
     if (status === "error") {
-      clc.inverse.red("✗");
+      icon = clc.inverse.red("✗");
     }
-    let got = got.replace(/&lt;/g,"<").replace(/&gt;/g,">");
 
-    let desc = obj.description;
-    console.log("  " + icon + ": " + desc + "; Got: " + clc.bold(obj.got));
+    let got = rmHTML(obj.got);
+    let desc = rmHTML(obj.description);
+    let msg = "  " + icon + " " + desc;
+    if (got !== "") {
+      msg = msg + "\n  " + clc.bold("Got: ") + got;
+    }
+    console.log(msg);
     return;
   }
 
-  let icon = "<font style='background-color:green;'><b>&#x2713;</b></font>&nbsp;";
+  let icon = "<font style='background-color:green;'><b>✓</b></font>&nbsp;";
   if (status === "warn") {
-    icon = "<font style='background-color:yellow'><b>&#x26a0;</b></font>";
+    icon = "<font style='background-color:yellow'><b>⚠</b></font>";
   }
   if (status === "error") {
-    icon = "<font style='background-color:red'><b>&#x2717;</b></font>";
+    icon = "<font style='background-color:red'><b>✗</b></font>";
   }
 
   // Get function name from description in obj and replace it
   // with a link to GitHub code.
-  var key = obj.description.replace(/^is\.(.*?)\(.*/,"$1");
-  let description = obj.description.replace(/^(is.*?):/,"<a href='https://github.com/hapi-server/verifier-nodejs/blob/master/is.js#L__LINE__'>$1</a>: ");
-  description = description.replace(/__LINE__/,report.lineobj[key]);
+  let desc = obj.description;
+  var key = desc.replace(/^is\.(.*?)\(.*/,"$1");
+  let base = "<a href='https://github.com/hapi-server/verifier-nodejs/blob/master";
+  desc = desc
+          .replace(/^(is.*?):/, base + "/is.js#L__LINE__'>$1</a>: ")
+          .replace(/__LINE__/, report.lineobj[key]);
   let got = obj.got
               .toString()
               .replace(/\n/g,"<br>");
@@ -193,16 +213,22 @@ function writeResult(obj, status, res) {
               <table>
                 <tr>
                   <th>${icon}</th>
-                  <td>${description}</td>
+                  <td>${desc}</td>
                 </tr>
-                <tr>
-                  <th></th>
-                  <td><b>Got</b>: ${got}</td>
-                </tr>
-              </table>
             `;
+  if (got !== "") {
+    line += `
+            <tr>
+              <th></th>
+              <td><b>Got</b>: ${got}</td>
+            </tr>
+            `;
+  }
+  line += "</table>";
+
   res.write(line);
 }
+exports.writeResult = writeResult;
 
 function summary(r) {
 
@@ -264,17 +290,17 @@ function summary(r) {
       }
       if (reqOpts["output"] === "html") {
         res.write("&nbsp;&nbsp;<font style='color:black;background:yellow'>Warn:</font>&nbsp;" 
-                  + stats.warns[i].description 
+                  + rmHTML(stats.warns[i].description)
                   + "; Got: <b>" 
-                  + stats.warns[i].got.toString().replace(/\n/g,"<br>") 
+                  + rmHTML(stats.warns[i].got)
                   + "</b><br>");
       } else {
         console.log("|  " 
                     + clc.yellowBright.inverse("Warn") 
                     + " " 
-                    + stats.warns[i].description 
+                    + rmHTML(stats.warns[i].description)
                     + "; Got: " 
-                    + clc.bold(stats.warns[i].got));        
+                    + clc.bold(rmHTML(stats.warns[i].got)));
       }
     }
     for (var i = 0; i < stats.fails.length; i++) {
@@ -289,16 +315,16 @@ function summary(r) {
       }
       if (reqOpts["output"] === "html") {
         res.write("&nbsp;&nbsp;<font style='color:black;background:red'>Fail</font>&nbsp;" 
-                  + stats.fails[i].description 
+                  + rmHTML(stats.fails[i].description)
                   + "; Got: <b><pre>" 
-                  + stats.fails[i].got.toString().replace(/</g,"&lt;").replace(/>/g,"&gt;") 
+                  + rmHTML(stats.fails[i].got)
                   + "</pre></b><br>");
       } else {
         console.log("|  " 
                     + clc.red.inverse("Fail") 
-                    + " " + stats.fails[i].description 
+                    + " " + rmHTML(stats.fails[i].description)
                     + "; Got: " 
-                    + clc.bold(stats.fails[i].got));
+                    + clc.bold(rmHTML(stats.fails[i].got)));
       }
     }
   }
@@ -308,17 +334,17 @@ function summary(r) {
     //let localplotserver = /localhost/.test(r.opts["plotserver"]); // r not defined when report() called.
     //let localtesturl = /localhost/.test(url);
     //if ((localplotserver && localtesturl) || !localtesturl) {
-      res.write("<br><br>");
-      res.write("<b>Use the following links for visual checks of data and stress testing server.</b><br><br>")
-      for (var i = 0;i < CATALOG["catalog"].length;i++) {
-        var link = reqOpts["plotserver"] 
-                    + "?server=" 
-                    + reqOpts["url"] 
-                    + "&id=" 
-                    + CATALOG["catalog"][i]["id"] 
-                    + "&format=gallery";
-        res.write("<a target='_blank' href='" + link + "'>" + link + "</a><br>");
-      }
+    res.write("<br>");
+    res.write("<b>Use the following links for visual checks of data and stress testing server.</b><br><br>")
+    for (var i = 0;i < CATALOG["catalog"].length;i++) {
+      var link = reqOpts["plotserver"] 
+                  + "?server=" 
+                  + reqOpts["url"] 
+                  + "&id=" 
+                  + CATALOG["catalog"][i]["id"] 
+                  + "&format=gallery";
+      res.write("<a target='_blank' href='" + link + "'>" + link + "</a><br>");
+    }
     //}
     res.end("</body></html>");
   } else if (reqOpts["output"] === "console") {

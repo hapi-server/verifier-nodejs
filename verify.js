@@ -1,41 +1,52 @@
-var fs   = require('fs');
-var clc  = require('chalk');
-var argv = require('yargs')
-            .help()
-            .default({
-              "port": 9999,
-              "url": "",
-              "id": "",
-              "parameter": "",
-              "timemax": "",
-              "timemin": "",
-              "version": "",
-              "datatimeout": 5000,
-              "metatimeout": 1000,
-              "output": "",
-              "test": false,
-              "plotserver":"http://hapi-server.org/plot"
-            })
-            .argv
+const fs   = require('fs');
+const clc  = require('chalk');
 
-var tests = require('./tests.js'); // Test runner
-var versions = require('./is.js').versions;
+const argv = require('yargs')
+              .help()
+              .default({
+                "port": 9999,
+                "url": "",
+                "id": "",
+                "dataset": "",
+                "parameter": "",
+                "timemax": "",
+                "start": "",
+                "timemin": "",
+                "stop": "",
+                "version": "",
+                "datatimeout": 5000,
+                "metatimeout": 1000,
+                "output": "console",
+                "test": false,
+                "plotserver":"https://hapi-server.org/plot"
+              })
+              .boolean('test')
+              .deprecateOption('id', 'use --dataset')
+              .deprecateOption('timemin', 'use --start')
+              .deprecateOption('timemax', 'use --stop')
+              .choices('output', ['console', 'json'])
+              .argv;
+
+
+const tests = require('./tests.js'); // Test runner
+const versions = require('./is.js').versions; // Array of implemented versions
 
 const nodever = parseInt(process.version.slice(1).split('.')[0]);
 if (parseInt(nodever) < 8) {
   // TODO: On windows, min version is 8
-  console.log(clc.red("!!! node.js version >= 8 required.!!! "
+  console.log(clc.red("!!! Node.js version >= 8 required.!!! "
     + "node.js -v returns " + process.version
-    + ".\nConsider installing https://github.com/creationix/nvm and then 'nvm install 8'.\n"));
+    + ".\nConsider installing https://github.com/creationix/nvm"
+    + " and then 'nvm install 8'.\n"));
   process.exit(1);
 }
 
 function fixurl(q) {
 
   // Allow typical copy/paste error
-  //   ?url=http://server/hapi/info?id=abc
+  //   ?url=http://server/hapi/info?{id,dataset}=abc
   // and treat as equivalent to 
-  //   ?url=http://server/hapi&id=abc
+  //   ?url=http://server/hapi&{id,dataset}=abc
   // for web interface and similar for command line.
 
   if (/\?id=/.test(q['url'])) {
@@ -44,10 +55,17 @@ function fixurl(q) {
                   .split("?id=")[0]
                   .replace(/\/info$|\/data$|\/catalog$/,"")
   }
+  if (/\?dataset=/.test(q['url'])) {
+    q['id'] = q['url'].split("?datset=")[1];
+    q['url'] = q['url']
+                  .split("?dataset=")[0]
+                  .replace(/\/info$|\/data$|\/catalog$/,"")
+  }
   q['url'] = q['url'].replace(/\/$/,"");
 }
 
-if (argv.url !== "" || argv.test) {
+if (argv.url !== "" || argv.test == true) {
+
   // Command-line mode
 
   if (argv.test) {
@@ -60,15 +78,15 @@ if (argv.url !== "" || argv.test) {
   argv.parameter = argv.parameter || argv.parameters || "";
   
   if (argv.version !== "" && !versions().includes(argv.version)) {
-    console.log("Version must be one of ",versions());
+    console.log("Version must be one of ", versions());
   }
 
   let opts = {
     "url": argv["url"],
     "id": argv["id"] || argv["dataset"],
     "parameter": argv["parameter"],
-    "start": argv["timemin"],
-    "stop": argv["timemax"],
+    "start": argv["timemin"] || argv["start"],
+    "stop": argv["timemax"] || argv["stop"],
     "version": argv["version"],
     "output": argv["output"] || "console",
     "datatimeout": argv["datatimeout"],
@@ -77,51 +95,48 @@ if (argv.url !== "" || argv.test) {
   }
 
   tests.run(opts);
-
 } else {
-  // Server mode
-  var express = require('express');
-  var app     = express();
-  var server  = require("http").createServer(app);
 
-  app.get('/favicon.ico', function (req, res, next) {
-    res.setHeader('Content-Type', 'image/x-icon');
-    fs.readFile(__dirname + "/favicon.ico",
-      function (err,data) {
-        res.end(data);
-    });
-  });
+  // Server mode
+  const express = require('express');
+  const app     = express();
+  const server  = require("http").createServer(app);
 
   app.get('/', function (req, res, next) {
 
-    var addr = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-    console.log(new Date().toISOString() + " [verifier] Request from " + addr + ": " + req.originalUrl)
+    let addr = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+    console.log(new Date().toISOString() 
+              + " [verifier] Request from " + addr + ": " + req.originalUrl);
     
-    if (!req.query.url) { // Send html page if no url given in query string
+    if (!req.query.url) { 
+      // Send HTML page if no URL given in query string
       res.contentType("text/html");
-      fs.readFile(__dirname + "/verify.html",function (err,html) {res.end(html);});
+      fs.readFile(__dirname + "/verify.html",
+                    function (err,html) {res.end(html)});
       return;
     }
 
-    var allowed = ["url","id","dataset","parameter","parameters",
+    let allowed = ["url","id","dataset","parameter","parameters",
                    "time.min","start","time.max","stop","version",
                    "datatimeout","metatimeout","output"];
-    for (var key in req.query) {
+    for (let key in req.query) {
       if (!allowed.includes(key)) {
-        res.end("Only allowed parameters are " + allowed.join(",") + " (not "+key+").");
+        res.end("Allowed parameters are " 
+                + allowed.join(",") + " (not " + key + ").");
         return;
       }
     }
 
     fixurl(req.query);
 
-    var version = req.query["version"] || argv["version"];
+    let version = req.query["version"] || argv["version"];
     if (version && !versions().includes(version)) {
-      res.status(400).end("version must be one of " + JSON.stringify(versions()));
+      let vers = JSON.stringify(versions());
+      res.status(400).end("<code>version</code> must be one of " + vers);
     }
 
     let parameter = req.query["parameter"] || req.query["parameters"] || "";
-    if (parameter) {
+    if (parameter.trim() !== "") {
       if (parameter.split(",").length > 1) {
         res.end("Only one parameter may be specified.");
       }
@@ -145,20 +160,29 @@ if (argv.url !== "" || argv.test) {
 
   app.use(errorHandler);
   app.listen(argv.port);
-  console.log(new Date().toISOString() + " [verifier] HAPI verifier listening on port " + argv.port + ". See http://localhost:" + argv.port + "/");
-  console.log(new Date().toISOString() + " [verifier] Using plotserver " + argv.plotserver);
+  console.log(new Date().toISOString() 
+              + " [verifier] HAPI verifier listening on port " 
+              + argv.port + ". See http://localhost:" + argv.port + "/");
+  console.log(new Date().toISOString() 
+              + " [verifier] Using plotserver " + argv.plotserver);
 }
 
 // Uncaught errors in API request code.
 function errorHandler(err, req, res, next) {
   console.error(err.stack);
-  res.end('<div style="border:2px solid black"><b><font style="color:red"><b>Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.</b></font></div>');
+  res.end('<div style="border: 2px solid black; color: red; font-weight: bold; ">'
+        + ' Problem with verification server (Uncaught Exception).'
+        + ' Aborting. Please report last URL shown above in report to the'
+        + ' <a href="https://github.com/hapi-server/verifier-nodejs/issues">'
+        + '   issue tracker'
+        + ' </a>.'
+        + '</div>');
 }
 
 process.on('uncaughtException', function(err) {
   if (err.errno === 'EADDRINUSE') {
-    console.log(clc.red("Port " + argv.port + " already in use."));
+    console.log(clc.red("Port " + argv.port + " is already in use."));
   } else {
     console.log(err.stack);
   }
-})
+});

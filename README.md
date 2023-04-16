@@ -10,8 +10,6 @@ and
 
 http://hapi-server.org/verify-dev
 
-See below to run tests from the command line or a local server.
-
 # Local Installation
 
 Installation is only required if the server to test is not available from a public IP address.
@@ -24,6 +22,8 @@ nvm install
 git clone https://github.com/hapi-server/verifier-nodejs.git
 # Install required Node.js packages
 cd verifier-nodejs; npm install
+# Test
+node verify.js --test
 ```
 
 ## Command-Line Usage
@@ -31,13 +31,15 @@ cd verifier-nodejs; npm install
 ```
 node verify.js
   --url URL
-  [--id DATASETID
+  [--dataset DATASETID
   --parameter PARAMETERNAME
-  --timemin HAPITIME
-  --timemax HAPITIME]
+  --start HAPIDATETIME
+  --stop HAPIDATETIME]
 ```
 
-If `--url URL` is provided, output goes to stdout, and a web server is not started. See `verify.html` for documentation.
+If `--url URL` is provided, output is sent to stdout and a web server is not started. See `verify.html` for documentation.
+
+See `node verify.js --help` for additional options.
 
 ## Server Usage
 
@@ -52,6 +54,23 @@ See http://localhost:9999/ for API documentation.
 ## StackBlitz
 
 [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/edit/verify-nodejs-dev?file=README.md&file=md!README.md)
+
+# Schema Validation Only
+
+To execute a schema validation on file or URL, use
+
+```
+node validate.js <file|URL> [--version HAPIVERSION]
+```
+
+If `version` is not given, the value in the JSON is used.
+
+**Examples**
+
+```
+node validate.js test/json/capabilities.json
+node validate.js http://hapi-server.org/servers/TestData2.0/hapi/capabilities
+```
 
 # Contact
 

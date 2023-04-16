@@ -24,7 +24,7 @@
     "jsonschema": "^1.1.1",
     "moment": "^2.29.3",
     "request": "^2.81.0",
-    "yargs": "^8.0.2"
+    "yargs": "^17.7.1"
   },
   "scripts": {
     "start": "node verify.js --port 9999",

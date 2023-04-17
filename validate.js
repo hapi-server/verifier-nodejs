@@ -4,6 +4,7 @@ const request = require('request');
 
 const is = require('./is.js');
 const writeResult = require('./report.js').writeResult;
+const writeURL = require('./report.js').writeURL;
 
 const argv = require('yargs')
               .usage("$0 <url|file> [options]")
@@ -19,6 +20,7 @@ const argv = require('yargs')
 
 const arg = argv['_'][0];
 
+writeURL(arg);
 if (arg.startsWith('http')) {
   request(arg, (err, res, body) => {
     if (!err) validate(body); return;

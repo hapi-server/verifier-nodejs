@@ -146,6 +146,7 @@ function writeURL(url, res) {
             + url.replace(/\&parameters/,"&amp;parameters") 
             + "</a></font></br>");
 }
+exports.writeURL = writeURL;
 
 function rmHTML(str) {
   if (typeof str !== 'string') {

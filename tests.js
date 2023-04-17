@@ -189,18 +189,8 @@ function run(opts, REQ, RES) {
           return;
         }
 
-        let outputFormats = json.outputFormats || "No outputFormats element."
-        // Existence of 'csv' can't be checked easily with schema using enum.
-        // (Could be done using oneOf for outputFormats and have csv be in emum
-        // array for each of the objects in oneOf.)
-        // Possible solution?: https://stackoverflow.com/a/17940765
-        report(r,url,
-            {
-              "description":"Expect outputFormats to have 'csv'",
-              "error": outputFormats.indexOf("csv") == -1,
-              "got": outputFormats.toString()
-            });
-        catalog(outputFormats);
+        report(r,url,is.AllowedOutputFormat(json));
+        catalog(json["outputFormats"]);
       });
   }
 
@@ -395,7 +385,7 @@ function run(opts, REQ, RES) {
       if ((localplotserver && localtesturl) || localtesturl == false) {
         var link = opts["plotserver"]+"?server=" + opts["url"] + "&id=" + id + "&format=gallery";
         var note = "<a target='_blank' href='" + link + "'>Visually check data and test performance</a>";
-        RES.write("&thinsp;&thinsp;&#128065;&nbsp;:" + note + "<br>");
+        RES.write("&thinsp;👁&nbsp;" + note + "<br>");
       }
     }
 
@@ -1143,7 +1133,7 @@ function run(opts, REQ, RES) {
             var note = "<a target='_blank' href='" + link + "'>Direct link for following plot.</a>. "
                      + "Please report any plotting issues at "
                      + "<a target='_blank' href='https://github.com/hapi-server/plot-python/issues'>the Python <code>hapiplot</code> GitHub page</a>.";
-            RES.write("&nbsp&nbsp;&nbsp&nbsp;<font style='color:black'>&#x261E</font>:&nbsp" + note + "<br><img src='" + link + "'/><br>");
+            RES.write("&nbsp&nbsp;<font style='color:black'>☞</font>&nbsp" + note + "<br><img src='" + link + "'/><br>");
           }
         }
 

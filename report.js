@@ -183,6 +183,8 @@ function writeResult(obj, status, res) {
     let desc = rmHTML(obj.description);
     let msg = "  " + icon + " " + desc;
     if (got !== "") {
+      got = got.split("\n");
+      got = got[0] + got.slice(1, got.length).join("\n       ");
       msg = msg + "\n  " + clc.bold("Got: ") + got;
     }
     console.log(msg);
@@ -238,43 +240,35 @@ function summary(r) {
   let stats = r.stats;
 
   if (reqOpts["output"] === "html") {
-    res.write("<p>End of validation tests.</p>"
-            + "<p>Summary: "
+    res.write("<p>End of validation tests. "
+            + "Summary: "
             + "<font style='color:black;background:green'>Pass</font>: "
-            + stats.passes.length + ". "
-            + "<font style='color:black;background:yellow'>Warns</font>:"
-            + stats.warns.length + ". "
-            + "<font style='background:red;color:black'>Fails</font>:"
-            + stats.fails.length + ".");
-  } else if (reqOpts["output"] === "console") {
-    console.log("End of validation tests.");
-  }
-  if (stats.warns.length + stats.fails.length > 0) {
-    if (reqOpts["output"] === "html") {
+            + stats.passes.length + "; "
+            + "<font style='color:black;background:yellow'>Warns</font>: "
+            + stats.warns.length + "; "
+            + "<font style='background:red;color:black'>Fails</font>: "
+            + stats.fails.length + ". ");
+    if (stats.warns.length + stats.fails.length > 0) {
       res.write("Warnings and failures repeated below.</p>");
-    } else if (reqOpts["output"] === "console") {
-      console.log("\nWarnings and failures repeated below.");
     }
   }
 
   if (reqOpts["output"] === "console") {
-    console.log("*".repeat(80));
-    console.log("Summary: " 
-                  + clc.green.inverse('Pass') 
-                  + ": " 
-                  + stats.passes.length 
-                  + ". " 
-                  + clc.yellowBright.inverse('Warn') 
-                  + ": " 
-                  + stats.warns.length 
-                  + ". " 
-                  + clc.inverse.red('Fail') 
-                  + ": " + stats.fails.length 
-                  + ".");
+    let msg = "\nEnd of validation tests. "
+              + clc.green.inverse('Pass') 
+              + ": " 
+              + stats.passes.length 
+              + "; " 
+              + clc.yellowBright.inverse('Warn') 
+              + ": " 
+              + stats.warns.length 
+              + "; " 
+              + clc.inverse.red('Fail') 
+              + ": " + stats.fails.length;
     if (stats.warns.length + stats.fails.length > 0) {
-      console.log("Warnings and failures repeated below.");
+      msg += ". Warnings and failures repeated below.";
     } 
-    console.log("*".repeat(80));
+    console.log(msg + "\n");
   }
 
   if (reqOpts["output"] !== "json") {
@@ -286,22 +280,9 @@ function summary(r) {
                   + stats.warns[i].url.replace(/\&parameters/,"&amp;parameters") 
                   + "</a><br>");
       } else {
-        console.log("|" + clc.blue(stats.warns[i].url));
+        console.log(clc.blue(stats.warns[i].url));
       }
-      if (reqOpts["output"] === "html") {
-        res.write("&nbsp;&nbsp;<font style='color:black;background:yellow'>Warn:</font>&nbsp;" 
-                  + rmHTML(stats.warns[i].description)
-                  + "; Got: <b>" 
-                  + rmHTML(stats.warns[i].got)
-                  + "</b><br>");
-      } else {
-        console.log("|  " 
-                    + clc.yellowBright.inverse("Warn") 
-                    + " " 
-                    + rmHTML(stats.warns[i].description)
-                    + "; Got: " 
-                    + clc.bold(rmHTML(stats.warns[i].got)));
-      }
+      writeResult(stats.warns[i],'warn',res);
     }
     for (var i = 0; i < stats.fails.length; i++) {
       if (reqOpts["output"] === "html") {
@@ -311,21 +292,9 @@ function summary(r) {
                   + stats.fails[i].url.replace(/\&parameters/,"&amp;parameters") 
                   + "</a><br>");
       } else {
-        console.log("|" + clc.blue(stats.fails[i].url));
+        console.log(clc.blue(stats.fails[i].url));
       }
-      if (reqOpts["output"] === "html") {
-        res.write("&nbsp;&nbsp;<font style='color:black;background:red'>Fail</font>&nbsp;" 
-                  + rmHTML(stats.fails[i].description)
-                  + "; Got: <b><pre>" 
-                  + rmHTML(stats.fails[i].got)
-                  + "</pre></b><br>");
-      } else {
-        console.log("|  " 
-                    + clc.red.inverse("Fail") 
-                    + " " + rmHTML(stats.fails[i].description)
-                    + "; Got: " 
-                    + clc.bold(rmHTML(stats.fails[i].got)));
-      }
+      writeResult(stats.fails[i],'fail',res);
     }
   }
 

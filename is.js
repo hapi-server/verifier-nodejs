@@ -136,7 +136,7 @@ exports.HAPIVersionSame = HAPIVersionSame;
 
 function HAPIVersion(version) {
 
-  let got = version;
+  let got = "<code>" + version + "</code>";
   let err = false;
   if (!versions().includes(version)) {
     err = true;
@@ -1273,6 +1273,20 @@ function checkdims(units, size, version) {
   }
 }
 
+function AllowedOutputFormat(json) {
+  // Existence of 'csv' can't be checked easily with schema using enum.
+  // (Could be done using oneOf for outputFormats and have csv be in emum
+  // array for each of the objects in oneOf.)
+  // Possible solution?: https://stackoverflow.com/a/17940765
+  let outputFormats = json.outputFormats || "No outputFormats element."
+  return {
+        "description": "Expect <code>outputFormats</code> to have '<code>csv</code>'",
+        "error": outputFormats.indexOf("csv") == -1,
+        "got": "<code>" + outputFormats.join(", ") + "</code>"
+  };
+}
+exports.AllowedOutputFormat = AllowedOutputFormat;
+
 function UnitsOK(name, units, type, size) {
 
   if (type === 'isotime') {
@@ -1796,11 +1810,11 @@ function TooLong(arr, arrstr, idstr, elstr, N){
     if (!arr[i][elstr]) continue;
     if (arr[i][elstr]) {
       if (arr[i][elstr].length > N) {
-        ids.push("id: '" + arr[i][idstr] + "'; title: '" + arr[i][elstr] + "'");
+        ids.push("id: '<code>" + arr[i][idstr] + "</code>'; title: '" + arr[i][elstr] + "'");
       }
     }
   }
-  var got = "All titles in " + arrstr + " ≤ " + N + " characters"
+  var got = "All titles in '<code>" + arrstr + "</code>' ≤ " + N + " characters"
   let No = ids.length;
   if (ids.length > 0) {
     if (ids.length > 10) {
@@ -1835,11 +1849,11 @@ function CORSAvailable(head) {
 
   var want = "<code>Access-Control-Allow-Origin = '*'</code> and, if given, "
            + "<code>Access-Control-Allow-Methods</code> to include <code>'GET'</code>";
-  var got = `<code>Access-Control-Allow-Origin = '${astr}'</code> and, `
+  var got = `<code>Access-Control-Allow-Origin = '${astr}'</code> and, `;
   if (bstr) {
     got = got + `<code>Access-Control-Allow-Methods '${bstr}'</code>`;
   } else {
-    got = got + "No <code>Access-Control-Allow-Methods</code> header."
+    got = got + "No <code>Access-Control-Allow-Methods</code> header.";
   }
   var e = !(a && b);
   let desc = "To enable AJAX clients, want CORS HTTP Headers: " + want;

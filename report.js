@@ -274,36 +274,16 @@ function summary(r) {
 
   if (reqOpts["output"] !== "json") {
     for (var i = 0;i < stats.warns.length; i++) {
-      if (reqOpts["output"] === "html") {
-        res.write("<br><a href='" 
-                  + stats.warns[i].url.replace(/\&parameters/,"&amp;parameters") 
-                  + "'>" 
-                  + stats.warns[i].url.replace(/\&parameters/,"&amp;parameters") 
-                  + "</a><br>");
-      } else {
-        console.log(clc.blue(stats.warns[i].url));
-      }
+      writeURL(stats.warns[i].url, res);
       writeResult(stats.warns[i],'warn',res);
     }
     for (var i = 0; i < stats.fails.length; i++) {
-      if (reqOpts["output"] === "html") {
-        res.write("<br><a href='" 
-                  + stats.fails[i].url.replace(/\&parameters/,"&amp;parameters") 
-                  + "'>" 
-                  + stats.fails[i].url.replace(/\&parameters/,"&amp;parameters") 
-                  + "</a><br>");
-      } else {
-        console.log(clc.blue(stats.fails[i].url));
-      }
+      writeURL(stats.fails[i].url, res);
       writeResult(stats.fails[i],'fail',res);
     }
   }
 
   if (reqOpts["output"] === "html") {
-    // TODO: Next three lines also appear in tests.js
-    //let localplotserver = /localhost/.test(r.opts["plotserver"]); // r not defined when report() called.
-    //let localtesturl = /localhost/.test(url);
-    //if ((localplotserver && localtesturl) || !localtesturl) {
     res.write("<br>");
     res.write("<b>Use the following links for visual checks of data and stress testing server.</b><br><br>")
     for (var i = 0;i < CATALOG["catalog"].length;i++) {
@@ -315,7 +295,6 @@ function summary(r) {
                   + "&format=gallery";
       res.write("<a target='_blank' href='" + link + "'>" + link + "</a><br>");
     }
-    //}
     res.end("</body></html>");
   } else if (reqOpts["output"] === "console") {
     if (stats.fails.length == 0) {

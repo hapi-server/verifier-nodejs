@@ -9,8 +9,8 @@ const argv =
           .default({
             "server1": "https://hapi-server.org/servers/TestData2.0/hapi",
             "server2": "https://hapi-server.org/servers/TestData2.0/hapi",
-            "name1": "1 ",
-            "name2": "2 ",
+            "name1": "1",
+            "name2": "2",
             "dataset": "",
             "parameters": "",
             "start": "",
@@ -25,15 +25,18 @@ const argv =
 argv['server1'] = argv['server1'].replace(/\/$/,"");
 argv['server2'] = argv['server2'].replace(/\/$/,"");
 
+console.log(`${argv['name1']} = ${argv['server1']}`);
+console.log(`${argv['name2']} = ${argv['server2']}\n`);
+
 if (argv['dataset'] === '') {
-  get(`${argv['server1']}/catalog`, "1 ", (err, res) => {
+  get(`${argv['server1']}/catalog`, "1", (err, res) => {
 
     const body = parseResponse(err, res);
     const datasets = body['catalog'];
 
     argv['dataset'] = datasets[0]['id'];    
     if (argv['parameters'] === '' || argv['start'] === '' || argv['stop'] === '') {
-      get(`${argv['server1']}/info?id=${argv['dataset']}`, "1 ", 
+      get(`${argv['server1']}/info?id=${argv['dataset']}`, "1", 
         (err, res) => {
           const info = JSON.parse(res['body']);
           startstop(argv, info);
@@ -90,7 +93,7 @@ function run(argv) {
       if (err) {
         console.log("Error:")
         console.error(err);
-        console.log("Exiting with code 1")
+        console.log("Exiting with code 1");
         process.exit(1);
       }
 
@@ -122,7 +125,7 @@ function run(argv) {
 
 function get(url, msgPrefix, cb) {
 
-  console.log(msgPrefix + clc.blue('Getting ' + url));
+  console.log(msgPrefix + clc.blue(' Getting ' + url));
 
   let opts = {"url": url, "time": true};
   request(opts,

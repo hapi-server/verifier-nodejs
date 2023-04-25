@@ -1,129 +1,188 @@
-var fs   = require('fs');
-var clc  = require('chalk');
-var argv = require('yargs')
-				.default({
-					"port": 9999,
-					"url": "",
-					"id": "",
-					"parameter": "",
-					"timemax": "",
-					"timemin": "",
-					"version": "",
-					"plotserver":"http://hapi-server.org/plot"
-				})
-				.argv
+const fs   = require('fs');
+const clc  = require('chalk');
 
-var tests = require('./tests.js'); // Test runner
-var versions = require('./is.js').versions;
+const argv = require('yargs')
+              .help()
+              .default({
+                "port": 9999,
+                "url": "",
+                "id": "",
+                "dataset": "",
+                "parameter": "",
+                "timemax": "",
+                "start": "",
+                "timemin": "",
+                "stop": "",
+                "version": "",
+                "datatimeout": 5000,
+                "metatimeout": 1000,
+                "output": "console",
+                "test": false,
+                "plotserver":"https://hapi-server.org/plot"
+              })
+              .boolean('test')
+              .deprecateOption('id', 'use --dataset')
+              .deprecateOption('timemin', 'use --start')
+              .deprecateOption('timemax', 'use --stop')
+              .choices('output', ['console', 'json'])
+              .argv;
 
-const ver  = parseInt(process.version.slice(1).split('.')[0]);
 
-if (parseInt(ver) < 8) {
+const tests = require('./tests.js'); // Test runner
+const versions = require('./is.js').versions; // Array of implemented versions
+
+const nodever = parseInt(process.version.slice(1).split('.')[0]);
+if (parseInt(nodever) < 8) {
   // TODO: On windows, min version is 8
-  console.log(clc.red("!!! node.js version >= 8 required.!!! "
+  console.log(clc.red("!!! Node.js version >= 8 required.!!! "
     + "node.js -v returns " + process.version
-    + ".\nConsider installing https://github.com/creationix/nvm and then 'nvm install 8'.\n"));
+    + ".\nConsider installing https://github.com/creationix/nvm"
+    + " and then 'nvm install 8'.\n"));
   process.exit(1);
 }
 
-function fixurl(url, q) {
+function fixurl(q) {
 
-	// Allow typical copy/paste error
-	//   ?url=http://server/hapi/info?id=abc
-	// and treat as equivalent to 
-	//   ?url=http://server/hapi&id=abc
-	// for web interface and similar for command line.
+  // Allow typical copy/paste error
+  //   ?url=http://server/hapi/info?{id,dataset}=abc
+  // and treat as equivalent to 
+  //   ?url=http://server/hapi&{id,dataset}=abc
+  // for web interface and similar for command line.
 
-	if (/\?id=/.test(q['url'])) {
-		q['id'] = q['url'].split("?id=")[1];
-		q['url'] = q['url']
-									.split("?id=")[0]
-									.replace(/\/info$|\/data$|\/catalog$/,"")
-									.replace(/\/$/,"")
-	}
-
+  if (/\?id=/.test(q['url'])) {
+    q['id'] = q['url'].split("?id=")[1];
+    q['url'] = q['url']
+                  .split("?id=")[0]
+                  .replace(/\/info$|\/data$|\/catalog$/,"")
+  }
+  if (/\?dataset=/.test(q['url'])) {
+    q['id'] = q['url'].split("?datset=")[1];
+    q['url'] = q['url']
+                  .split("?dataset=")[0]
+                  .replace(/\/info$|\/data$|\/catalog$/,"")
+  }
+  q['url'] = q['url'].replace(/\/$/,"");
 }
 
-if (argv.url !== "") {
-	// Command-line mode
+if (argv.url !== "" || argv.test == true) {
 
-	fixurl(argv.url, argv);
+  // Command-line mode
 
-	argv.parameter = argv.parameter || argv.parameters || "";
-	
-	if (argv.version !== "" && !versions().includes(argv.version)) {
-		console.log("Version must be one of ",versions());
-	}
+  if (argv.test) {
+    argv.url = "https://hapi-server.org/servers/TestData2.0/hapi";
+    argv.id = "dataset1";
+  }
 
-	tests.run(argv.url,argv.id,argv.parameter,argv["timemin"],argv["timemax"],argv["version"],argv.plotserver);
+  fixurl(argv);
+
+  argv.parameter = argv.parameter || argv.parameters || "";
+  
+  if (argv.version !== "" && !versions().includes(argv.version)) {
+    console.log("Version must be one of ", versions());
+  }
+
+  let opts = {
+    "url": argv["url"],
+    "id": argv["id"] || argv["dataset"],
+    "parameter": argv["parameter"],
+    "start": argv["timemin"] || argv["start"],
+    "stop": argv["timemax"] || argv["stop"],
+    "version": argv["version"],
+    "output": argv["output"] || "console",
+    "datatimeout": argv["datatimeout"],
+    "metatimeout": argv["metatimeout"],
+    "plotserver": argv["plotserver"]
+  }
+
+  tests.run(opts);
 } else {
-	// Server mode
-	var express = require('express');
-	var app     = express();
-	var server  = require("http").createServer(app);
 
-	// Not working.
-	app.use(function(err, req, res, next) {
-  		res.end('Application error.');
-	});
+  // Server mode
+  const express = require('express');
+  const app     = express();
+  const server  = require("http").createServer(app);
 
-	app.get('/favicon.ico', function (req, res, next) {
-		res.setHeader('Content-Type', 'image/x-icon');
-		fs.readFile(__dirname + "/favicon.ico",function (err,data) {res.end(data);});
-	});
+  app.get('/', function (req, res, next) {
 
-	app.get('/', function (req, res, next) {
+    let addr = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+    console.log(new Date().toISOString() 
+              + " [verifier] Request from " + addr + ": " + req.originalUrl);
+    
+    if (!req.query.url) { 
+      // Send HTML page if no URL given in query string
+      res.contentType("text/html");
+      fs.readFile(__dirname + "/verify.html",
+                    function (err,html) {res.end(html)});
+      return;
+    }
 
-		var addr = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-		console.log(new Date().toISOString() + " [verifier] Request from " + addr + ": " + req.originalUrl)
-		
-		if (!req.query.url) { // Send html page if no url given in query string
-			res.contentType("text/html");
-			fs.readFile(__dirname + "/verify.html",function (err,html) {res.end(html);});
-			return;
-		}
+    let allowed = ["url","id","dataset","parameter","parameters",
+                   "time.min","start","time.max","stop","version",
+                   "datatimeout","metatimeout","output"];
+    for (let key in req.query) {
+      if (!allowed.includes(key)) {
+        res.end("Allowed parameters are " 
+                + allowed.join(",") + " (not " + key + ").");
+        return;
+      }
+    }
 
-		var allowed = ["url","id","parameter","parameters","time.min","time.max","version","datatimeout","metatimeout"];
-		for (var key in req.query) {
-			if (!allowed.includes(key)) {
-				res.end("Only allowed parameters are " + allowed.join(",") + " (not "+key+").");
-				return;
-			}
-		}
+    fixurl(req.query);
 
-		fixurl(req.query.url, req.query);
+    let version = req.query["version"] || argv["version"];
+    if (version && !versions().includes(version)) {
+      let vers = JSON.stringify(versions());
+      res.status(400).end("<code>version</code> must be one of " + vers);
+    }
 
-		var url   = req.query["url"]       || ""
-		var id    = req.query["id"]        || ""
-		var param = req.query["parameter"] || req.query["parameters"] || ""
-		var start = req.query["time.min"]  || ""
-		var stop  = req.query["time.max"]  || ""
-		var datatimeout = parseInt(req.query["datatimeout"]) || ""
-		var metatimeout = parseInt(req.query["metatimeout"]) || ""
+    let parameter = req.query["parameter"] || req.query["parameters"] || "";
+    if (parameter.trim() !== "") {
+      if (parameter.split(",").length > 1) {
+        res.end("Only one parameter may be specified.");
+      }
+    }
 
-		var version = req.query["version"] || argv.version;
-		if (version && !versions().includes(version)) {
-			res.status(400).end("version must be one of " + JSON.stringify(versions()));
-		}
+    let opts = {
+      "url": req.query["url"] || "",
+      "id": req.query["id"] || req.query["dataset"] || "",
+      "parameter": parameter,
+      "start": req.query["time.min"] || req.query["start"] || "",
+      "stop": req.query["time.max"]  || req.query["start"] || "",
+      "version": version,
+      "output": req.query["output"] || "html",
+      "datatimeout": parseInt(req.query["datatimeout"]) || argv["datatimeout"],
+      "metatimeout": parseInt(req.query["metatimeout"]) || argv["metatimeout"],
+      "plotserver": req.query["plotserver"] || argv["plotserver"]
+    }
 
-		if (param) {
-			if (param.split(",").length > 1) {
-				res.end("Only one parameter may be specified.");
-			}
-		}
-		tests.run(url,id,param,start,stop,version,datatimeout,metatimeout,req,res,argv.plotserver);
+    tests.run(opts,req,res);
+  });
 
-	})
+  app.use(errorHandler);
+  app.listen(argv.port);
+  console.log(new Date().toISOString() 
+              + " [verifier] HAPI verifier listening on port " 
+              + argv.port + ". See http://localhost:" + argv.port + "/");
+  console.log(new Date().toISOString() 
+              + " [verifier] Using plotserver " + argv.plotserver);
+}
 
-	app.listen(argv.port);
-	console.log(new Date().toISOString() + " [verifier] HAPI verifier listening on port " + argv.port + ". See http://localhost:" + argv.port + "/");
-	console.log(new Date().toISOString() + " [verifier] Using plotserver " + argv.plotserver);
+// Uncaught errors in API request code.
+function errorHandler(err, req, res, next) {
+  console.error(err.stack);
+  res.end('<div style="border: 2px solid black; color: red; font-weight: bold; ">'
+        + ' Problem with verification server (Uncaught Exception).'
+        + ' Aborting. Please report last URL shown above in report to the'
+        + ' <a href="https://github.com/hapi-server/verifier-nodejs/issues">'
+        + '   issue tracker'
+        + ' </a>.'
+        + '</div>');
 }
 
 process.on('uncaughtException', function(err) {
-	if (err.errno === 'EADDRINUSE') {
-		console.log(clc.red("Port " + argv.port + " already in use."));
-	} else {
-		console.log(err.stack);
-	}
-})
+  if (err.errno === 'EADDRINUSE') {
+    console.log(clc.red("Port " + argv.port + " is already in use."));
+  } else {
+    console.log(err.stack);
+  }
+});

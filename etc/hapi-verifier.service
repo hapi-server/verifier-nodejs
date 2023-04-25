@@ -1,8 +1,8 @@
-# sudo cp hapi-verifier.service /lib/systemd/system
-# sudo chmod 644 /lib/systemd/system/hapi-verifier.service
-# sudo systemctl enable hapi-verifier
-# sudo systemctl start hapi-verifier
-# sudo systemctl status hapi-verifier
+# sudo cp hapi-verifier-dev.service /lib/systemd/system
+# sudo chmod 644 /lib/systemd/system/hapi-verifier-dev.service
+# sudo systemctl enable hapi-verifier-dev
+# sudo systemctl start hapi-verifier-dev
+# sudo systemctl status hapi-verifier-dev
 
 
 [Unit]
@@ -12,8 +12,12 @@ Documentation=https://github.com/rweigel/hapi-server/verifier-nodejs
 [Service]
 Type=simple
 User=ubuntu
+CPUWeight=10
+CPUQuota=20%
+IOWeight=20
+MemorySwapMax=0
 WorkingDirectory=/home/ubuntu/verifier-nodejs
-ExecStart=/home/ubuntu/.nvm/versions/node/v16.2.0/bin/node verify.js --port 9997
+ExecStart=bash etc/start.sh
 Restart=always
 
 [Install]

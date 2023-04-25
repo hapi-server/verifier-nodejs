@@ -12,8 +12,12 @@ Documentation=https://github.com/rweigel/hapi-server/verifier-nodejs
 [Service]
 Type=simple
 User=ubuntu
+CPUWeight=10
+CPUQuota=20%
+IOWeight=20
+MemorySwapMax=0
 WorkingDirectory=/home/ubuntu/verifier-nodejs-dev
-ExecStart=/home/ubuntu/.nvm/versions/node/v16.2.0/bin/node verify.js --port 9996
+ExecStart=bash etc/start-dev.sh
 Restart=always
 
 [Install]

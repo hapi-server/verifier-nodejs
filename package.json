@@ -1,10 +1,10 @@
 {
   "name": "hapi-server-verifier",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "license": "MIT",
   "engine-strict": true,
   "engines": {
-    "node": ">=6"
+    "node": ">=8"
   },
   "people": {
     "name": "Bob Weigel",
@@ -16,6 +16,7 @@
     "url": "https://github.com/hapi-server/verifier-nodejs.git"
   },
   "dependencies": {
+    "async": "^3.2.4",
     "chalk": "^2",
     "deep-diff": "^1.0.2",
     "express": "^4.15.3",
@@ -23,11 +24,14 @@
     "jsonschema": "^1.1.1",
     "moment": "^2.29.3",
     "request": "^2.81.0",
-    "yargs": "^8.0.2",
-    "yarn": "^1.22.19"
+    "yargs": "^17.7.1"
   },
   "scripts": {
     "start": "node verify.js --port 9999",
-    "start2": "node verify.js --port 9999 --plotserver 'http://localhost:5000/'"
+    "start2": "node verify.js --port 9999 --plotserver 'http://localhost:5000/'",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "tinyify": "^4.0.0"
   }
 }

@@ -1,3 +1,5 @@
+# Notes
+
 The `HAPI 3.1` schema has the proposed `encoding` element. The `TestData3.1` server has datasets and parameters with Unicode, which have always been allowed. The change in `3.1` is to allow string data to be Unicode encoded as UTF-8. The `TestData3.1` server also serves parameters with Unicode.
 
 As written, `encoding` is allowed for any of `type=`, `string`, `isotime`, `integer`, and `double`. It should only be allowed for `type=string`.

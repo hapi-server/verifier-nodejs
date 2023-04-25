@@ -1,23 +1,5 @@
-HAPI 3.0 is a copy of 2.1.
+# Notes
 
-`server-nodejs` handles 3.0 metadata (resolves references).
-
-The schema needs to allow references and also check resolved metadata.
-
-May need to revise all schema to have
-
-````json
-"patternProperties": {
-    "x_.*": {
-        "enum": ["number", "string", "boolean", "object", "array", "null"]
-    }
-}
-```
-
-instead of
-
-````json
-"patternProperties": {
-    "x_.*": {}
-}
-```
+* Need to allow references
+* Verifier needs to check resolved metadata against schema (don't think this can be done in JSON schema)
+* `server-nodejs` handles 3.0 metadata (resolves references).

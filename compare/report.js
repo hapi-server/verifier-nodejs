@@ -6,21 +6,28 @@ function report(argv, infos, data) {
   log.argv = argv;
 
   let errs = 0;
-  errs += timings(data[0]['timing'], data[1]['timing'], argv);
-  errs += headers(data[0]['headers'], data[1]['headers'], argv)
+
+  if (data != null) {
+    errs += timings(data[0]['timing'], data[1]['timing'], argv);
+    errs += headers(data[0]['headers'], data[1]['headers'], argv)
+  }
 
   // Get matching info parameters until difference
   errs += info(infos, argv);
 
+  if (data == null) {
+    return errs;
+  } 
+
   let ct1 = data[0]['headers']['content-type'];
   let ct2 = data[1]['headers']['content-type'];
-
   if (ct1.includes('csv') && ct2.includes('csv')) {
     errs += csv(data[0]['body'], data[1]['body'], infos[0], argv);
   } else {
     log("content-types are not both csv",true);
     errs += 1;
   }
+  return errs;
 }
 exports.report = report;
 
@@ -117,7 +124,6 @@ function headers(h1, h2, argv) {
 function info(infos, argv) {
 
   let infoDiffs = 0;
-
   function equals(a,b,name) {
 
     if (typeof a != typeof b) {
@@ -128,8 +134,8 @@ function info(infos, argv) {
     }
 
     if (a === null && b === null) {
-      log(`1 ${null}`,0);
-      log(`2 ${null}`,0);
+      log(`1 ${null}`,false);
+      log(`2 ${null}`,false);
       return true;
     }
 
@@ -148,8 +154,6 @@ function info(infos, argv) {
         if (!equals(a[i], b[i], `${name}[${i}]`)) {
           diff = true;
         }
-        //log(`1 ${name}[${i}] = ${a[i]}`,diff);
-        //log(`2 ${name}[${i}] = ${b[i]}`,diff);
       }
       let ldiff = false;
       if (a.length != b.length) {
@@ -158,7 +162,7 @@ function info(infos, argv) {
       }
       log(`1 ${name}.length = ${a.length}`,ldiff);
       log(`2 ${name}.length = ${b.length}`,ldiff);
-      return diff == true;
+      return diff == true || ldiff == true;
     }
 
     if (typeof a === 'object' && typeof b === 'object') {
@@ -185,13 +189,38 @@ function info(infos, argv) {
         diff = true;
         diffs++;
         infoDiffs++;
-        log(`1 ${key} = ${a[key]}`,diff);
-        log(`2 ${key} = ${b[key]}`,diff);
+        log(`1 ${name}['${key}'] = ${a[key]}`,diff);
+        log(`2 ${name}['${key}'] = ${b[key]}`,diff);
       }
       return diffs.length > 0;
     }
 
     return true;
+  }
+
+
+  function namecheck(p1, p2) {
+
+    let ldiff = false;
+    if (p1.length != p2.length) {
+      infoDiffs++;
+      ldiff = true;
+    }
+    log(`1 parameters.length = ${p1.length}`,ldiff);
+    log(`2 parameters.length = ${p2.length}`,ldiff);
+
+    let ndiff = false;
+    for (let p in p1) {
+      ndiff = false;
+      if (p1[p]['name'] !== p2[p]['name']) {
+        infoDiffs++;
+        ndiff = true;
+        log(`1 parameters[${p}]['name'] = ${p1[p]['name']}`,ndiff);
+        log(`2 parameters[${p}]['name'] = ${p2[p]['name']}`,ndiff);
+      }
+    }
+
+    return ldiff == true || ndiff == true;
   }
 
   log("/info",'title');
@@ -205,9 +234,18 @@ function info(infos, argv) {
   delete infos[0]['status'];
   delete infos[1]['status'];
 
-  equals(infos[0],infos[1],'info');
+  if (true || argv['namesonly']) {
+    namecheck(infos[0]['parameters'],infos[1]['parameters']);
+  } else {
+    equals(infos[0],infos[1],'info');    
+  }
 
-  let msg = `${infoDiffs} difference${plural(infoDiffs)}`;
+  let post = "";
+  if (argv['namesonly']) {
+    let np = infos[0].parameters.length;
+    post = ` in ${np} parameter name${plural(np)}`;
+  }
+  let msg = `${infoDiffs} difference${plural(infoDiffs)}${post}`;
   console.log('-'.repeat(4));
   if (infoDiffs === 0) {
     log(msg,'pass-summary');

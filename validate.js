@@ -21,6 +21,7 @@ const argv = require('yargs')
 const arg = argv['_'][0];
 
 writeURL(arg);
+
 if (arg.startsWith('http')) {
   request(arg, (err, res, body) => {
     if (!err) validate(body); return;

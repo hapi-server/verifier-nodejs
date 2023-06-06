@@ -78,7 +78,7 @@ function getVersion(argv, json) {
     if (versionResult['error'] == true) {
       process.exit(1);
     } else {
-      version = json['HAPI'];        
+      version = json['HAPI'];
     }
   }
 
@@ -86,6 +86,7 @@ function getVersion(argv, json) {
 }
 
 function inferSubSchema(json) {
+  console.log(json)
   if (json['id']) {
     return "about";
   }
@@ -97,9 +98,9 @@ function inferSubSchema(json) {
   }
   if (json['parameters']) {
     if (json['data']) {
-      return "info";
-    } else {
       return "data";
+    } else {
+      return "info";
     }
   }
 }

@@ -135,14 +135,16 @@ function HAPIVersionSame(url, version, urlLast, versionLast) {
 }
 exports.HAPIVersionSame = HAPIVersionSame;
 
-function HAPIVersion(version) {
+function HAPIVersion(version, ignoreVersionError) {
 
   let got = "<code>" + version + "</code>";
   let err = false;
   if (!versions().includes(version)) {
     err = true;
-    got = "'<code>" + version + "</code>', which is not valid or not implemented by verifier. "
-        + "Will use latest version implemented by verifier: " + versions().pop();
+    got = "'<code>" + version + "</code>', which is not valid or not implemented by verifier.";
+    if (ignoreVersionError) {
+      got += " Will use latest version implemented by verifier: " + versions().pop();
+    }
   }
 
   let des = "Expect HAPI version in JSON response to be one of "
@@ -232,7 +234,7 @@ function HAPIJSON(text, version, part, ignoreVersionError) {
   }
 
   let ve = vr.errors;
-  let got = ""
+  let got = "JSON is valid with respect to JSON schema."
   let err = [];
   if (ve.length != 0) {
     for (let i = 0; i < ve.length; i++) {

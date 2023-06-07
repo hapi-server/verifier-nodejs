@@ -27,7 +27,7 @@
     "yargs": "^17.7.1"
   },
   "scripts": {
-    "postinstall": "git clone --depth 1 https://github.com/hapi-server/data-specification-schema",
+    "postinstall": "([ ! -d data-specification-schema ] && git clone --depth 1 https://github.com/hapi-server/data-specification-schema) || exit 0",
     "start": "node verify.js --port 9999",
     "start2": "node verify.js --port 9999 --plotserver 'http://localhost:5000/'",
     "test": "node --test"

@@ -1334,7 +1334,7 @@ function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
       return {
               "description": callerName() + msg,
               "got": `bins[${d}][${which}].length = ${bins[d][which].length} and ${name}["size"][${d}] = ${param["size"][d]}`,
-              "error": true
+              "error": bins[d][which].length != param["size"][d]
             }
     }
     if (which === "ranges") {

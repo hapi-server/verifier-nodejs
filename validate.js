@@ -36,7 +36,7 @@ if (arg.startsWith('http')) {
 
     console.error("Read failure for " + arg + ":");
     console.log(err);
-    process.exit(1);      
+    process.exit(1);
   });
 }
 

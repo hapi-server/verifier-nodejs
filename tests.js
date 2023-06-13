@@ -46,7 +46,7 @@ function run(opts, REQ, RES) {
   if (opts["parameter"]) {
     capabilities();
   } else {
-    root();    
+    root();
   }
 
   function version(metaVersion) {
@@ -61,7 +61,7 @@ function run(opts, REQ, RES) {
     }
   }
 
-  function versionCheck(url,metaVersion) {
+  function versionCheck(url, metaVersion) {
 
     if (versionCheck.lastVersion !== undefined) {
       let obj = is.HAPIVersionSame(url, metaVersion,
@@ -95,7 +95,7 @@ function run(opts, REQ, RES) {
       var metaTimeout = "metadefault";
     } else {
       root.tries += 1;
-      var metaTimeout = "metapreviousfail";     
+      var metaTimeout = "metapreviousfail";
     };
 
     var url = opts["url"];
@@ -126,13 +126,13 @@ function run(opts, REQ, RES) {
         report(r,url,is.HTTP200(res),{"warn":true});
         report(r,url,is.ContentType(/^text\/html/,res.headers["content-type"]),{"warn":true});
         //report(r);
-        //process.exit(0);
-        capabilities();
+        about();
       })
   }
 
   function about() {
     // TODO: Added in 3.0. Tests will be similar to those in capabilities()
+    capabilities();
   }
 
   function capabilities() {
@@ -144,7 +144,7 @@ function run(opts, REQ, RES) {
       var metaTimeout = "metadefault";
     } else {
       capabilities.tries += 1;
-      var metaTimeout = "metapreviousfail";     
+      var metaTimeout = "metapreviousfail";
     };
 
     var url = opts["url"] + "/capabilities";
@@ -412,7 +412,7 @@ function run(opts, REQ, RES) {
         }
 
         report(r,url,is.RequestError(err,res,metaTimeout,timeout()));
-    
+
         if (!report(r,url,is.HTTP200(res),{"abort":true})) return;
         report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
         if (!report(r,url,is.JSONParsable(body),{"abort":true})) return;
@@ -433,7 +433,7 @@ function run(opts, REQ, RES) {
                 "got": JSON.stringify(json.parameters[0])
               },
               {"abort":true});
-            return;           
+            return;
           }
         } else {
           report(r,url,
@@ -474,32 +474,41 @@ function run(opts, REQ, RES) {
             continue;
           }
 
-          len  = json.parameters[i]["length"];
-          type = json.parameters[i]["type"];
-          name = json.parameters[i]["name"];
-          size = json.parameters[i]["size"];
-          fill = json.parameters[i]["fill"];
-          units = json.parameters[i]["units"];
-          label = json.parameters[i]["label"]
+          let len  = json.parameters[i]["length"];
+          let type = json.parameters[i]["type"];
+          let name = json.parameters[i]["name"];
+          let size = json.parameters[i]["size"];
+          let fill = json.parameters[i]["fill"];
+          let units = json.parameters[i]["units"];
+          let label = json.parameters[i]["label"];
+          let bins = json.parameters[i]["bins"];
 
-          if (!size) {
+          if (size === undefined) {
             size = [1];
           }
-          //console.log(name,size,units)
-          report(r,url,is.UnitsOK(name,units,type,size),{"warn":false});
-          report(r,url,is.FillOK(fill,type,len,name,type),{"warn":true});
-          report(r,url,is.ArrayOK(name,units,size,"units",ver),{"warn":false});
-          report(r,url,is.ArrayOK(name,label,size,"label",ver),{"warn":false});
 
-          if (type === "string") {
-            report(r,url,is.FillOK(fill,type,len,name,'nullstring'),{"warn":true});
-            report(r,url,is.FillOK(fill,type,len,name,'stringparse'),{"warn":true});
+          report(r,url,is.TimeParameterUnitsOK(name,units,type,size));
+          report(r,url,is.LengthAppropriate(len,type,name));
+
+          report(r,url,is.LabelOrUnitsOK(name,units,size,"label",ver));
+          report(r,url,is.LabelOrUnitsOK(name,label,size,"units",ver));
+
+          report(r,url,is.BinsLengthOK(name,bins,size,ver));
+          for (d in size) {
+            report(r,url,is.BinsLabelOrUnitsOK(name,bins,size,d,'labels',ver));
+            report(r,url,is.BinsLabelOrUnitsOK(name,bins,size,d,'units',ver));
+            report(r,url,is.BinsCentersOrRangesOK(json.parameters,i,d,'centers',ver));
+            report(r,url,is.BinsCentersOrRangesOK(json.parameters,i,d,'ranges',ver));
           }
 
-          report(r,url,is.LengthAppropriate(len,type,name));
-          report(r,url,is.BinsOK(name,json.parameters[i]["bins"],size));
-          //report(r,url,is.SizeAppropriate(size,name,"2D+"),{"warn":true});
-          //report(r,url,is.SizeAppropriate(size,name,"needed"),{"warn":true});
+          report(r,url,is.FillOK(fill,type,len,name,type));
+
+          if (type === "string") {
+            // Additional checks.
+            report(r,url,is.FillOK(fill,type,len,name,'nullstring'));
+            report(r,url,is.FillOK(fill,type,len,name,'stringparse'));
+          }
+
         }
 
         var validCadence = false;
@@ -558,7 +567,7 @@ function run(opts, REQ, RES) {
   }
 
   function infor(formats,datasets,header,start,stop,dataTimeout) {
-    
+
     if (CLOSED) {return;}
 
     // Check if JSON response has two parameter objects when only
@@ -790,7 +799,7 @@ function run(opts, REQ, RES) {
       var useTimeout = dataTimeout;
     } else {
       dataAll2.tries += 1;
-      var useTimeout = "datapreviousfail";      
+      var useTimeout = "datapreviousfail";
     };
 
     // md2doy converts YMD -> DOY or YDOY -> YMD
@@ -1156,9 +1165,9 @@ function run(opts, REQ, RES) {
         if (!body || body.length === 0) {
           // Check next parameter
           next(formats,datasets,header,start,stop,dataTimeout,bodyAll,pn);
-          return;         
+          return;
         }
-        
+
         report(r,url,is.CompressionAvailable(res.headers),{"warn":true});
         report(r,url,is.ContentType(/^text\/csv/,res.headers["content-type"]));
         report(r,url,is.CORSAvailable(res.headers),{"warn":true});
@@ -1179,7 +1188,7 @@ function run(opts, REQ, RES) {
         report(r,url,is.CadenceOK(header["cadence"],time1,time2,"consecsample"),{"warn":true});
 
         var timeLength = header.parameters[0].length;
-        
+
         var warn = true;
         if (formats.includes('binary')) {
           // If wrong length and server can serve binary, then error.
@@ -1203,7 +1212,7 @@ function run(opts, REQ, RES) {
         report(r,url,is.FileLineOK(header, body, pn, 'Ncolumns'));
         //report(r,url,is.FileLineOK(header, body, pn, 'fields'));
         //report(r,url,is.SizeCorrect(line1.length-1,nf-1,header.parameters[pn]),{"warn":true});
-        
+
         if (bodyAll) {
           report(r,url,is.FileContentSame(header,body,bodyAll,pn,'subsetsame'));
         }

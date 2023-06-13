@@ -5,6 +5,10 @@ function report(r,url,obj,opts) {
 
   let reqOpts = r.opts;
   let res = r.res;
+  if (res) {
+    console.log(r);
+    process.exit(0);
+  }
 
   // Returns !(obj.error && (stop || abort))
   // stop means processing can't continue on current URL
@@ -192,7 +196,7 @@ function writeResult(obj, status, res) {
     return;
   }
 
-  let icon = "<font style='background-color:green;'><b>✓</b></font>&nbsp;";
+  let icon = "<font style=''><b>✓</b></font>&nbsp;";
   if (status === "warn") {
     icon = "<font style='background-color:yellow'><b>⚠</b></font>";
   }
@@ -268,7 +272,7 @@ function summary(r) {
               + ": " + stats.fails.length;
     if (stats.warns.length + stats.fails.length > 0) {
       msg += ". Warnings and failures repeated below.";
-    } 
+    }
     console.log(msg + "\n");
   }
 
@@ -279,13 +283,13 @@ function summary(r) {
     }
     for (var i = 0; i < stats.fails.length; i++) {
       writeURL(stats.fails[i].url, res);
-      writeResult(stats.fails[i],'fail',res);
+      writeResult(stats.fails[i],'error',res);
     }
   }
 
   if (reqOpts["output"] === "html") {
-    res.write("<br>");
-    res.write("<b>Use the following links for visual checks of data and stress testing server.</b><br><br>")
+    res.write("");
+    res.write("<p><b>Use the following links for visual checks of data and stress testing server.</b></p>")
     for (var i = 0;i < CATALOG["catalog"].length;i++) {
       var link = reqOpts["plotserver"] 
                   + "?server=" 

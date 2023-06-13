@@ -1,6 +1,6 @@
-const fs   = require('fs');
-const clc  = require('chalk');
+checkNodeJSVersion();
 
+const fs   = require('fs');
 const argv = require('yargs')
               .help()
               .default({
@@ -31,15 +31,6 @@ const argv = require('yargs')
 const tests = require('./tests.js'); // Test runner
 const versions = require('./is.js').versions; // Array of implemented versions
 
-const nodever = parseInt(process.version.slice(1).split('.')[0]);
-if (parseInt(nodever) < 8) {
-  // TODO: On windows, min version is 8
-  console.log(clc.red("!!! Node.js version >= 8 required.!!! "
-    + "node.js -v returns " + process.version
-    + ".\nConsider installing https://github.com/creationix/nvm"
-    + " and then 'nvm install 8'.\n"));
-  process.exit(1);
-}
 
 function fixurl(q) {
 
@@ -76,7 +67,7 @@ if (argv.url !== "" || argv.test == true) {
   fixurl(argv);
 
   argv.parameter = argv.parameter || argv.parameters || "";
-  
+
   if (argv.version !== "" && !versions().includes(argv.version)) {
     console.log("Version must be one of ", versions());
   }
@@ -107,7 +98,7 @@ if (argv.url !== "" || argv.test == true) {
     let addr = req.headers['x-forwarded-for'] || req.connection.remoteAddress
     console.log(new Date().toISOString() 
               + " [verifier] Request from " + addr + ": " + req.originalUrl);
-    
+
     if (!req.query.url) { 
       // Send HTML page if no URL given in query string
       res.contentType("text/html");
@@ -180,9 +171,24 @@ function errorHandler(err, req, res, next) {
 }
 
 process.on('uncaughtException', function(err) {
+  const clc  = require('chalk');
   if (err.errno === 'EADDRINUSE') {
     console.log(clc.red("Port " + argv.port + " is already in use."));
   } else {
     console.log(err.stack);
   }
 });
+
+function checkNodeJSVersion() {
+  const minVersion = 12;
+  const clc  = require('chalk');
+  const nodever = parseInt(process.version.slice(1).split('.')[0]);
+  if (parseInt(nodever) < minVersion) {
+    let msg = `Error: Node.js version >=${minVersion} required. ` 
+            + `node.js -v returns ${process.version}.\n`
+            + "Consider installing https://github.com/creationix/nvm"
+            + ` and then 'nvm install ${minVersion}'.\n`
+    console.log(clc.red(msg));
+    process.exit(1);
+  }
+}

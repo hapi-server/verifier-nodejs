@@ -3,13 +3,11 @@ var moment    = require('moment');
 var Validator = require('jsonschema').Validator;
 var diff      = require('deep-diff').diff;
 
-
 let schemaURL = "https://github.com/hapi-server/verifier-nodejs/tree/master/schemas";
 let wikiURL   = 'https://github.com/hapi-server/verifier-nodejs/wiki';
 let requestURL   = 'https://github.com/request/request#requestoptions-callback';
 let jsonLintLink = "<a href='http://jsonlint.org/'>http://jsonlint.org/</a>";
-// Note that for reporting to have correct line numbers, must start 
-// functions with function FNAME( and start description with 'is.FNAME()'.
+let unitsAndLabels = "https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#369-unit-and-label-arrays";
 
 // TODO: Get this list by reading directory.
 let base = "./data-specification-schema/HAPI-data-access-schema";
@@ -19,6 +17,18 @@ schemas["2.0"] = require(base + "-2.0-1.json");
 schemas["2.1"] = require(base + "-2.1.json");
 schemas["3.0"] = require(base + "-3.0.json");
 schemas["3.1"] = require(base + "-3.1.json");
+
+function sameSize(size1, size2) {
+  if (!Array.isArray(size1)) size1 = [size1];
+  if (!Array.isArray(size2)) size2 = [size2];
+  if (size1.length != size2.length) return false;
+  for (let i in size1) {
+    if (size1[i] !== size2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
 
 function prod(arr) {
   // TODO: Also in tests.js. Move to lib.js (and create lib.js)
@@ -117,7 +127,6 @@ function versions() {
   return arr.sort();
 }
 exports.versions = versions;
-
 
 function HAPIVersionSame(url, version, urlLast, versionLast) {
   let des = "Expect HAPI version to match that from last requests where found.";
@@ -731,8 +740,6 @@ function FileContentSame(header, body, bodyAll, pn, what) {
 
   if (what === "subsetsame") {
 
-    let got = "";
-
     if (lines.length != linesAll.length) {
       let desc = "Expect number of rows from one parameter request to"
                + " match data from all parameter request.";
@@ -761,6 +768,7 @@ function FileContentSame(header, body, bodyAll, pn, what) {
     let desc = "Expect content from one parameter request to"
              + " match content from all parameter request.";
     let t = false;
+    let got = "";
     for (let i = 0;i < lines.length-1;i++) {
 
       //let line = lines[i].split(",");
@@ -771,10 +779,10 @@ function FileContentSame(header, body, bodyAll, pn, what) {
       // Time
       if (line[0].trim() !== lineAll[0].trim()) {
         t = true;
-        got = "Time column for parameter " + name + " does not match at time "
+        got += "\nTime column for parameter " + name + " does not match at time "
             + line[0] + ": Single parameter request: " + line[1]
             + "; All parameter request: " + lineAll[0]
-            + ".\n";
+            + ".";
       }
 
       if (pn == 0) {
@@ -785,9 +793,9 @@ function FileContentSame(header, body, bodyAll, pn, what) {
       if (line.length > lineAll.length) {
         desc = "Expect number of columns from one parameter request to be"
              + " equal to or less than number of columns in all parameter request.";
-        got += "# columns in single parameter request = " + line.length 
+        got += "\n# columns in single parameter request = " + line.length 
              + " # in all parameter request = <code>" + lineAll.length
-             + "</code>.\n";
+             + "</code>.";
         return {
           "description": callerName() + desc,
           "error": true,
@@ -802,10 +810,10 @@ function FileContentSame(header, body, bodyAll, pn, what) {
 
         if (!line[1+j] || !lineAll[fc+j]) {
           t = true;
-          got += "Problem with line <code>" + (j) + "</code>:\n"
+          got += "\nProblem with line <code>" + (j) + "</code>:\n"
               +  "Single parameter request: <code>" + line[1+j]
-              +  "</code>.\nAll parameter request: <code>" + lineAll[fc+j]
-              +  "</code>.\n";
+              +  "</code>; All parameter request: <code>" + lineAll[fc+j]
+              +  "</code>.";
           break;
         }
 
@@ -819,12 +827,12 @@ function FileContentSame(header, body, bodyAll, pn, what) {
 
           if (nf == 2) {
             t = true;
-            got += got + ". Parameter <code>" + name + "</code> does not match at time " 
+            got += "\nParameter <code>" + name + "</code> does not match at time " 
                 +  line[0] + ": Single parameter request: <code>" + line[1] 
                 +  "</code>; All parameter request: <code>" + lineAll[fc+j]
                 +  "</code>.\n";
           } else {
-            got += got + ". Parameter <code>" + name + "</code> field #<code>" + j 
+            got += "\nParameter <code>" + name + "</code> field #<code>" + j 
                 +  "</code> does not match at time <code>" + line[0] 
                 +  "</code>: Single parameter request: <code>" + line[1+j] 
                 +  "</code>; All parameter request: <code>" + lineAll[fc+j]
@@ -1083,7 +1091,8 @@ exports.FormatInHeader = FormatInHeader;
 function FirstParameterOK(header, what) {
   if (what == "name") {
     let desc = "First parameter should (not must) be named"
-             + " '<code>Time</code>' b/c clients will likely label first parameter as '<code>Time</code>'"
+             + " '<code>Time</code>' b/c clients will likely label first"
+             + " parameter as '<code>Time</code>'"
              + " on plot to protect against first parameter names that are"
              + " not sensible."
     return {
@@ -1113,166 +1122,248 @@ function FirstParameterOK(header, what) {
 }
 exports.FirstParameterOK = FirstParameterOK;
 
-function BinsOK(name, bins, size) {
-  if (!bins) {
-    return;
-  }
-
-  var desc = "Expect bin units, label, centers, and ranges to have"
-           + " correct number of elements.";
-  var err = false;
-  var got = "";
-
-  // Recursive check
-  if (false && Array.isArray(bins[0])) {
-    size.shift();
-    BinsOK(name,bins[0],size);
-    return {}; 
-  }
-  var err = false;
-  var k = 1;
-  if (size.length == 1) {
-    k = 0;
-  }
-  if (size.length == 1 && bins.length != 1) {
-    err = true;
-    got = "Parameter " + name + ": bins.length = " 
-        + bins.length + " but should equal 1. ";
-  }
-  if (size.length > 1 && bins.length != size.length) {
-    err = true;
-    got = "Parameter " + name + ": bins.length (= " 
-        + bins.length + ") != size.length (= " + size.length + "). ";
-  }
-  if (size.length <= 2) {
-    for (i=0; i < bins.length; i++) {
-      if (bins[i].units && Array.isArray(bins[i].units) && bins[i].units.length > 1 && bins[i].units.length != size[k]) {
-        err = true; 
-        got = got + "Parameter " + name + ": wrong number of elements in units. Got " + bins[i].units.length + ". Expected 1 or " + size[k] + ". ";
-      }
-      if (bins[i].label && Array.isArray(bins[i].label) && bins[i].label.length > 1 && bins[i].label.length != size[k]) {
-        err = true;
-        got = got + "Parameter " + name + ": wrong number of elements in labels. Got " + bins[i].label.length + ". Expected 1 or " + size[k] + ". ";
-      }
-      if (bins[i].centers && bins[i].centers.length != size[i]) {
-        err = true;
-        got = got + "Parameter " + name + ": wrong number of elements in centers. Got " + bins[i].centers.length + ". Expected " + size[i] + ". ";
-      }
-      if (bins[i].ranges && bins[i].ranges.length != size[i]) {
-        err = true;
-        got = got + "Parameter " + name + ": wrong number of elements in ranges. Got " + bins[i].ranges.length + ". Expected " + size[i] + ". ";
-      }
-    }
-  }
-
-  if (got === "") {got = "Parameter " + name + " has correct number of elements."}
-
-  if (units.length > 1 && size.length > 2) {
-    got = "<span style='background-color:yellow'>size.length &gt; 2 for parameter " + name + ". Check not implemented.</span>"    
-  }
-
-  return {
-    "description": callerName() + desc,
-    "error": err,
-    "got": got
-  };
-}
-exports.BinsOK = BinsOK;
-
-function ArrayOK(name, units, size, type, version) {
+function LabelOrUnitsOK(name, array, size, which, version) {
 
   if (parseFloat(version) < 2.1) {
     return;
   }
-  // "units": [["nT"],["nT","degrees","nT"]],
 
-  // size = [N]
-  // units = "u" 
-  // units = ["u"]
-  // units = ['u1','u2',...,'uN']
+  let desc = `Expect <code>${which}</code> for parameter '<code>${name}</code>'`;
+  desc += ` to have a <a href="${unitsAndLabels}">valid structure</a>.`;
 
-  // size = [N,M]
-  // units = "u"
-  // units = ["u"]
-  // units = ['uN','uM']
-  // units = [['u1',...,'u1M'],['u2',...,'uM'],...,['uN',...,'uNM']]
+  var checkArray = require('./lib/checkArray.js').checkArray;
 
-  if (Array.isArray(units)) {
-    var desc = "Expect " + type 
-             + " to be a string or an array with appropriate structure. ";
-    var err = false;
-    var got = "";
-    if (units.length > 1 && size.length == 1 && units.length != size[0]) {
-      // size = [N], units = ['u1','u2',...,'uN'] case
-      err = true;
-      got = got + "if size.length == 1, " + type 
-          + " should have 1 element or size[0] elements. ";
-    }
-    if (units.length > 1 && size.length == 2) {
-      for (var j = 0; j < units.length; j++) {
-        if (Array.isArray(units[j])) {
-          if (units[j].length != 1 && units[j].length != size[1]) {
-            err = true;
-            got = got + type + "[" + j + "] " 
-                + "contains array; it should have 1 element or size[" + (1) + "]"
-                + " elements. ";
-          }
-        }
+  let err = checkArray(array, size, which, ['string', 'null']);
+
+  return {
+    "description": callerName() + desc,
+    "error": err !== '',
+    "got": err || "Valid structure"
+  };
+}
+exports.LabelOrUnitsOK = LabelOrUnitsOK;
+
+function BinsLengthOK(name, bins, size, version) {
+  if (!bins) return;
+  let got = "Match";
+  let err = false;
+  if (bins.length != size.length) {
+    got = `bins.length = ${bins.length} ≠ size.length = ${size.length}`;
+    err = true;
+  }
+  return {
+          "description": "Expect bins.length == size.length",
+          "got": got,
+          "error": err
+        };
+}
+exports.BinsLengthOK = BinsLengthOK;
+
+function BinsLabelOrUnitsOK(name, bins, size, d, which, version) {
+
+  if (parseFloat(version) < 2.1) {
+    return;
+  }
+
+  if (!bins) return;
+  if (Array.isArray(bins[which]) && bins[which].length > 1) {
+    let msg = `${name}[${which}]["units"] is an array with length > 1, so expect `
+            + `${name}[${which}]["units"].length == ${name}["size"][${d}]`;
+    if (bins[which].length == size[d]) {
+      return {
+                "description": callerName() + msg,
+                "got": "Match",
+                "error": false
+              };
+      } else {
+        return {
+          "description": callerName() + msg,
+          "got": `bins[${which}].length ≠ ${name}["size"][${d}]`,
+          "error": true
+        };
       }
+  }
+  return; // No check needed. Schema checks types.
+}
+exports.BinsLabelOrUnitsOK = BinsLabelOrUnitsOK;
 
+function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
+
+  let param = parameters[pn];
+  let name = parameters[pn]["name"];
+  let bins = parameters[pn]["bins"];
+  if (!bins) return;
+
+  if (typeof bins[d][which] === 'string') {
+
+    let rname = bins[d][which]; // referenced parameter name
+
+    let rpn; // referenced parameter number
+    for (let pidx in parameters) {
+      if (parameters[pidx]['name'] === rname) {
+        rpn = pidx;
+        break;
+      }
     }
-    if (got === "") {
-      got = "parameter '" + name + "' " + type + " has appropriate structure.";
-    } else {
-      got = "parameter '" + name + "', size = " + JSON.stringify(size) 
-          + ", " + type + " = " + JSON.stringify(units) + ". " + got;      
+
+    let msgo = `${name}["bins"][${d}]["${which}"] is a string that references `
+            + `another parameter, so expect `;
+
+    if (!rpn) {
+      return {
+        "description": callerName() + msgo + " referenced parameter to be in dataset.",
+        "got": `No parameter named '${rname}'`,
+        "error": true
+      };
     }
-    if (units.length > 1 && size.length > 2) {
-      let spanOpen = "<span style='background-color:yellow'>";
-      got = spanOpen + "size.length &gt; 2 for parameter " + name 
-          + ". Check not implemented.</span>"    
+
+    if (rpn == pn) {
+      return {
+        "description": callerName() + msgo + " referenced parameter to have a different name than bins parent parameter.",
+        "got": `Self reference`,
+        "error": true
+      };
     }
+
+    let rparam = parameters[rpn];
+
+    if (parameters[rpn]['fill']) {
+      return {
+        "description": callerName() + msgo + " to not have a fill of null or no fill element.",
+        "got": `Parameter ${rname}["fill"] must be null or not present.`,
+        "error": true
+      };
+    }
+
+    if (rparam['bins']) {
+      return {
+        "description": callerName() + msg,
+        "got": `Parameter ${rname}["bins"] may not be given.`,
+        "error": true
+      };
+    }
+
+    if (rparam['units'] && Array.isArray(rparam['units'])) {
+      // TODO: Check for consistency?
+      return {
+        "description": callerName() + msgo + " units to not be an array.",
+        "got": `Parameter ${rname}["units"] may not be an array.`,
+        "error": true
+      };
+    }
+    if (rparam['label'] && Array.isArray(rparam['label'])) {
+      return {
+        "description": callerName() + msgo + " label to not be an array.",
+        "got": `Parameter ${rname}["label"] may not be an array.`,
+        "error": true
+      };
+    }
+    if (!["integer","double"].includes(rparam['type'])) {
+      return {
+        "description": callerName() + msgo + " to be an integer or double.",
+        "got": `Parameter ${rname}["type"] = ${rparam['type']}`,
+        "error": true
+      };
+    }
+    if (!rparam['size']) {
+      return {
+        "description": callerName() + msgo + " to have a size element.",
+        "got": `Parameter '${rname}' does not have a size element.`,
+        "error": true
+      };
+    }
+
+    if (!Array.isArray(rparam['size'])) {
+      // size = 10 => size = [10]
+      rparam['size'] = [rparam['size']];
+    }
+
+    if (which === 'centers') {
+      if (rparam['size'].length > 1) {
+        return {
+          "description": callerName() + msgo + `${rname}["size"].length = 1`,
+          "got": `Parameter ${rname}["size"].length = ${rparam["size"].length}`,
+          "error": true
+        };
+      }
+      if (rparam['size'][0] != param['size'][d]) {
+        return {
+          "description": callerName() + msgo + `${rname}["size"][0] = ${name}["size"][${d}]`,
+          "got": `Parameter ${rname}["size"][0] = ${rparam['size'][0]} and ${name}["size"][${d}] = ${param['size'][d]}`,
+          "error": true
+        };
+      }
+    }
+
+    if (which === 'ranges') {
+      if (rparam['size'].length != 2) {
+        return {
+          "description": callerName() + msgo + `${rname}["size"].length = 2`,
+          "got": `Parameter ${rname}["size"].length = ${rparam['size'].length}`,
+          "error": true
+        };
+      }
+      if (rparam['size'][0] != 2) {
+        return {
+          "description": callerName() + msgo + `${rname}["size"][0] = 2.`,
+          "got": `Parameter ${rname}["size"][0] = ${rparam['size'][0]}`,
+          "error": true
+        };
+      }
+      if (rparam['size'][1] != param['size'][d]) {
+        return {
+          "description": callerName() + msgo + `${rname}["size"][1] = ${name}["size"][${d}].`,
+          "got": `Parameter ${rname}["size"][1] = ${rparam['size'][1]} and ${name}["size"][${d}] = ${param['size'][d]}`,
+          "error": true
+        };
+      }
+    }
+    // TODO: Check values are numbers?
     return {
-      "description": callerName() + desc,
-      "error": err,
-      "got": got
+      "description": callerName() + msgo + " referenced parameter to exist, have correct size, and statisfy other constraints.",
+      "got": `Referenced parameter found is an acceptable reference.`,
+      "error": false
     };
   }
-}
-exports.ArrayOK = ArrayOK;
 
-// TODO: Use this
-function checkdims(units, size, version) {
-  var err = false;
-  if (units && units !== null && typeof(units) !== "string") {
-    // units is an array.
-    // size passed assumed to always be an array
-    var err = false;
-    if (size.length == 1 && units.length == size[0]) {
-      // e.g., size = [2] and units = ["m", "km"] is OK
-      // So is size = [1] and units = ["m"] 
-      // (but this should really be size = 1 and units = "m")
-    } else {
-      if (units.length !== size.length) {
-        // Check that number of elements in units matches number in size.
-        err = true;
-      } else if (typeof(units[0]) !== 'object') {
-        // If here, then size.length > 1. This checks for, e.g.,
-        // units = ["m", "km"] and size = [1,2], which is wrong
-        err = true;
-      } else {
-        // Check that ith subarray of units has length equal to ith value in size.
-        for (var i = 0; i < units.length; i++) {
-          if (units[i].length !== size[i]) {
-            err = true;
-            break;
-          }       
-        }
-      }
+  if (bins[d][which]) {
+    if (bins[d][which].length == param["size"][d]) {
+      let msg = callerName() + `Expect bins[${d}]["${which}"].length = ${name}["size"][${d}]`;
+      return {
+              "description": callerName() + msg,
+              "got": `bins[${d}][${which}].length = ${bins[d][which].length} and ${name}["size"][${d}] = ${param["size"][d]}`,
+              "error": true
+            }
     }
-    return err;
+    if (which === "ranges") {
+      // TODO: Check that all elements of bins[${d}]["ranges"] have length of 2.
+    }
+  }
+
+  if (which === "ranges") {
+    if (bins[d]["centers"] === null && bins[d]["ranges"] !== undefined) {
+      // "Each dimension must be described in the bins object, 
+      // but any dimension not representing binned data should indicate this
+      // by using '"centers": null' and not including the 'ranges' attribute."
+      // Could be written into schema, but is complex.
+      // What about case where ranges are known, but centers are not known?
+      let msg = callerName() + `If ${name}["bins"][${d}]["centers"] = null, `
+              + `no ${name}["bins"][${d}]["ranges"] allowed.`;
+      return {
+              "description": callerName() + msg,
+              "got": `${name}["bins"][${d}]["ranges"] ≠ null`,
+              "error": true
+            }
+    }
+  }
+
+  return {
+    "description": callerName() + `Expect ${name}["bins"][${d}]["${which}"] to have correct size and if "centers" = null, no "ranges" given.`,
+    "got": ``,
+    "error": false
   }
 }
+exports.BinsCentersOrRangesOK = BinsCentersOrRangesOK;
 
 function AllowedOutputFormat(json) {
   // Existence of 'csv' can't be checked easily with schema using enum.
@@ -1288,7 +1379,7 @@ function AllowedOutputFormat(json) {
 }
 exports.AllowedOutputFormat = AllowedOutputFormat;
 
-function UnitsOK(name, units, type, size) {
+function TimeParameterUnitsOK(name, units, type, size) {
 
   if (type === 'isotime') {
     var err = false;
@@ -1306,7 +1397,7 @@ function UnitsOK(name, units, type, size) {
               + "' for parameter " + name + ".";
       if (units !== "UTC") {
         err = true;
-      }     
+      }
     }
 
     return {
@@ -1316,11 +1407,12 @@ function UnitsOK(name, units, type, size) {
     };
   }
 }
-exports.UnitsOK = UnitsOK;
+exports.TimeParameterUnitsOK = TimeParameterUnitsOK;
 
 function FillOK(fill, type, len, name, what) {
 
   if (!fill) {return;} // No fill or fill=null so no test needed.
+
   var t = false;
   if (typeof(fill) === 'string') {
     var got = "fill = '" + fill + "' for parameter " + name + ".";
@@ -1399,38 +1491,6 @@ function SizeCorrect(nc, nf, header) {
   };
 }
 exports.SizeCorrect = SizeCorrect;
-
-function SizeAppropriate(size, name, what) {
-  if (!size) return; // Test not appropriate.
-  if (typeof(size) !== 'object') return; // Test not appropriate.
-
-  if (what === "needed") {
-    // Test if all elements of size are 1.
-    t = 0;
-    for (var i = 0;i < size.length; i++) {
-      t = t + size[i];
-    }
-    t = t == size.length;
-    return {
-      "description": callerName() + "Size is not needed if all elements are 1.",
-      "error": t,
-      "got": "size = <code>" + JSON.stringify(size) + "</code> for parameter '<code>" + name + "'</code>"
-    };
-  }
-  if (what === "2D+") {
-    // Test size array has 2 or more elements.
-    t = false;
-    if (size) {
-      t = (size.length > 1)
-    }
-    return {
-      "description": callerName() + "Size arrays with more than one element are experimental.",
-      "error": t,
-      "got": "size = " + JSON.stringify(size) + " for parameter '<code>" + name + "</code>'"
-    };
-  }
-}
-exports.SizeAppropriate = SizeAppropriate;
 
 function HTTP200(res){
   var body = "";
@@ -1544,7 +1604,7 @@ function TimeIncreasing(header, what) {
         var ts = "Time(line="+(i+1)+") &gt; Time(line="+i+")";
         var got = "line " + (i+1) + " = "+ linenext[0] + "; line " 
                 + (i) + " = " + line[0];
-        break;      
+        break;
       }
       if (new Date().getTime() - starttest > 10) {
         // Stop testing after 10 ms.
@@ -1581,7 +1641,7 @@ function TimeIncreasing(header, what) {
       } else {
         var ts = "info.sampleStopDate does not have a matching sampleStartDate";
         var t = false;
-        var got = "a missing date";       
+        var got = "a missing date";
       }
     }
   }

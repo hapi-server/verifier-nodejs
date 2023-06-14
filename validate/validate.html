@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="module">
+      import validate from './validate.js';
+      function check() {
+        let textarea = document.getElementById("json");
+        let results = validate(textarea.textContent);
+        document.getElementById("report").innerHTML = JSON.stringify(results, null, 2);
+        console.log(results);
+      }
+      function format() {
+        let textContent = document.getElementById("json").textContent;
+        document.getElementById("json").textContent = JSON.stringify(JSON.parse(textContent), null, 2);
+      }
+      window.check = check;
+      window.format = format;
+    </script>
+</head>
+<body>
+  <button onclick="check()">Check</button>
+  <button onclick="format()">Format</button>
+  <br/>
+  <textarea id="json" style="width:50vw;height:50vh">
+    {"outputFormats":["csv","binary","json"],"HAPI":"2.0","status":{"code":1200,"message":"OK"}}
+  </textarea>
+  <pre id="report"></pre>
+</body>
+</html>

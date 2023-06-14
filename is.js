@@ -170,7 +170,7 @@ exports.schema = schema;
 function JSONParsable(text) {
 
   let ret = {
-    "description": callerName() + "Expect <code>JSON.parse(response)</code> to not throw error",
+    "description": callerName() + "Expect <code>JSON.parse()</code> to not throw error",
     "error": false,
     "got": ""
   };

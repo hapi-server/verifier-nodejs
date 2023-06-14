@@ -37,5 +37,5 @@ function timings(timing1, timing2, argv) {
       log(msg,'fail-summary');
       return 1;
     }
-  }
-  module.exports.timings = timings;
+}
+module.exports.timings = timings;

@@ -1,33 +1,10 @@
 const clc     = require('chalk');
-const request = require('request');
 const async   = require('async');
 const report  = require('./lib/report.js').report;
+const axios   = require('axios');
 
-const argv =
-        require('yargs')
-          .help()
-          .default({
-            "server2": "https://cdaweb.gsfc.nasa.gov/hapi",
-            "server1": "http://localhost:8999/CDAWeb-cdas-cdf-using-pycdf/hapi",
-//            "server1": "https://hapi-server.org/servers/TestData2.0/hapi",
-//            "server2": "https://hapi-server.org/servers/TestData2.0/hapi",
-            "name1": "BW",
-            "name2": "NL",
-            "dataset": "AC_H0_MFI",
-            "parameters": "",
-//            "start": "",
-//            "stop": "",
-            "start": "2021-03-12T00:00:42.000000000Z",
-            "stop": "2021-03-12T00:20:42.000000000Z",
-            "maxrecs": 2,
-            "data": true,
-            "namesonly": false,
-            "simulate": false,
-            "showpasses": false,
-            "timefraction": "0.5"
-          })
-          .option('simulate',{'type': 'boolean'})
-          .argv;
+const cli = require('./lib/cli.js').cli;
+argv = cli();
 
 // Replace trailing /
 argv['server1'] = argv['server1'].replace(/\/$/,"");
@@ -36,17 +13,18 @@ argv['server2'] = argv['server2'].replace(/\/$/,"");
 console.log(`${argv['name1']} = ${argv['server1']}`);
 console.log(`${argv['name2']} = ${argv['server2']}\n`);
 
-if (argv['dataset'] === '') {
-  getDatasetIDs(argv, run);
+if (argv['dataset'].trim() === '') {
+  // No dataset given. Get all dataset IDs.
+  getDatasetIDs();
   return;
 } else {
-  run(argv, argv['dataset'].split(","));
+  run(argv['dataset'].split(","));
 }
 
-function run(argv, datasets) {
-  getInfos(argv, datasets[0], (argv, infos) => {
-    getDatasets(argv, datasets[0], infos, 
-      (err, argv, infos, data) => {
+function run(datasets) {
+  getInfos(datasets[0], (infos) => {
+    getDatasets(datasets[0], infos, 
+      (err, infos, data) => {
         if (!err) {
           report(argv, infos, data);
         }
@@ -59,54 +37,60 @@ function run(argv, datasets) {
   });
 }
 
-function getDatasetIDs(argv, cb) {
+function getDatasetIDs(cb) {
 
   // Get list of datasets from first server
-  get(`${argv['server1']}/catalog`, argv['name1'], (err, res) => {
-    if (err) {
-      console.log(err);
-      process.exit(1);
-    }
-    const body = parseResponse(err, res);
+  get(`${argv['server1']}/catalog`, (res) => {
+
+    const body = res['body'];
     const catalog = body['catalog'];
     let datasets = [];
     for (let ds of catalog) {
       datasets.push(ds["id"]);
     }
-    cb(argv, datasets);
+    //console.log(datasets);
+    run(datasets);
   });
 }
 
-function getInfos(argv, dataset, cb) {
+function getInfos(dataset, cb) {
 
   console.log("-".repeat(30));
-  console.log(dataset)
+  console.log(dataset);
 
   // Arguments for /info request
-  const args_i = `?id=${dataset}&parameters=${argv['parameters']}`;
+  let args_i = `?id=${dataset}&parameters=${argv['parameters']}`;
+  if (argv['parameters'] === '') {
+    args_i = `?id=${dataset}`;
+  }
 
   // Get /info response for dataset
-  const seriesInfo = [
-    (cb) => {get(argv['server1'] + "/info" + args_i, argv['name1'], cb)}, 
-    (cb) => {get(argv['server2'] + "/info" + args_i, argv['name2'], cb)}
+  const urls = [
+    argv['server1'] + "/info" + args_i,
+    argv['server2'] + "/info" + args_i
   ];
 
-  async.series(seriesInfo, 
-    (err, infos) => {
-      handleError(err);
-      cb(argv, infos);
-  })
+  get(urls, (responses) => {
+    let infos = [];
+    infos[0] = responses[0]['body'];
+    infos[1] = responses[1]['body'];
+    //report(argv, infos, null);
+    //console.log(infos)
+    cb(infos)
+  });
 }
 
-function getDatasets(argv, dataset, infos, cb) {
+function getDatasets(dataset, infos, cb) {
 
-  // Arguments for /info request
-  const args_i = `?id=${dataset}&parameters=${argv['parameters']}`;
-
-  infos[0] = JSON.parse(infos[0]['body']);
-  infos[1] = JSON.parse(infos[1]['body']);
+  //console.log(infos)
+  // Arguments for /data request
+  let args_i = `?id=${dataset}&parameters=${argv['parameters']}`;
+  if (argv['parameters'] === '') {
+    args_i = `?id=${dataset}`;
+  }
 
   startstop(argv, infos);
+
   if (argv['start'] === '' && argv['stop'] === '') {
     console.error('start/stop not given and sampleStartDate/sampleStopDate not available from either server.');
     process.exit(1);
@@ -122,18 +106,19 @@ function getDatasets(argv, dataset, infos, cb) {
 
   let args_d = args_i + `&time.min=${argv['start']}&time.max=${argv['stop']}`;
 
-  url1 = argv['server1'] + "/data" + args_d;
-  url2 = argv['server2'] + "/data" + args_d;
-
-  let seriesData = [
-      (cb) => {get(url1, argv['name1'], cb)},
-      (cb) => {get(url2, argv['name2'], cb)}
+  // Get /info response for dataset
+  const urls = [
+    argv['server1'] + "/data" + args_d,
+    argv['server2'] + "/data" + args_d
   ];
 
-  async.series(seriesData,
-    (err, data) => {
-      handleError(err);
-      cb(err, argv, infos, data);
+  get(urls, (responses) => {
+    let data = [];
+    data[0] = responses[0]['body'];
+    data[1] = responses[1]['body'];
+    //report(argv, infos, null);
+    //console.log(infos)
+    cb(null, infos, data);
   });
 }
 
@@ -164,24 +149,55 @@ function startstop(argv, infos) {
   }  
 }
 
-function get(url, msgPrefix, cb) {
+function get(urls, cb) {
 
-  console.log(msgPrefix + clc.blue(' Getting ' + url));
+  if (!Array.isArray(urls)) {
+    urls = [urls];
+  }
 
-  let opts = {"url": url, "time": true};
-  request(opts,
-    function (err,res,body) {
-        handleError(err);
-        if (err) cb(err, null);
-        let data = 
-                    {
-                      "url": url,
-                      "headers": res.headers,
-                      "body": body,
-                      "timing": extractTiming(res)
-                    }
-        cb(err, data);
-    });
+  function finished(err, response, url) {
+    if (finished.N === undefined) {
+      finished.responses = [];
+      finished.N = 0;
+    }
+
+    console.log("Received " + url);
+    finished.responses.push(response);
+    if (finished.responses.length === urls.length) {
+      if (urls.length === 1) {
+        cb(finished.responses[0]);
+      } else {
+        cb(finished.responses);
+      }
+    }
+  }
+
+  for (let idx in urls) {
+    console.log("Requesting " + urls[idx])
+    axios.get(urls[idx])
+      .then((response) => {
+        //console.log(response)
+        finished(null, {'body': response.data, 'headers': response.headers}, urls[idx]);
+      })
+      .catch((error) => {
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.log(error.response.data);
+          console.log(error.response.status);
+          console.log(error.response.headers);
+        } else if (error.request) {
+          // The request was made but no response was received
+          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+          // http.ClientRequest in node.js
+          console.log(error.request);
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          console.log('Error', error.message);
+        }
+        console.log(error.config);
+      });
+  }
 }
 
 function extractTiming(res, precision) {

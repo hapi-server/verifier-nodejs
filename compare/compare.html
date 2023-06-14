@@ -1,0 +1,77 @@
+<html>
+<head>
+  <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+  <title>HAPI Server Comparer</title>
+  <link rel="shortcut icon" href="//hapi-server.org/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="//hapi-server.org/favicon.ico" type="image/x-icon">
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+    input[type=text] {
+      width: 50%;
+      padding: 12px 12px;
+      margin: 8px 0;
+      box-sizing: border-box;
+    }
+    input[type=submit] {
+      width: 10%;
+      background-color: #4CAF50;
+      color: white;
+      padding: 12px 20px;
+      margin: 8px 0;
+      box-sizing: border-box;
+    }
+    input[type=submit]:hover {
+      background-color: #45a049;
+    }
+    label {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <form action="/">
+    <label for="url1">First URL</label>
+    <br>
+    <input type="text" id="url1" name="url1" value="https://cottagesystems.com/server/cdaweb/hapi">
+    <br>
+
+    <label for="name1">First URL Name</label>
+    <br>
+    <input type="text" id="name1" name="name1" value="jf">
+    <br>
+
+    <label for="url2">Second URL</label>
+    <br>
+    <input type="text" id="url2" name="url2" value="https://cdaweb.gsfc.nasa.gov/hapi">
+    <br>
+    <label for="name2">Second URL Name</label>
+    <br>
+    <input type="text" id="name2" name="name2" value="nl">
+    <br>
+
+    <label for="dataset">Dataset</label>
+    <br>
+    <input type="text" id="dataset" name="dataset" value="AC_H0_MFI">
+    <br>
+
+    <label for="dataset">Parameters</label>
+    <br>
+    <input type="text" id="parameters" name="parameters" value="">
+    <br>
+
+    <label for="start">Start</label>
+    <br>
+    <input type="text" id="start" name="start" value="">
+    <br>
+
+    <label for="stop">Stop</label>
+    <br>
+    <input type="text" id="stop" name="stop" value="">
+    <br>
+
+    <input type="submit" value="Submit">
+  </form>
+</body>
+</html>

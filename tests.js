@@ -234,46 +234,61 @@ function run(opts, REQ, RES) {
         report(r,url,is.CORSAvailable(res.headers),{"warn":true});
         if (!report(r,url,is.HTTP200(res),{"abort":true})) return;
         if (!report(r,url,is.JSONParsable(body),{"abort":true})) return;
+
         var CATALOG = JSON.parse(body);
-        var cat = CATALOG["catalog"];
-        if (opts["id"]) {
-          for (var i = 0;i < cat.length;i++) {
-            if (cat[i]["id"] == opts["id"]) {
-              var catr = [cat[i]];
-              break;
-            }
-          }
-          CATALOG["catalog"] = catr;
-        } else {
-          CATALOG["catalog"] = cat;
-        }
+        versionCheck(url,CATALOG.HAPI);
 
         // TODO: Hacky way to pass CATALOG to report.
         r['catalog'] = CATALOG;
-        versionCheck(url,CATALOG.HAPI);
         report(r,url,is.HAPIJSON(body,version(CATALOG.HAPI),'catalog'));
-        var datasets = JSON.parse(body).catalog;
-        if (datasets) {
-          report(r,url,is.Unique(datasets,"datasets","id"));
-          var datasets = removeDuplicates(datasets,'id');
-          report(r,url,is.TooLong(datasets,"catalog","id","title",40),{"warn":true});
-          report(r,url,is.CIdentifier(datasets,"dataset id"),{"warn":true});          
-          if (opts["parameter"]) {
-            info(formats,datasets);
-          } else {
-            infoerr(formats,datasets);
+
+        let datasets = CATALOG.catalog;
+        report(r,url,is.Unique(datasets,"datasets","id"));
+        datasets = removeDuplicates(datasets,'id');
+        report(r,url,is.TooLong(datasets,"catalog","id","title",40),{"warn":true});
+        report(r,url,is.CIdentifier(datasets,"dataset id"),{"warn":true});
+
+        if (opts["id"]) {
+          let datasetsr = [];
+          for (var i = 0;i < datasets.length;i++) {
+            if (opts["id"].startsWith("^")) {
+              let re = new RegExp(opts["id"]);
+              if (re.test(datasets[i]["id"])) {
+                console.log(opts["id"], datasets[i]["id"], re.test(datasets[i]["id"]))
+                datasetsr.push(datasets[i]);
+                continue;
+              }
+            }
+            if (datasets[i]["id"] == opts["id"]) {
+              datasetsr = [datasets[i]];
+              break;
+            }
           }
+
+          if (datasetsr.length == 0) {
+            let description = opts["id"] + " is not in catalog.";
+            if (opts["id"].startsWith("^")) {
+              description = opts["id"] + " did not match any dataset id in catalog.";
+            }
+            if (!report(r,url,
+                    {
+                      "description": description,
+                      "error": true,
+                      "got": "to abort"
+                    },
+                    {"abort":true}
+                  )
+              ) {
+              return;
+            }
+          }
+          datasets = datasetsr;
+        }
+
+        if (opts["parameter"]) {
+          info(formats,datasets);
         } else {
-          report(r,url,
-            {
-              "description": "Expect datasets element in catalog",
-              "error": true,
-              "got": datasets
-            },
-            {
-              "abort": true
-            });
-          return;
+          infoerr(formats,datasets);
         }
       });
   }
@@ -291,7 +306,7 @@ function run(opts, REQ, RES) {
       var metaTimeout = "metadefault";
     } else {
       infoerr.tries += 1;
-      var metaTimeout = "metapreviousfail";     
+      var metaTimeout = "metapreviousfail";
     };
 
     var url = opts["url"] + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
@@ -319,15 +334,14 @@ function run(opts, REQ, RES) {
         report(r,url,is.RequestError(err,res,metaTimeout,timeout()));
         report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
         report(r,url,is.ErrorCorrect(res.statusCode,404,"httpcode"));
-        var err1406 = errors(1406);
-        report(r,url,is.StatusInformative(res.statusMessage,"HAPI error 1406",'httpstatus'),{"warn":true});
+        report(r,url,is.StatusInformative(res.statusMessage,errors(1406),'httpstatus'),{"warn":true});
         if (report(r,url,is.JSONParsable(body),{"stop":true})) {
           let json = JSON.parse(body);
           versionCheck(url,json.HAPI);
           if (report(r,url,is.HAPIJSON(json,version(json.HAPI),'HAPIStatus'),{"stop":true})) {
             report(r,url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
             report(r,url,is.StatusInformative(json.status.message,"HAPI error 1406",'hapistatus'),{"warn":true});
-          } 
+          }
         }
         info(formats,datasets);
       })
@@ -343,7 +357,7 @@ function run(opts, REQ, RES) {
       return;
     }
 
-    if (!opts["id"]) {
+    if (!opts["id"] || opts["id"].startsWith("^")) {
       var id = datasets[0]["id"];
       var url = opts["url"] + '/info?id=' + datasets[0]["id"];
     } else {
@@ -351,10 +365,11 @@ function run(opts, REQ, RES) {
       var url = opts["url"] + '/info' + "?id=" + opts["id"];
       // Only check one dataset with id = opts["id"].
       datasets = selectOne(datasets,'id',opts["id"]);
+      let description = "Dataset " + opts["id"] + " is not in catalog";
       if (datasets.length == 0) {
         if (!report(r,url,
                 {
-                  "description": "Dataset " + opts["id"] + " is not in catalog",
+                  "description": description,
                   "error": true,
                   "got": "to abort"
                 },
@@ -413,9 +428,30 @@ function run(opts, REQ, RES) {
 
         report(r,url,is.RequestError(err,res,metaTimeout,timeout()));
 
-        if (!report(r,url,is.HTTP200(res),{"abort":true})) return;
+        let rargs = {"abort": true};
+        if (datasets.length > 1) {
+          rargs = {"stop": true};
+        }
+
+        function next() {
+          if (datasets.length > 1) {
+            datasets.shift();        // Remove first element
+            info(formats,datasets);  // Start next dataset
+          }
+        }
+
+        if (!report(r,url,is.HTTP200(res),rargs)) {
+          next();
+          return;
+        }
+
         report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
-        if (!report(r,url,is.JSONParsable(body),{"abort":true})) return;
+
+        if (!report(r,url,is.JSONParsable(body),rargs)) {
+          next();
+          return;
+        }
+
         let json = JSON.parse(body);
         versionCheck(url,json.HAPI);
         let ver = version(json.HAPI);

@@ -254,7 +254,8 @@ function run(opts, REQ, RES) {
             if (opts["id"].startsWith("^")) {
               let re = new RegExp(opts["id"]);
               if (re.test(datasets[i]["id"])) {
-                console.log(opts["id"], datasets[i]["id"], re.test(datasets[i]["id"]))
+                //console.log(opts["id"], datasets[i]["id"], re.test(datasets[i]["id"]))
+                //console.log(opts["id"])
                 datasetsr.push(datasets[i]);
                 continue;
               }

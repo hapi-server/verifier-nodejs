@@ -184,7 +184,7 @@ function writeResult(obj, status, res) {
       icon = clc.inverse.red("✗");
     }
 
-    let got = rmHTML(obj.got);
+    let got = "" + rmHTML(obj.got); // "" to cast to string
     let desc = rmHTML(obj.description);
     let msg = "  " + icon + " " + desc;
     if (got !== "") {

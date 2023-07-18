@@ -20,6 +20,7 @@ const argv = require('yargs')
                 "test": false,
                 "plotserver":"https://hapi-server.org/plot"
               })
+              .describe('dataset','Start with "^" to indicate a regular expression')
               .boolean('test')
               .deprecateOption('id', 'use --dataset')
               .deprecateOption('timemin', 'use --start')

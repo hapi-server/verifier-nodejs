@@ -204,7 +204,7 @@ function HAPIJSON(text, version, part, ignoreVersionError) {
 
   let s = schema(version);
 
-  if (schema == false) {
+  if (s == false) {
     let known = JSON.stringify(Object.keys(schemas));
     let desc = "Expect HAPI version to be one of <code>" + known + "</code>"; 
     let got = `Schema version '<code>${version}</code>' is not one of <code>${known}</code>`;
@@ -1135,7 +1135,7 @@ function LabelOrUnitsOK(name, array, size, which, version) {
 
   var checkArray = require('./lib/checkArray.js').checkArray;
 
-  let err = checkArray(array, size, which, ['string', 'null']);
+  let err = checkArray(array, size, which);
 
   return {
     "description": callerName() + desc,
@@ -1209,7 +1209,7 @@ function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
     }
 
     let msgo = `${name}["bins"][${d}]["${which}"] is a string that references `
-            + `another parameter, so expect `;
+             + `another parameter, so expect`;
 
     if (!rpn) {
       return {
@@ -1228,14 +1228,6 @@ function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
     }
 
     let rparam = parameters[rpn];
-
-    if (parameters[rpn]['fill']) {
-      return {
-        "description": callerName() + msgo + " to not have a fill of null or no fill element.",
-        "got": `Parameter ${rname}["fill"] must be null or not present.`,
-        "error": true
-      };
-    }
 
     if (rparam['bins']) {
       return {
@@ -1283,14 +1275,14 @@ function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
     if (which === 'centers') {
       if (rparam['size'].length > 1) {
         return {
-          "description": callerName() + msgo + `${rname}["size"].length = 1`,
+          "description": callerName() + msgo + ` ${rname}["size"].length = 1`,
           "got": `Parameter ${rname}["size"].length = ${rparam["size"].length}`,
           "error": true
         };
       }
       if (rparam['size'][0] != param['size'][d]) {
         return {
-          "description": callerName() + msgo + `${rname}["size"][0] = ${name}["size"][${d}]`,
+          "description": callerName() + msgo + ` ${rname}["size"][0] = ${name}["size"][${d}]`,
           "got": `Parameter ${rname}["size"][0] = ${rparam['size'][0]} and ${name}["size"][${d}] = ${param['size'][d]}`,
           "error": true
         };
@@ -1300,22 +1292,22 @@ function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
     if (which === 'ranges') {
       if (rparam['size'].length != 2) {
         return {
-          "description": callerName() + msgo + `${rname}["size"].length = 2`,
+          "description": callerName() + msgo + ` ${rname}["size"].length = 2`,
           "got": `Parameter ${rname}["size"].length = ${rparam['size'].length}`,
           "error": true
         };
       }
-      if (rparam['size'][0] != 2) {
+      if (rparam['size'][1] != 2) {
         return {
-          "description": callerName() + msgo + `${rname}["size"][0] = 2.`,
-          "got": `Parameter ${rname}["size"][0] = ${rparam['size'][0]}`,
+          "description": callerName() + msgo + ` ${rname}["size"][1] = 2.`,
+          "got": `Parameter ${rname}["size"][1] = ${rparam['size'][1]}`,
           "error": true
         };
       }
-      if (rparam['size'][1] != param['size'][d]) {
+      if (rparam['size'][0] != param['size'][d]) {
         return {
-          "description": callerName() + msgo + `${rname}["size"][1] = ${name}["size"][${d}].`,
-          "got": `Parameter ${rname}["size"][1] = ${rparam['size'][1]} and ${name}["size"][${d}] = ${param['size'][d]}`,
+          "description": callerName() + msgo + ` ${rname}["size"][0] = ${name}["size"][${d}].`,
+          "got": `Parameter ${rname}["size"][0] = ${rparam['size'][0]} and ${name}["size"][${d}] = ${param['size'][d]}`,
           "error": true
         };
       }

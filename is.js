@@ -192,7 +192,7 @@ function JSONParsable(text) {
     return ret;
   } catch (error) {
     ret.got = "JSON.parse of:\n\n" + text + "\n\nresulted in " + error 
-            + ". Use " + jsonLintURL
+            + ". Use " + jsonLintLink
             + " for a more detailed error report. ";
     ret.error = true;
     return ret;

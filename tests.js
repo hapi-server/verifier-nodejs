@@ -36,11 +36,11 @@ function run(opts, REQ, RES) {
     REQ.connection.on('close',function() {CLOSED = true;});
   }
 
-  // Catch uncaught execeptions.
+  // Catch uncaught exceptions.
   process.on('uncaughtException', internalerror);
 
-  // Some servers return "Error: certificate has expired" when testing
-  // from command line or localhost.
+  // Some servers return "Error: certificate has expired" when testing from
+  // command line or localhost.
   let agentOptions = {"rejectUnauthorized": false};
 
   if (opts["parameter"]) {
@@ -353,17 +353,18 @@ function run(opts, REQ, RES) {
     if (CLOSED) {return;}
 
     if (datasets.length == 0) {
-      // All datsets have been checked.
+      // All datasets have been checked.
       report(r);
       return;
     }
 
+    let id, url;
     if (!opts["id"] || opts["id"].startsWith("^")) {
-      var id = datasets[0]["id"];
-      var url = opts["url"] + '/info?id=' + datasets[0]["id"];
+      id = datasets[0]["id"];
+      url = opts["url"] + '/info?id=' + datasets[0]["id"];
     } else {
-      var id = opts["id"];
-      var url = opts["url"] + '/info' + "?id=" + opts["id"];
+      id = opts["id"];
+      url = opts["url"] + '/info' + "?id=" + opts["id"];
       // Only check one dataset with id = opts["id"].
       datasets = selectOne(datasets,'id',opts["id"]);
       let description = "Dataset " + opts["id"] + " is not in catalog";
@@ -395,14 +396,8 @@ function run(opts, REQ, RES) {
 
     report(r,url);
 
-    if (RES && opts["output"] === "html" && info.tries[datasets.length] == 0) {
-      let localplotserver = /localhost/.test(opts["plotserver"]);
-      let localtesturl = /localhost/.test(opts["url"]);
-      if ((localplotserver && localtesturl) || localtesturl == false) {
-        var link = opts["plotserver"]+"?server=" + opts["url"] + "&id=" + id + "&format=gallery";
-        var note = "<a target='_blank' href='" + link + "'>Visually check data and test performance</a>";
-        RES.write("&thinsp;👁&nbsp;" + note + "<br>");
-      }
+    if (info.tries[datasets.length] == 0) {
+      plotLink(RES,opts,id);
     }
 
     request(
@@ -1171,17 +1166,7 @@ function run(opts, REQ, RES) {
           }
         }
 
-        if (RES && opts["output"] === "html") {
-          let localplotserver = /localhost/.test(opts["plotserver"]);
-          let localtesturl = /localhost/.test(opts["url"]);
-          if ((localplotserver && localtesturl) || localtesturl == false) {
-            var link = opts["plotserver"]+"?usecache=false&usedatacache=false&server=" + url.replace("/data?","&");
-            var note = "<a target='_blank' href='" + link + "'>Direct link for following plot.</a>. "
-                     + "Please report any plotting issues at "
-                     + "<a target='_blank' href='https://github.com/hapi-server/plot-python/issues'>the Python <code>hapiplot</code> GitHub page</a>.";
-            RES.write("&nbsp&nbsp;<font style='color:black'>☞</font>&nbsp" + note + "<br><img src='" + link + "'/><br>");
-          }
-        }
+        plotLink(RES,opts,url);
 
         report(r,url,is.RequestError(err,res,dataTimeout,timeout()));
         if (!report(r,url,is.HTTP200(res), {"stop": true})) {
@@ -1301,6 +1286,36 @@ function run(opts, REQ, RES) {
 }
 exports.run = run;
 
+function plotLink(RES,opts,url) {
+
+  if (RES && opts["output"] === "html") {
+    let localplotserver = /localhost/.test(opts["plotserver"]);
+    let localtesturl = /localhost/.test(opts["url"]);
+    if ((localplotserver && localtesturl) || localtesturl == false) {
+    }
+  }
+
+  if (RES && opts["output"] === "html") {
+    let localplotserver = /localhost/.test(opts["plotserver"]);
+    let localtesturl = /localhost/.test(opts["url"]);
+    if ((localplotserver && localtesturl) || localtesturl == false) {
+      if (url.startsWith('http')) {
+        var link = opts["plotserver"]+"?usecache=false&usedatacache=false&server=" + url.replace("/data?","&");
+        var note = "<a target='_blank' href='" + link + "'>Direct link for following plot.</a>. "
+                 + "Please report any plotting issues at "
+                 + "<a target='_blank' href='https://github.com/hapi-server/plot-python/issues'>the Python <code>hapiplot</code> GitHub page</a>.";
+        RES.write("&nbsp&nbsp;<font style='color:black'>☞</font>&nbsp" + note + "<br><img src='" + link + "'/><br>");
+      } else {
+        var link = opts["plotserver"]+"?server=" + opts["url"] + "&id=" + url + "&format=gallery";
+        var note = "<a target='_blank' href='" + link + "'>Visually check data and test performance</a>";
+        RES.write("&thinsp;👁&nbsp;" + note + "<br>");
+      }
+    } else {
+      RES.write("&nbsp;&nbsp;&nbsp;&nbsp; <i>Cannot plot b/c server URL is localhost and no localhost plotserver given as command line argument when starting verifier server.</i><br>");
+    }
+  }
+}
+
 function errors(num) {
 
   var errs = 
@@ -1395,5 +1410,5 @@ function selectOne(arr,key,value) {
   if (found) {
     arr = [arr[0]];
   }
-  return arr;     
+  return arr;
 }

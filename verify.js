@@ -146,7 +146,6 @@ if (argv.url !== "" || argv.test == true) {
       "metatimeout": parseInt(req.query["metatimeout"]) || argv["metatimeout"],
       "plotserver": req.query["plotserver"] || argv["plotserver"]
     }
-
     tests.run(opts,req,res);
   });
 

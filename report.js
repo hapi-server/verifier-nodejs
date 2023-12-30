@@ -5,10 +5,6 @@ function report(r,url,obj,opts) {
 
   let reqOpts = r.opts;
   let res = r.res;
-  if (res) {
-    console.log(r);
-    process.exit(0);
-  }
 
   // Returns !(obj.error && (stop || abort))
   // stop means processing can't continue on current URL

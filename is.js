@@ -113,7 +113,7 @@ function splitCSV(bodyString) {
 }
 
 function versionWarning(version) {
-  if (parseFloat(version) >= 3.0) {
+  if (parseFloat(version) >= 3.1) {
     return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. Some errors reported by schema check may not actually be errors and not all features are checked.</span>`;
   }
   return "";
@@ -129,7 +129,7 @@ function versions() {
 exports.versions = versions;
 
 function HAPIVersionSame(url, version, urlLast, versionLast) {
-  let des = "Expect HAPI version to match that from last requests where found.";
+  let des = "Expect HAPI version to match that from previous requests when given.";
   let got = `Current: '<code>${version}</code>' and Last: '<code>${versionLast}</code>'`;
   let err = false;
   if (version !== versionLast) {
@@ -856,7 +856,7 @@ function FileContentSame(header, body, bodyAll, pn, what) {
 exports.FileContentSame = FileContentSame;
 
 function FileStructureOK(body, what, other, emptyExpected) {
-  
+
   var desc,t,got;
 
   if (what === "emptyconsistent") {

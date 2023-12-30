@@ -24,8 +24,10 @@ writeURL(arg);
 
 if (arg.startsWith('http')) {
   request(arg, (err, res, body) => {
-    if (!err) validate(body); return;
-
+    if (!err) {
+      validate(body);
+      return;
+    }
     console.error("Request failure for " + arg + ":");
     console.log(err);
     process.exit(1);
@@ -46,7 +48,7 @@ function validate(str) {
   if (parseResult['error'] == true) {
     writeResult(parseResult);
     process.exit(1);
-  } 
+  }
   let json = parseResult['json'];
 
   let version = getVersion(argv, json);
@@ -86,7 +88,6 @@ function getVersion(argv, json) {
 }
 
 function inferSubSchema(json) {
-  console.log(json)
   if (json['id']) {
     return "about";
   }

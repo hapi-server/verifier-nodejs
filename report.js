@@ -154,6 +154,8 @@ function rmHTML(str) {
   }
   return str.replace(/&lt;/g,"<").replace(/&gt;/g,">")
             .replace(/<code>/g,"").replace(/<\/code>/g,"")
+            .replace(/<pre>/g,"").replace(/<\/pre>/g,"")
+            .replace(/<span .*?>(.*)<\/span>/gi,"$1")
             .replace(/<a .*?>(.*)<\/a>/gi,"$1")
 }
 
@@ -161,7 +163,7 @@ function writeNote(msg, style, res) {
   if (res) {
     res.write(msg + "<br>");
   } else {
-    console.log(msg + "Passes are being suppressed.");        
+    console.log(msg + "Passes are being suppressed.");
   }
 }
 

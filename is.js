@@ -212,6 +212,11 @@ function HAPIJSON(text, version, part, ignoreVersionError) {
     }
   }
 
+  if (part === "error" && parseInt(version.split('.')) < 3) {
+    // In version 3+, error is a top-level element.
+    part = "HAPIStatus";
+  }
+
   if (ignoreVersionError && !s[part]) {
     return;
   }

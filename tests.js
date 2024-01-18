@@ -245,7 +245,7 @@ function run(opts, clientRequest, clientResponse) {
       if (report(r,url,is.JSONParsable(body),{"stop":true})) {
         let json = JSON.parse(body);
         versionCheckAndReport(r,url,opts,json.HAPI);
-        if (report(r,url,is.HAPIJSON(json,version(opts,json.HAPI),'HAPIStatus',ignoreVersionError),{"stop":true})) {
+        if (report(r,url,is.HAPIJSON(json,version(opts,json.HAPI),'error',ignoreVersionError),{"stop":true})) {
           report(r,url,is.ErrorCorrect(json.status.code,1406,"hapicode"));
           report(r,url,is.StatusInformative(json.status.message,"HAPI error 1406",'hapistatus'),{"warn":true});
         }

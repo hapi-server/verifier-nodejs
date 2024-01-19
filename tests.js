@@ -157,7 +157,7 @@ function run(opts, clientRequest, clientResponse) {
     if (CLOSED) {return;}
 
     let timeoutString = timeoutCondition(catalog,'metadata');
-    var url = opts["url"] + "/catalog";
+    var url = encodeURI(opts["url"] + "/catalog");
 
     report(r,url);
     request(requestOptions(url,opts,timeoutString),function (err,res,body) {
@@ -223,7 +223,7 @@ function run(opts, clientRequest, clientResponse) {
     }
 
     let timeoutString = timeoutCondition(infoError,'metadata');
-    var url = opts["url"] + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs";
+    var url = encodeURI(opts["url"] + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs");
 
     report(r,url);
     request(requestOptions(url,opts,timeoutString),function (err,res,body) {
@@ -274,7 +274,7 @@ function run(opts, clientRequest, clientResponse) {
     let datasets = r["datasetsToCheck"];
     let id = datasets[0]["id"];
 
-    url = opts["url"] + '/info?id=' + datasets[0]["id"];
+    url = encodeURI(opts["url"] + '/info?id=' + datasets[0]["id"]);
 
     // Initialize object that stores additional infoSingleParametermation for this dataset.
     r['catalog'][id] = {};
@@ -459,7 +459,7 @@ function run(opts, clientRequest, clientResponse) {
       }
     }
 
-    var url = opts["url"] + '/info' + "?id=" + id + '&parameters=' + parameter;
+    let url = encodeURI(opts["url"] + '/info' + "?id=" + id + '&parameters=' + parameter);
 
     report(r,url);
     request(requestOptions(url,opts,timeoutString),function (err,res,body) {
@@ -546,7 +546,7 @@ function run(opts, clientRequest, clientResponse) {
 
     let timeoutString = timeoutCondition(infoUsingDataset,"metadata");
 
-    var url = opts["url"] + '/info?dataset=' + datasets[0]["id"];
+    let url = encodeURI(opts["url"] + '/info?dataset=' + datasets[0]["id"]);
 
     report(r,url);
     request(requestOptions(url,opts,timeoutString),function (err,res,body) {
@@ -644,10 +644,10 @@ function run(opts, clientRequest, clientResponse) {
 
     let timeoutString = timeoutCondition(dataAll1,"data");
 
-    var url = opts["url"] 
+    let url = encodeURI(opts["url"] 
           + '/data?id=' + id 
           + '&time.min=' + r['catalog'][id]["startToUse"] 
-          + '&time.max=' + r['catalog'][id]["stopToUse"];
+          + '&time.max=' + r['catalog'][id]["stopToUse"]);
 
     report(r,url);
     let reqOpts = requestOptions(url,opts,timeoutString,true);
@@ -720,10 +720,10 @@ function run(opts, clientRequest, clientResponse) {
     let timeoutString = timeoutCondition(dataAll2,"data");
 
     // switchTimeFormat converts YMD -> DOY or YDOY -> YMD
-    var url = opts["url"] 
+    let url = encodeURI(opts["url"] 
             + '/data?id=' + id
             + '&time.min=' + switchTimeFormat(r['catalog'][id]['startToUse'])
-            + '&time.max=' + switchTimeFormat(r['catalog'][id]['stopToUse']);
+            + '&time.max=' + switchTimeFormat(r['catalog'][id]['stopToUse']));
 
     let reqOpts = requestOptions(url,opts,timeoutString,true);
     request(reqOpts,function (err,res,dataAll2Body) {
@@ -775,11 +775,11 @@ function run(opts, clientRequest, clientResponse) {
 
     let timeoutString = timeoutCondition(dataAll_Header,"data");
 
-    var url = opts["url"] 
+    let url = encodeURI(opts["url"] 
           + '/data?id=' + id 
           + '&time.min=' + r['catalog'][id]["startToUse"]
           + '&time.max=' + r['catalog'][id]["stopToUse"]
-          + "&include=header";
+          + "&include=header");
 
     report(r,url);
     let reqOpts = requestOptions(url,opts,timeoutString,true);
@@ -862,7 +862,7 @@ function run(opts, clientRequest, clientResponse) {
       stop2 = stop2.slice(0,-1);
     }
 
-    var url = opts["url"] + '/data?id='+ id + '&time.min=' + start2 + '&time.max=' + stop2;
+    let url = encodeURI(opts["url"] + '/data?id='+ id + '&time.min=' + start2 + '&time.max=' + stop2);
 
     report(r,url);
     let reqOpts = requestOptions(url,opts,timeoutString,true);
@@ -944,11 +944,11 @@ function run(opts, clientRequest, clientResponse) {
 
     let timeoutString = timeoutCondition(datar,"data");
 
-    var url = opts["url"] 
+    let url = encodeURI(opts["url"] 
             + '/data?id=' + datasets[0].id
             + '&parameters=' + parameter
             + '&time.min=' + start
-            + '&time.max=' + stop;
+            + '&time.max=' + stop);
 
     report(r,url);
     let reqOpts = requestOptions(url,opts,timeoutString,true);

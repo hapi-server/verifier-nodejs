@@ -17,6 +17,7 @@ schemas["2.0"] = require(base + "-2.0-1.json");
 schemas["2.1"] = require(base + "-2.1.json");
 schemas["3.0"] = require(base + "-3.0.json");
 schemas["3.1"] = require(base + "-3.1.json");
+schemas["3.2"] = require(base + "-3.2.json");
 
 function schema(version) {
   let json = schemas[version];

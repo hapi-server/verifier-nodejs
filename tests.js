@@ -147,11 +147,6 @@ function run(opts, clientRequest, clientResponse) {
     });
   }
 
-  function api3_0() {
-    // TODO: Check no Unicode in dataset and parameter opts["id"]s (for 3.0, but allowed in 3.1?)
-    // TODO: Test that time.min and start and time.max and stop are both supported for /data requests.
-  }
-
   function catalog() {
 
     if (CLOSED) {return;}

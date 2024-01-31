@@ -22,7 +22,7 @@ nvm install
 git clone https://github.com/hapi-server/verifier-nodejs.git
 # Install required Node.js packages
 cd verifier-nodejs; npm install
-# Test
+# Run unit test
 node verify.js --test
 ```
 

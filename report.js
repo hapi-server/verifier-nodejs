@@ -64,6 +64,11 @@ function report(r,url,obj,opts) {
         console.log(msg);
       }
     }
+    if (reqOpts["output"] === "html") {
+      // TODO: Can we determine if request originated from hapi-server.org
+      //       and suppress feedback if not?
+      res.write("https://hapi-server.org/verify has low memory limits. If feedback stops, memory may be exhausted. In this case, use command line version or reduce time range of request. See https://github.com/hapi-server/verifier-nodejs/issues/61");
+    }
 
     // Parse is.js to get line numbers for test functions.
     var istext = fs.readFileSync(__dirname + '/is.js').toString();

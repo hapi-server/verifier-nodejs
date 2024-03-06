@@ -14,8 +14,8 @@ const argv = require('yargs')
                 "timemin": "",
                 "stop": "",
                 "version": "",
-                "datatimeout": 5000,
-                "metatimeout": 1000,
+                "datatimeout": 0,
+                "metatimeout": 0,
                 "output": "console",
                 "test": false,
                 "plotserver":"https://hapi-server.org/plot"
@@ -26,7 +26,7 @@ const argv = require('yargs')
               .describe('parameter','')
               .describe('start','')
               .describe('stop','')
-              .describe('version','Validate against a HAPI version. Defauts to what given in JSON responses.')
+              .describe('version','Validate against a HAPI version. Defaults to what given in JSON responses.')
               .describe('datatimeout','')
               .describe('metatimeout','')
               .describe('output','')
@@ -41,8 +41,6 @@ const argv = require('yargs')
 
 
 const tests = require('./tests.js'); // Test runner
-const versions = require('./is.js').versions; // Array of implemented versions
-
 
 function fixurl(q) {
 
@@ -77,27 +75,8 @@ if (argv.url !== "" || argv.test == true) {
   }
 
   fixurl(argv);
+  tests.run(argv);
 
-  argv.parameter = argv.parameter || argv.parameters || "";
-
-  if (argv.version !== "" && !versions().includes(argv.version)) {
-    console.log("Version must be one of ", versions());
-  }
-
-  let opts = {
-    "url": argv["url"],
-    "id": argv["id"] || argv["dataset"],
-    "parameter": argv["parameter"],
-    "start": argv["timemin"] || argv["start"],
-    "stop": argv["timemax"] || argv["stop"],
-    "version": argv["version"],
-    "output": argv["output"] || "console",
-    "datatimeout": argv["datatimeout"],
-    "metatimeout": argv["metatimeout"],
-    "plotserver": argv["plotserver"]
-  }
-
-  tests.run(opts);
 } else {
 
   // Server mode
@@ -114,8 +93,7 @@ if (argv.url !== "" || argv.test == true) {
     if (!req.query.url) { 
       // Send HTML page if no URL given in query string
       res.contentType("text/html");
-      fs.readFile(__dirname + "/verify.html",
-                    function (err,html) {res.end(html)});
+      fs.readFile(__dirname + "/verify.html", (err, html) => res.end(html));
       return;
     }
 
@@ -124,40 +102,13 @@ if (argv.url !== "" || argv.test == true) {
                    "datatimeout","metatimeout","output"];
     for (let key in req.query) {
       if (!allowed.includes(key)) {
-        res.end("Allowed parameters are " 
-                + allowed.join(",") + " (not " + key + ").");
+        res.end(`Allowed parameters are ${allowed.join(",")} (not ${key}).`);
         return;
       }
     }
 
     fixurl(req.query);
-
-    let version = req.query["version"] || argv["version"];
-    if (version && !versions().includes(version)) {
-      let vers = JSON.stringify(versions());
-      res.status(400).end("<code>version</code> must be one of " + vers);
-    }
-
-    let parameter = req.query["parameter"] || req.query["parameters"] || "";
-    if (parameter.trim() !== "") {
-      if (parameter.split(",").length > 1) {
-        res.end("Only one parameter may be specified.");
-      }
-    }
-
-    let opts = {
-      "url": req.query["url"] || "",
-      "id": req.query["id"] || req.query["dataset"] || "",
-      "parameter": parameter,
-      "start": req.query["time.min"] || req.query["start"] || "",
-      "stop": req.query["time.max"]  || req.query["start"] || "",
-      "version": version,
-      "output": req.query["output"] || "html",
-      "datatimeout": parseInt(req.query["datatimeout"]) || argv["datatimeout"],
-      "metatimeout": parseInt(req.query["metatimeout"]) || argv["metatimeout"],
-      "plotserver": req.query["plotserver"] || argv["plotserver"]
-    }
-    tests.run(opts,req,res);
+    tests.run(req.query,req,res);
   });
 
   app.use(errorHandler);

@@ -1,5 +1,4 @@
 const fs      = require('fs');
-const clc     = require('chalk');
 const moment  = require('moment');
 const ip      = require("ip");
 const {URL}   = require("url");
@@ -13,6 +12,8 @@ let report = require('./report.js').report; // Logging
 
 exports.run = run;
 function run(opts, clientRequest, clientResponse) {
+
+  opts = setAndCheckOptions(opts, clientResponse);
 
   // For simulating timeouts
   //opts["metatimeout"] = 1;
@@ -608,7 +609,6 @@ function run(opts, clientRequest, clientResponse) {
       if (json["cadence"] && validCadence) {
         dataTimeout = "datasample10xcadence";
         report(r,url,is.CadenceOK(json["cadence"],start,stop,"start/stop"));
-        var moment = require('moment');
         var md = moment.duration(json["cadence"]);
         stop = new Date(start).valueOf() + 10*md._milliseconds;
         stop = new Date(stop).toISOString();
@@ -647,7 +647,6 @@ function run(opts, clientRequest, clientResponse) {
     report(r,url);
     let reqOpts = requestOptions(url,opts,timeoutString,true);
     request(reqOpts,function (err,res,dataAll1Body) {
-
       if (err) {
         if (dataAll1.tries === 0) {
           report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)),{"warn":true});
@@ -1049,6 +1048,50 @@ function run(opts, clientRequest, clientResponse) {
 
 // Helper functions
 
+function setAndCheckOptions(argv, res) {
+  const versions = require('./is.js').versions; // Array of implemented versions
+
+  if (res === undefined) {
+    output = argv["output"];
+  } else {
+    output = argv["output"] || "html";
+  }
+
+  let opts = {
+    "url": argv["url"],
+    "id": argv["id"] || argv["dataset"],
+    "parameter": argv["parameter"] || argv["parameters"] || "",
+    "start": argv["timemin"] || argv["start"],
+    "stop": argv["timemax"] || argv["stop"],
+    "version": argv["version"],
+    "output": output,
+    "datatimeout": parseInt(argv["datatimeout"]) || 5000,
+    "metatimeout": parseInt(argv["metatimeout"]) || 1000,
+    "plotserver": argv["plotserver"] || "http://hapi-server.org/plot",
+  }
+
+  if (opts.version && !versions().includes(opts.version)) {
+    if (res) {
+      res.status(400).end("<code>version</code> must be one of " + versions());
+      return;
+    }
+    console.log("'version' must be one of ", versions());
+    process.exit(1);
+  }
+
+  let parameter = opts["parameter"] || opts["parameters"] || "";
+  if (opts["parameter"].trim() !== "") {
+    if (opts["parameter"].split(",").length > 1) {
+      if (res) {
+        res.end("Only one parameter may be specified.");
+        return;
+      }
+    }
+  }
+
+  return opts;
+}
+
 function versionParts(version) {
   let parts = version.split('.');
   return {"major": parseInt(parts[0]), "minor": parseInt(parts[1])};
@@ -1251,12 +1294,12 @@ function errors(num) {
   return errs[num+""];
 }
 
-function uncaughtException(err,clientResponse) {
-  console.log(err.stack);
+function uncaughtException(err, clientResponse) {
   if (clientResponse) {
     clientResponse.end('<br><br><div style="border:2px solid black"><b><font style="color:red"><b>Problem with verification server (Uncaught Exception). Aborting. Please report last URL shown above in report to the <a href="https://github.com/hapi-server/verifier-nodejs/issues">issue tracker</a>.</b></font></div>');
+    console.log(err.stack);
   } else {
-    console.log(clc.red('Problem with verification server (Uncaught Exception). Aborting.'));
+    console.log("Problem with verification server (Uncaught Exception). Aborting.");
     console.log(err.stack);
     process.exit(1);
   }

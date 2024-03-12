@@ -6,8 +6,8 @@ function report(r,url,obj,opts) {
   let reqOpts = r.opts;
   let res = r.res;
   if (res) {
-    console.log(r);
-    process.exit(0);
+    //console.log(r);
+    //process.exit(0);
   }
 
   // Returns !(obj.error && (stop || abort))

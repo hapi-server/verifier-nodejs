@@ -97,6 +97,7 @@ if (argv.url !== "" || argv.test == true) {
       return;
     }
 
+    console.log(req.query.url)
     let allowed = ["url","id","dataset","parameter","parameters",
                    "time.min","start","time.max","stop","version",
                    "datatimeout","metatimeout","output"];
@@ -107,6 +108,14 @@ if (argv.url !== "" || argv.test == true) {
       }
     }
 
+    let url = req.query.url;
+    // Because this service echos links in the response, it is used to post
+    // links such as verify?url=some_non_hapi_content and this links show up
+    // in a Google search.
+    if (!url.endsWith("hapi/") && !url.endsWith("hapi")) {
+      res.status(404).end("URL must end with 'hapi/' or 'hapi'");
+      return;
+    }
     fixurl(req.query);
     tests.run(req.query,req,res);
   });

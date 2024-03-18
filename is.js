@@ -17,6 +17,16 @@ schemas["2.0"] = require(base + "-2.0-1.json");
 schemas["2.1"] = require(base + "-2.1.json");
 schemas["3.0"] = require(base + "-3.0.json");
 schemas["3.1"] = require(base + "-3.1.json");
+schemas["3.2"] = require(base + "-3.2.json");
+
+function schema(version) {
+  let json = schemas[version];
+  if (!json) {
+    return false;
+  } else {
+    return schemas[version];
+  }
+}
 
 function sameSize(size1, size2) {
   if (!Array.isArray(size1)) size1 = [size1];
@@ -94,26 +104,8 @@ function csvToArray(text) {
   return ret;
 }
 
-function splitCSV(bodyString) {
-
-  let headerString = "";
-  let bodyLines = bodyString.split(/\r?\n/);
-  for (var i = 0; i < bodyLines.length; i++) {
-    if (bodyLines[i][0] === "#") {
-      headerString = headerString + bodyLines[i].slice(1);
-    } else {
-      break;
-    }
-  }
-  let dataString = bodyLines.slice(i).join("\n");
-  return {
-    "header": headerString,
-    "data": dataString
-  };
-}
-
 function versionWarning(version) {
-  if (parseFloat(version) >= 3.0) {
+  if (parseFloat(version) >= 3.2) {
     return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. Some errors reported by schema check may not actually be errors and not all features are checked.</span>`;
   }
   return "";
@@ -129,7 +121,7 @@ function versions() {
 exports.versions = versions;
 
 function HAPIVersionSame(url, version, urlLast, versionLast) {
-  let des = "Expect HAPI version to match that from last requests where found.";
+  let des = "Expect HAPI version to match that from previous requests when given.";
   let got = `Current: '<code>${version}</code>' and Last: '<code>${versionLast}</code>'`;
   let err = false;
   if (version !== versionLast) {
@@ -168,16 +160,6 @@ function HAPIVersion(version, ignoreVersionError) {
 }
 exports.HAPIVersion = HAPIVersion;
 
-function schema(version) {
-  let json = schemas[version];
-  if (!json) {
-    return false;
-  } else {
-    return schemas[version];
-  }
-}
-exports.schema = schema;
-
 function JSONParsable(text) {
 
   let ret = {
@@ -204,7 +186,7 @@ function HAPIJSON(text, version, part, ignoreVersionError) {
 
   let s = schema(version);
 
-  if (schema == false) {
+  if (s == false) {
     let known = JSON.stringify(Object.keys(schemas));
     let desc = "Expect HAPI version to be one of <code>" + known + "</code>"; 
     let got = `Schema version '<code>${version}</code>' is not one of <code>${known}</code>`;
@@ -231,14 +213,34 @@ function HAPIJSON(text, version, part, ignoreVersionError) {
     }
   }
 
+  if (part === "error" && parseInt(version.split('.')) < 3) {
+    // In version 3+, error is a top-level element.
+    part = "HAPIStatus";
+  }
+
+  if (ignoreVersionError && !s[part]) {
+    return;
+  }
+  if (!s[part]) {
+    let desc = `Expect HAPI JSON schema to have a element named '${part}'.`;
+    let got = `No element named '${part}' in HAPI schema. Is HAPI schema version '${version}' correct?`;
+    return {
+        "description": callerName() + desc,
+        "error": true,
+        "got": got
+      };
+  }
+
   try {
     var vr = v.validate(json, s[part]);
   } catch (e) {
+    console.log(json)
+    console.log(part)
     console.log(e)
     return {
         "description": callerName() + "Call to JSON validator failed.",
         "error": true,
-        "got": "Schema error: " + e
+        "got": e.toString()
       };
   }
 
@@ -254,7 +256,7 @@ function HAPIJSON(text, version, part, ignoreVersionError) {
              + " " + ve[i].message.replace(/\"/g,"'");
     }
     if (err.length > 0) {
-      got = "\n  " + JSON.stringify(err,null,4).replace(/\n/g,"\n  ");
+      got = "\n  <pre>" + JSON.stringify(err,null,4) + "</pre>";
     }
   }
 
@@ -295,10 +297,10 @@ function trailingZfix(str) {
 }
 exports.trailingZfix = trailingZfix;
 
-function RequestError(err, res, timeoutType, timeoutObj) {
+function RequestError(err, res, timeoutInfo) {
 
-  var tout = timeoutObj[timeoutType]["timeout"];
-  var when = timeoutObj[timeoutType]["when"];
+  var tout = timeoutInfo["value"];
+  var when = timeoutInfo["when"];
 
   if (!err) {
     // Remove extra precision on timings.
@@ -317,7 +319,7 @@ function RequestError(err, res, timeoutType, timeoutObj) {
       timeInfo = ` <a href='${requestURL}'>Timing info [ms]</a>: ${timeInfo}`;
     }
     return {
-      "description": callerName() + "Expect no request error for timeout of " + tout + " ms used when " + when,
+      "description": callerName() + "Expect no request error for timeout of " + tout + " ms when " + when,
       "error": false,
       "got": timeInfo
     };
@@ -549,6 +551,7 @@ function StatusInformative(message, wanted, what) {
 exports.StatusInformative = StatusInformative;
 
 function HeaderParsable(body) {
+
   let desc = "Expect header lines in data stream to"
            + " be JSON parsable after removal of leading #s.";
   let ret = {
@@ -568,7 +571,7 @@ function HeaderParsable(body) {
   ret.csvparts = csvparts;
 
   try {
-    JSON.parse(csvparts.header);
+    ret.csvparts.header = JSON.parse(csvparts.header);
     return ret;
   } catch (error) {
     ret.got = "<code>JSON.parse()</code> of \n\n" + csvparts.header + "\n\nresulted in "
@@ -577,7 +580,24 @@ function HeaderParsable(body) {
     return ret;
   }
 
-  return ret;
+  function splitCSV(bodyString) {
+
+    let headerString = "";
+    let bodyLines = bodyString.split(/\r?\n/);
+    for (var i = 0; i < bodyLines.length; i++) {
+      if (bodyLines[i][0] === "#") {
+        headerString = headerString + bodyLines[i].slice(1);
+      } else {
+        break;
+      }
+    }
+    let dataString = bodyLines.slice(i).join("\n");
+    return {
+      "header": headerString,
+      "data": dataString
+    };
+  }
+
 }
 exports.HeaderParsable = HeaderParsable;
 
@@ -660,29 +680,41 @@ function FileLineOK(header, body, pn, what) {
 }
 exports.FileLineOK = FileLineOK;
 
-function FileContentSame(header, body, bodyAll, pn, what) {
 
-  var nf = nFields(header, pn);
+function FileContentSameOrConsistent(header, body, bodyAll, what, pn) {
 
-  var lines = csvToArray(body);
-  var linesAll = csvToArray(bodyAll);
+  if (bodyAll === undefined && body !== undefined) {
+    return {
+      "description": callerName() + "Consistency with empty response.",
+      "error": true,
+      "got": "Content differs. One is empty and other is not."
+    };
+  }
+  if (bodyAll !== undefined && body === undefined) {
+    return {
+      "description": callerName() + "Consistency with empty response.",
+      "error": true,
+      "got": "Content differs. One is empty and other is not."
+    };
+  }
+
+  let nf = nFields(header, pn);
+  let lines = csvToArray(body);
+  let linesAll = csvToArray(bodyAll);
   //var lines = body.split("\n");
   //var linesAll = bodyAll.split("\n");
 
-  if (what === "contentsame") {
-    var e = false;
-    var got = "";
-    var desc = "Expect data response to be same as previous request given differing request URLs.";
+  if (what === "same") {
+    let desc = "Expect data response for to be same as previous request given differing request URLs.";
 
     if (bodyAll !== body) { // byte equivalent
 
       if (lines.length != linesAll.length) {
-        e = true;
-        got = "<code>" + lines.length + "</code> rows here vs. <code>" 
+        let got = "<code>" + lines.length + "</code> rows here vs. <code>" 
             + linesAll.length + "</code> rows previously.";
         return {
           "description": callerName() + desc,
-          "error": e,
+          "error": true,
           "got": got
         };
       }
@@ -690,8 +722,8 @@ function FileContentSame(header, body, bodyAll, pn, what) {
       // Look for location of difference.
       var line = "";
       var lineAll = "";
-      var e1 = false;
-      var e2 = false;
+      let e1 = false;
+      let e2 = false;
       for (var i = 0;i < lines.length - 1; i++) {
 
         //line = lines[i].split(",");
@@ -713,21 +745,19 @@ function FileContentSame(header, body, bodyAll, pn, what) {
         if (e2) {break;}
       }
       if (e1) {
-        got = line.length + " columns vs. " 
-            + lineAll.length + " columns on line " + (i+1) + ".";
-        e = true;
+        let got = line.length + " columns vs. " 
+                + lineAll.length + " columns on line " + (i+1) + ".";
         return {
           "description": callerName() + desc,
-          "error": e,
+          "error": true,
           "got": got
         };
       }
       if (e2) {
-        got = "Difference on line " + (i+1) + " column " + (nf+1) + ".";
-        e = true;
+        let got = "Difference on line " + (i+1) + " column " + (nf+1) + ".";
         return {
           "description": callerName() + desc,
-          "error": e,
+          "error": true,
           "got": got
         };
       }
@@ -735,12 +765,12 @@ function FileContentSame(header, body, bodyAll, pn, what) {
     }
     return {
       "description": callerName() + desc,
-      "error": e,
-      "got": got
+      "error": false,
+      "got": "Match"
     };
   }
 
-  if (what === "subsetsame") {
+  if (what === "consistent") {
 
     if (lines.length != linesAll.length) {
       let desc = "Expect number of rows from one parameter request to"
@@ -793,7 +823,7 @@ function FileContentSame(header, body, bodyAll, pn, what) {
 
       // Number of columns
       if (line.length > lineAll.length) {
-        desc = "Expect number of columns from one parameter request to be"
+        let desc = "Expect number of columns from one parameter request to be"
              + " equal to or less than number of columns in all parameter request.";
         got += "\n# columns in single parameter request = " + line.length 
              + " # in all parameter request = <code>" + lineAll.length
@@ -853,75 +883,44 @@ function FileContentSame(header, body, bodyAll, pn, what) {
     };
   }
 }
-exports.FileContentSame = FileContentSame;
+exports.FileContentSameOrConsistent = FileContentSameOrConsistent;
 
-function FileStructureOK(body, what, other, emptyExpected) {
-  
-  var desc,t,got;
-
-  if (what === "emptyconsistent") {
-    if (body === null || other === null) {
-      return; // Can't do test due to previous failure.
-    }
-    if (body.length == 0 || other.length == 0) {
-      if (body.length == 0 && other.length != 0) {
-        let msg = 'If empty response for single parameter, expect empty'
-                + ' response for all parameters.';
-        let got = "Single parameter body: <code>" + body.length + "</code> bytes."
-                + " All parameter body: <code>" + other.length + "</code> bytes.";
-        return {
-          "description": callerName() + msg,
-          "error": true,
-          "got": got
-        };
-      } else {
-        let msg = 'If empty response for single parameter, expect empty'
-                  ' response for all parameters.';
-        return {
-          "description": callerName() + msg,
-          "error": false,
-          "got": "Both empty."
-        };
-      }
-    } else {
-      return; // Test is not relevant.
-    } 
-  }
+function FileStructureOK(body, what, statusMessage, emptyExpected) {
 
   if (what === "empty") {
 
     let link = `<a href='${wikiURL}#empty-body'> (Details.)</a>`;
 
-    let emptyIndicated = /HAPI 1201/.test(other);
+    let emptyIndicated = /HAPI 1201/.test(statusMessage);
     if (!body || body.length === 0) {
       if (emptyExpected) {
-        let msg = "If data part of response has zero length, prefer '<code>HAPI 1201</code>'"
+        let desc = "If data part of response has zero length, prefer '<code>HAPI 1201</code>'"
                 + " (no data in time range) in HTTP header status message"
                 + " (if possible)." + link;
         return {
-          "description": callerName() + msg,
+          "description": callerName() + desc,
           "error": emptyIndicated == false,
-          "got": "Zero bytes and HTTP header status message of '<code>" + other + "</code>'"
+          "got": "Zero bytes and HTTP header status message of '<code>" + statusMessage + "</code>'"
         };
       } else {
-        let msg = "The verifier should have enough information to make a"
+        let desc = "The verifier should have enough information to make a"
                 + " request that returns data. Avoid this error by adding or"
                 + " modifying sample{Start,Stop} in /info response (preferred)"
                 + " or set a start/stop where there are data in the verifier"
                 + " query parameters (or command-line arguments). " + link;
         return {
-          "description": callerName() + msg,
+          "description": callerName() + desc,
           "error": true,
           "got": "Zero bytes."
         };
       }
     }
     if (body && body.length != 0 && emptyIndicated) {
-      let msg = "A data part of response with zero bytes was expected"
+      let desc = "A data part of response with zero bytes was expected"
               + " because '<code>HAPI 1201</code>' (no data in time range) in HTTP header"
-              + " status messsage." + link;
+              + " status message." + link;
       return {
-        "description": callerName() + msg,
+        "description": callerName() + desc,
         "error": false,
         "got": "'<code>HAPI 1201</code>' in HTTP header status message and <code>" + body.length + "</code> bytes."
       };
@@ -930,7 +929,7 @@ function FileStructureOK(body, what, other, emptyExpected) {
       "description": callerName() + "Expect nonzero length for data part of response.",
       "error": false,
       "got": `<code>${body.length}</code> bytes.`
-    };   
+    };
   }
 
   if (what === "firstchar") {
@@ -950,7 +949,7 @@ function FileStructureOK(body, what, other, emptyExpected) {
     }
   }
 
-  if (what === "extranewline") {  
+  if (what === "extranewline") {
     desc = "Expect last two characters of CSV response to not be newlines.";
     t    = /\n\n$/.test(body.slice(-2));
     got  = body.slice(-2).replace(/\n/g,"\\n");
@@ -1010,15 +1009,16 @@ function LengthAppropriate(len, type, name) {
 }
 exports.LengthAppropriate = LengthAppropriate;
 
-function HeaderSame(headerInfo, headerBody) {
-  // Compare header from info response with header in data response
+function InfoSame(headerInfo, headerBody, whatCompared) {
+
+  // InfoSame(headerInfo, headerBody)
+  //  Compare /info response with info header in data response.
+  // InfoSame(headerInfo, headerBody, "APIvsAPI")
+  //  Compare /info?id= response with /datset?id= response.
 
   var differences = diff(headerInfo, headerBody); 
   var keptDiffs = [];
 
-  //console.log(headerInfo);
-  //console.log(headerBody);
-  //console.log(differences);
   if (differences) {
     for (var i = 0; i < differences.length; i++) {
       if (differences[i].path[0] !== 'format' && differences[i].path[0] !== 'creationDate') {
@@ -1037,8 +1037,13 @@ function HeaderSame(headerInfo, headerBody) {
       }
     }
   }
+
   var desc = "Expect <code>/info</code> response to match header"
            + " in data response when '<code>include=header</code>' requested.";
+  if (whatCompared === "APIvsAPI") {
+    var desc = "Expect <code>/info?id=</code> response to match <code>/info?dataset=</code>.";
+  }
+
   if (keptDiffs.length == 0) {
     return {
       "description": callerName() + desc,
@@ -1046,7 +1051,7 @@ function HeaderSame(headerInfo, headerBody) {
       "got": ""
     };
   } else {
-    var got = "Differences:\n" + JSON.stringify(keptDiffs, null, 2);
+    var got = "Differences:\n<pre>" + JSON.stringify(keptDiffs, null, 2) + "</pre>";
     return {
       "description": callerName() + desc,
       "error": true,
@@ -1054,7 +1059,56 @@ function HeaderSame(headerInfo, headerBody) {
     };
   }
 }
-exports.HeaderSame = HeaderSame;
+exports.InfoSame = InfoSame;
+
+function InfoEquivalent(infoAll, infoSingle) {
+
+  let desc = "Expect info response for one parameter to match content in response for all parameters";
+  let robj = {
+    "description": callerName() + desc,
+    "error": false,
+    "got": "Match"
+  };
+
+  let fullKeys = Object.keys(infoAll);
+  let reducedKeys = Object.keys(infoSingle);
+
+  // Check top-level of object
+  if (fullKeys.length != reducedKeys.length) {
+    robj.got = `Full info response has ${fullKeys.length} keys; `
+    robj.got += `reduced info response has ${reducedKeys.length} keys.`;
+    robj.error = true;
+    return robj;
+  }
+
+  for (let key of reducedKeys) {
+    if (key === "parameters") {
+      continue;
+    }
+    if (!require('util').isDeepStrictEqual(infoAll[key],infoSingle[key])) {
+      robj.got = `Full info response value of <code>${key}</code> does not match that in single parameter info response.`;
+      robj.error = true;
+      return robj;
+      }
+  }
+
+  for (let parameterReduced of infoSingle.parameters) {
+    for (let parameterFull of infoAll.parameters) {
+      if (parameterFull.name === parameterReduced.name) {
+        if (!require('util').isDeepStrictEqual(parameterFull,parameterReduced)) {
+          robj.got = `Parameter object for <code>${parameterFull.name}</code> in request for all parameters `;
+          robj.got += `does not match corresponding parameter object in request for one parameter.`;
+          robj.error = true;
+          return robj;
+        }
+      }
+    }
+  }
+
+  return robj;
+
+}
+exports.InfoEquivalent = InfoEquivalent;
 
 function FormatInHeader(header, type) {
 
@@ -1135,7 +1189,7 @@ function LabelOrUnitsOK(name, array, size, which, version) {
 
   var checkArray = require('./lib/checkArray.js').checkArray;
 
-  let err = checkArray(array, size, which, ['string', 'null']);
+  let err = checkArray(array, size, which);
 
   return {
     "description": callerName() + desc,
@@ -1209,7 +1263,7 @@ function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
     }
 
     let msgo = `${name}["bins"][${d}]["${which}"] is a string that references `
-            + `another parameter, so expect `;
+             + `another parameter, so expect`;
 
     if (!rpn) {
       return {
@@ -1228,14 +1282,6 @@ function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
     }
 
     let rparam = parameters[rpn];
-
-    if (parameters[rpn]['fill']) {
-      return {
-        "description": callerName() + msgo + " to not have a fill of null or no fill element.",
-        "got": `Parameter ${rname}["fill"] must be null or not present.`,
-        "error": true
-      };
-    }
 
     if (rparam['bins']) {
       return {
@@ -1283,14 +1329,14 @@ function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
     if (which === 'centers') {
       if (rparam['size'].length > 1) {
         return {
-          "description": callerName() + msgo + `${rname}["size"].length = 1`,
+          "description": callerName() + msgo + ` ${rname}["size"].length = 1`,
           "got": `Parameter ${rname}["size"].length = ${rparam["size"].length}`,
           "error": true
         };
       }
       if (rparam['size'][0] != param['size'][d]) {
         return {
-          "description": callerName() + msgo + `${rname}["size"][0] = ${name}["size"][${d}]`,
+          "description": callerName() + msgo + ` ${rname}["size"][0] = ${name}["size"][${d}]`,
           "got": `Parameter ${rname}["size"][0] = ${rparam['size'][0]} and ${name}["size"][${d}] = ${param['size'][d]}`,
           "error": true
         };
@@ -1300,22 +1346,22 @@ function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
     if (which === 'ranges') {
       if (rparam['size'].length != 2) {
         return {
-          "description": callerName() + msgo + `${rname}["size"].length = 2`,
+          "description": callerName() + msgo + ` ${rname}["size"].length = 2`,
           "got": `Parameter ${rname}["size"].length = ${rparam['size'].length}`,
           "error": true
         };
       }
-      if (rparam['size'][0] != 2) {
+      if (rparam['size'][1] != 2) {
         return {
-          "description": callerName() + msgo + `${rname}["size"][0] = 2.`,
-          "got": `Parameter ${rname}["size"][0] = ${rparam['size'][0]}`,
+          "description": callerName() + msgo + ` ${rname}["size"][1] = 2.`,
+          "got": `Parameter ${rname}["size"][1] = ${rparam['size'][1]}`,
           "error": true
         };
       }
-      if (rparam['size'][1] != param['size'][d]) {
+      if (rparam['size'][0] != param['size'][d]) {
         return {
-          "description": callerName() + msgo + `${rname}["size"][1] = ${name}["size"][${d}].`,
-          "got": `Parameter ${rname}["size"][1] = ${rparam['size'][1]} and ${name}["size"][${d}] = ${param['size'][d]}`,
+          "description": callerName() + msgo + ` ${rname}["size"][0] = ${name}["size"][${d}].`,
+          "got": `Parameter ${rname}["size"][0] = ${rparam['size'][0]} and ${name}["size"][${d}] = ${param['size'][d]}`,
           "error": true
         };
       }
@@ -1958,3 +2004,4 @@ function ContentType(re, given){
   };
 }
 exports.ContentType = ContentType;
+

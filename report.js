@@ -5,10 +5,6 @@ function report(r,url,obj,opts) {
 
   let reqOpts = r.opts;
   let res = r.res;
-  if (res) {
-    //console.log(r);
-    //process.exit(0);
-  }
 
   // Returns !(obj.error && (stop || abort))
   // stop means processing can't continue on current URL
@@ -68,6 +64,11 @@ function report(r,url,obj,opts) {
         console.log(msg);
       }
     }
+    if (reqOpts["output"] === "html") {
+      // TODO: Can we determine if request originated from hapi-server.org
+      //       and suppress feedback if not?
+      res.write("https://hapi-server.org/verify has low memory limits. If feedback stops, memory may be exhausted. In this case, use command line version or reduce time range of request. See https://github.com/hapi-server/verifier-nodejs/issues/61");
+    }
 
     // Parse is.js to get line numbers for test functions.
     var istext = fs.readFileSync(__dirname + '/is.js').toString();
@@ -88,29 +89,34 @@ function report(r,url,obj,opts) {
   if (report.url !== url) { 
     // Display URL only if not the same as last one seen or requested to
     // be displayed when report() was called.
-    writeURL(url, res);
+    if (reqOpts["output"] !== "json")
+      writeURL(url, res);
   }
 
   report.url = url;
   if (!obj) {
     // If report(url) was called, only print URL.
     return;
-  }; 
+  };
 
   obj.url = url;
   if (obj.error == true && warn == false) {
     r.stats.fails.push(obj)
-    writeResult(obj, "error", res);
+    if (reqOpts["output"] !== "json")
+      writeResult(obj, "error", res);
   } else if (obj.error == true && warn == true) {
     r.stats.warns.push(obj)
-    writeResult(obj, "warn", res);
+    if (reqOpts["output"] !== "json")
+      writeResult(obj, "warn", res);
   } else {
     r.stats.passes.push(obj);
     if (firstshush) {
-      writeNote("Passes are being suppressed.","", res);
+      if (reqOpts["output"] !== "json")
+        writeNote("Passes are being suppressed.","", res);
     }
     if (report.shushon == false) {
-      writeResult(obj, 'pass', res)
+      if (reqOpts["output"] !== "json")
+        writeResult(obj, 'pass', res)
     }
   }
 
@@ -158,6 +164,8 @@ function rmHTML(str) {
   }
   return str.replace(/&lt;/g,"<").replace(/&gt;/g,">")
             .replace(/<code>/g,"").replace(/<\/code>/g,"")
+            .replace(/<pre>/g,"").replace(/<\/pre>/g,"")
+            .replace(/<span .*?>(.*)<\/span>/gi,"$1")
             .replace(/<a .*?>(.*)<\/a>/gi,"$1")
 }
 
@@ -165,7 +173,7 @@ function writeNote(msg, style, res) {
   if (res) {
     res.write(msg + "<br>");
   } else {
-    console.log(msg + "Passes are being suppressed.");        
+    console.log(msg + "Passes are being suppressed.");
   }
 }
 

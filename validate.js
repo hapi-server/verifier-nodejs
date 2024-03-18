@@ -24,18 +24,22 @@ writeURL(arg);
 
 if (arg.startsWith('http')) {
   request(arg, (err, res, body) => {
-    if (!err) validate(body); return;
-
+    if (!err) {
+      validate(body);
+      return;
+    }
     console.error("Request failure for " + arg + ":");
     console.log(err);
     process.exit(1);
   });
 } else {
   fs.readFile(arg, (err, buff) => {
-    if (!err) validate(buff.toString()); return;
-
+    if (!err) {
+      validate(buff.toString());
+      return;
+    }
     console.error("Read failure for " + arg + ":");
-    console.log(err);
+    console.log(err.message);
     process.exit(1);
   });
 }
@@ -46,11 +50,17 @@ function validate(str) {
   if (parseResult['error'] == true) {
     writeResult(parseResult);
     process.exit(1);
-  } 
+  }
   let json = parseResult['json'];
 
   let version = getVersion(argv, json);
   let subSchema = inferSubSchema(json);
+  if (subSchema === undefined) {
+    let msg = "Could not infer subschema from JSON.";
+    let obj = { "error": true, "description": msg, "got": undefined };
+    writeResult(obj);
+    process.exit(1);
+  }
   let ignoreVersionError = argv['version'] ? true : false;
   if (ignoreVersionError) {
     console.log("  " + clc.yellowBright.inverse("⚠") + " Ignoring version in JSON b/c version given on command line.");
@@ -61,7 +71,6 @@ function validate(str) {
 }
 
 function getVersion(argv, json) {
-
   let version = undefined;
   if (argv['version']) {
     versionResult = is.HAPIVersion(argv['version']);
@@ -86,7 +95,6 @@ function getVersion(argv, json) {
 }
 
 function inferSubSchema(json) {
-  console.log(json)
   if (json['id']) {
     return "about";
   }
@@ -102,5 +110,8 @@ function inferSubSchema(json) {
     } else {
       return "info";
     }
+  }
+  if (json['status'] && json['status']['code'] >= 1400) {
+    return "error";
   }
 }

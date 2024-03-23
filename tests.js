@@ -846,7 +846,7 @@ function run(opts, clientRequest, clientResponse) {
       stop2 = stop2 + "Z";
     }
     var start2 = moment(is.trailingZfix(start2)).add(1,'ms').toISOString();
-    var stop2 = moment(is.trailingZfix(stop2)).add(2,'ms').toISOString();
+    var stop2 = moment(is.trailingZfix(start2)).add(2,'ms').toISOString();
     if (!start.match(/Z$/)) {
       // If start did not have trailing Z, remove it from new start.
       start2 = start2.slice(0,-1);

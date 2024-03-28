@@ -52,7 +52,7 @@ function callerName() {
 
 function isinteger(str) {
   return parseInt(str) < 2^31 - 1 &&
-         parseInt(str) > -2^31 && 
+         parseInt(str) > -2^31 &&
          parseInt(str) == parseFloat(str) &&
          /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim());
 }
@@ -67,7 +67,7 @@ function nFields(header, pn) {
   if (pn !== undefined && pn !== null) {
     // One parameter
     // nf = number of fields (columns) counter (start at 1 since time checked already)
-    var nf = 1; 
+    var nf = 1;
     if (!header.parameters[pn]["size"]) {
       nf = nf + 1; // Width of field (number of columns of field)
     } else {
@@ -81,10 +81,10 @@ function nFields(header, pn) {
         nf = nf + 1; // Width of field (number of columns of field)
       } else {
         nf = nf + prod(header.parameters[i]["size"]);
-      }   
+      }
     }
   }
-  return nf;  
+  return nf;
 }
 
 function csvToArray(text) {
@@ -173,7 +173,7 @@ function JSONParsable(text) {
     ret['json'] = json;
     return ret;
   } catch (error) {
-    ret.got = "JSON.parse of:\n\n" + text + "\n\nresulted in " + error 
+    ret.got = "JSON.parse of:\n\n" + text + "\n\nresulted in " + error
             + ". Use " + jsonLintLink
             + " for a more detailed error report. ";
     ret.error = true;
@@ -188,7 +188,7 @@ function HAPIJSON(text, version, part, ignoreVersionError) {
 
   if (s == false) {
     let known = JSON.stringify(Object.keys(schemas));
-    let desc = "Expect HAPI version to be one of <code>" + known + "</code>"; 
+    let desc = "Expect HAPI version to be one of <code>" + known + "</code>";
     let got = `Schema version '<code>${version}</code>' is not one of <code>${known}</code>`;
     return {
         "description": callerName() + desc,
@@ -252,7 +252,7 @@ function HAPIJSON(text, version, part, ignoreVersionError) {
       if (ignoreVersionError && ve[i].property == "instance.HAPI") {
         continue;
       }
-      err[i] = ve[i].property.replace("instance.","") 
+      err[i] = ve[i].property.replace("instance.","")
              + " " + ve[i].message.replace(/\"/g,"'");
     }
     if (err.length > 0) {
@@ -262,7 +262,7 @@ function HAPIJSON(text, version, part, ignoreVersionError) {
 
   let url = schemaURL + "/HAPI-data-access-schema-" + version + ".json";
   let desc = "Expect body to be valid "
-           + "<a href='" + url + "'>HAPI " 
+           + "<a href='" + url + "'>HAPI "
            + version + " '" + part + "' schema</a>."
            + versionWarning(version);
 
@@ -292,7 +292,7 @@ function trailingZfix(str) {
   // moment.js does not consider date only with trailing Z to be valid ISO8601
   if (/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]Z$|^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9]Z$/.test(str)) {
     str = str.slice(0, -1) + "T00Z";
-  } 
+  }
   return str;
 }
 exports.trailingZfix = trailingZfix;
@@ -393,7 +393,7 @@ function CadenceValid(cadence) {
     // Old code. moment.js is too permissive.
     var md = moment.duration(cadence);
     // moment.js claims duration with lowercase if valid
-    //var md2 = moment.duration(cadence.toUpperCase()); 
+    //var md2 = moment.duration(cadence.toUpperCase());
     var t = md._isValid;
     var got = cadence;
     if (t == true && cadence.toUpperCase() !== cadence) {
@@ -432,8 +432,20 @@ function CadenceOK(cadence, start, stop, what) {
   //console.log(stop)
   start = trailingZfix(start);
   stop = trailingZfix(stop);
+  t1  = moment(trailingZfix(start),moment.ISO_8601).isValid();
+  t2  = moment(trailingZfix(stop),moment.ISO_8601).isValid();
+  if (!t1 || !t2) {
+    return {
+      "description": callerName() + `Could not parse start = '${start}' or stop = '${stop}'`,
+      "error": true,
+      "got": `start = '${start}' and stop = '${stop}'`
+    };
+  }
+
+
   var startms = moment(start).valueOf();
   var stopms = moment(stop).valueOf();
+
   var md = moment.duration(cadence);
   var R = (stopms-startms)/md._milliseconds;
   if (what === "start/stop") {
@@ -710,7 +722,7 @@ function FileContentSameOrConsistent(header, body, bodyAll, what, pn) {
     if (bodyAll !== body) { // byte equivalent
 
       if (lines.length != linesAll.length) {
-        let got = "<code>" + lines.length + "</code> rows here vs. <code>" 
+        let got = "<code>" + lines.length + "</code> rows here vs. <code>"
             + linesAll.length + "</code> rows previously.";
         return {
           "description": callerName() + desc,
@@ -745,7 +757,7 @@ function FileContentSameOrConsistent(header, body, bodyAll, what, pn) {
         if (e2) {break;}
       }
       if (e1) {
-        let got = line.length + " columns vs. " 
+        let got = line.length + " columns vs. "
                 + lineAll.length + " columns on line " + (i+1) + ".";
         return {
           "description": callerName() + desc,
@@ -812,9 +824,9 @@ function FileContentSameOrConsistent(header, body, bodyAll, what, pn) {
       if (line[0].trim() !== lineAll[0].trim()) {
         t = true;
         got += "\nTime column for parameter " + name + " does not match at time "
-            + line[0] + ": Single parameter request: " + line[1]
-            + "; All parameter request: " + lineAll[0]
-            + ".";
+            + line[0] + ": Single parameter request: '" + line[1]
+            + "'; All parameter request: '" + lineAll[0]
+            + "'.";
       }
 
       if (pn == 0) {
@@ -825,7 +837,7 @@ function FileContentSameOrConsistent(header, body, bodyAll, what, pn) {
       if (line.length > lineAll.length) {
         let desc = "Expect number of columns from one parameter request to be"
              + " equal to or less than number of columns in all parameter request.";
-        got += "\n# columns in single parameter request = " + line.length 
+        got += "\n# columns in single parameter request = " + line.length
              + " # in all parameter request = <code>" + lineAll.length
              + "</code>.";
         return {
@@ -859,14 +871,14 @@ function FileContentSameOrConsistent(header, body, bodyAll, what, pn) {
 
           if (nf == 2) {
             t = true;
-            got += "\nParameter <code>" + name + "</code> does not match at time " 
-                +  line[0] + ": Single parameter request: <code>" + line[1] 
+            got += "\nParameter <code>" + name + "</code> does not match at time "
+                +  line[0] + ": Single parameter request: <code>" + line[1]
                 +  "</code>; All parameter request: <code>" + lineAll[fc+j]
                 +  "</code>.\n";
           } else {
-            got += "\nParameter <code>" + name + "</code> field #<code>" + j 
-                +  "</code> does not match at time <code>" + line[0] 
-                +  "</code>: Single parameter request: <code>" + line[1+j] 
+            got += "\nParameter <code>" + name + "</code> field #<code>" + j
+                +  "</code> does not match at time <code>" + line[0]
+                +  "</code>: Single parameter request: <code>" + line[1+j]
                 +  "</code>; All parameter request: <code>" + lineAll[fc+j]
                 +  "</code>.\n";
           }
@@ -981,7 +993,7 @@ function FileStructureOK(body, what, statusMessage, emptyExpected) {
 exports.FileStructureOK = FileStructureOK;
 
 function LengthAppropriate(len, type, name) {
-  var got = "Type = <code>" + type + "</code> and length = <code>" 
+  var got = "Type = <code>" + type + "</code> and length = <code>"
           + len + "</code> for parameter '<code>" + name + "</code>'";
   let desc = "If <code>type = string</code> or <code>isotime</code>, length must be given";
   if (/isotime|string/.test(type) && !len) {
@@ -1016,7 +1028,7 @@ function InfoSame(headerInfo, headerBody, whatCompared) {
   // InfoSame(headerInfo, headerBody, "APIvsAPI")
   //  Compare /info?id= response with /datset?id= response.
 
-  var differences = diff(headerInfo, headerBody); 
+  var differences = diff(headerInfo, headerBody);
   var keptDiffs = [];
 
   if (differences) {
@@ -1390,7 +1402,7 @@ function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
 
   if (which === "ranges") {
     if (bins[d]["centers"] === null && bins[d]["ranges"] !== undefined) {
-      // "Each dimension must be described in the bins object, 
+      // "Each dimension must be described in the bins object,
       // but any dimension not representing binned data should indicate this
       // by using '"centers": null' and not including the 'ranges' attribute."
       // Could be written into schema, but is complex.
@@ -1441,7 +1453,7 @@ function TimeParameterUnitsOK(name, units, type, size) {
         }
       }
     } else {
-      var got = "type = '" + type + "' and units = '" + units 
+      var got = "type = '" + type + "' and units = '" + units
               + "' for parameter " + name + ".";
       if (units !== "UTC") {
         err = true;
@@ -1574,7 +1586,7 @@ function CorrectLength(str, len, name, required) {
     got = got + extra + " Not an error for format=csv, but will "
         + " cause error for format=binary."
   }
-  let desc = 'Expect (trimmed length of ' 
+  let desc = 'Expect (trimmed length of '
            + name + ' string parameter in CSV) - (parameters.'+ name + '.length) = 0.'
   return {
     "description": callerName() + desc,
@@ -1605,8 +1617,8 @@ function TimeInBounds(lines, start, stop) {
   let a = moment(firstTime).valueOf() >= moment(start).valueOf();
   let b = moment(lastTime).valueOf()  <  moment(stop).valueOf();
   var t = a && b;
-  let desc = "Expect first time in CSV ≥ " 
-           + start + " and last time in CSV &lt; " 
+  let desc = "Expect first time in CSV ≥ "
+           + start + " and last time in CSV &lt; "
            + stop + " (only checks to ms)";
   return {
     "description": callerName() + desc,
@@ -1625,9 +1637,9 @@ function TimeIncreasing(header, what) {
     // Remove blanks (caused by extra newlines)
     header = header.filter(function(n){ return n != '' });
     // Don't run test if only one record.
-    if (header.length == 1) {return;} 
-    
-    for (i = 0;i < header.length-1;i++) {
+    if (header.length == 1) {return;}
+
+    for (let i = 0;i < header.length-1;i++) {
       var line = header[i].split(",");
       var linenext = header[i+1].split(",");
       //var t = new Date(linenext[0].trim()).getTime() > new Date(line[0].trim()).getTime();
@@ -1642,15 +1654,14 @@ function TimeIncreasing(header, what) {
         var t =  a > b;
       } catch (e) {
         t = false;
-        got = "Was not able to parse either " + linenext[0].trim() 
-            + " or " + line[0].trim();
+        got = "Was not able to parse either " + linenext[0].trim() + " or " + line[0].trim();
         break;
       }
       //console.log(linenext[0].trim())
       //console.log(moment.valueOf(linenext[0].trim()))
       if (!t) {
         var ts = "Time(line="+(i+1)+") &gt; Time(line="+i+")";
-        var got = "line " + (i+1) + " = "+ linenext[0] + "; line " 
+        var got = "line " + (i+1) + " = "+ linenext[0] + "; line "
                 + (i) + " = " + line[0];
         break;
       }
@@ -1709,7 +1720,7 @@ function ISO8601(str, extra) {
   // https://github.com/hapi-server/data-specification/issues/54
   var extra = extra || ""
   var t  = moment(trailingZfix(str),moment.ISO_8601).isValid();
-  var ts = "moment('" + trailingZfix(str) 
+  var ts = "moment('" + trailingZfix(str)
          + "',moment.ISO_8601).isValid() == true" + extra;
   return {
     "description": callerName() + "Expect " + ts,
@@ -1758,6 +1769,7 @@ function HAPITime(isostr, version) {
       "error": t != true,
       "got": got};
   }
+
   // Tests if a string is a valid HAPI time representation, which is a subset of ISO 8601.
   // Two tests are made: (1) A set of regular expressions in the JSON schema (see ./schemas)
   // and (2) A set of semantic tests.
@@ -1852,7 +1864,7 @@ exports.Integer = Integer;
 function Float(str, extra) {
   extra = extra || ""
   let t  = isfloat(str);
-  let ts = "Math.abs(parseFloat('"+str+"')) &lt; " 
+  let ts = "Math.abs(parseFloat('"+str+"')) &lt; "
          + Number.MAX_VALUE + " && "
          + "/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('" + str + "'.trim()) == true"
          + extra;
@@ -1895,14 +1907,14 @@ function Unique(arr, arrstr, idstr){
     ids[i] = arr[i][idstr];
   }
   var uids = Array.from(new Set(ids)); // Unique values
-  
+
   var e = !(uids.length == ids.length);
   if (e) {
     var got ="Repeated at least once: " + rids.join(",");
   } else {
     var got ="";
   }
-  let desc = "Expect all '" + idstr 
+  let desc = "Expect all '" + idstr
            + "' values in objects in " + arrstr + " array to be unique";
   return {
     "description": callerName() + desc,
@@ -1930,7 +1942,7 @@ function TooLong(arr, arrstr, idstr, elstr, N){
       ids = ids.slice(0, 10);
       ids.push("\n ... (" + (No - 10) + ") more.");
     }
-    got = arrstr + " has " + No + " datasets with a " + elstr + " &gt; " 
+    got = arrstr + " has " + No + " datasets with a " + elstr + " &gt; "
         + N + " characters: \n\n" + ids.join("\n");
   }
   return {
@@ -1949,7 +1961,7 @@ function CORSAvailable(head) {
 
   var bhead = "Access-Control-Allow-Methods";
   var bstr  = head[bhead.toLowerCase()] || "";
-  var b = true; 
+  var b = true;
   // If not specified, Methods = GET, HEAD, and POST are allowed.
   // See links in https://stackoverflow.com/a/44385327
   if (bstr !== "") {

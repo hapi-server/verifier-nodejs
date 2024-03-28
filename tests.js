@@ -1009,6 +1009,14 @@ function run(opts, clientRequest, clientResponse) {
       } else {
         var time2 = null;
       }
+      versionCheckAndReport(r,url,opts,r["infoAll"][id].HAPI);
+      let ret = is.HAPITime(lines,version(opts,r["infoAll"][id].HAPI));
+      report(r,url,ret);
+      if (ret.error === true) {
+        next(pn);
+        return;
+      }
+
       report(r,url,is.CadenceOK(r["infoAll"][id]["cadence"],time1,time2,"consecsample"),{"warn":true});
 
       var timeLength = r["infoAll"][id].parameters[0].length;
@@ -1020,8 +1028,6 @@ function run(opts, clientRequest, clientResponse) {
       }
       report(r,url,is.CorrectLength(time1,timeLength,"Time",!warn),{"warn":warn});
 
-      versionCheckAndReport(r,url,opts,r["infoAll"][id].HAPI);
-      report(r,url,is.HAPITime(lines,version(opts,r["infoAll"][id].HAPI)));
       report(r,url,is.TimeIncreasing(lines,"CSV"));
       report(r,url,is.TimeInBounds(lines,start,stop));
 

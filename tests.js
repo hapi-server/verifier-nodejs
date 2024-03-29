@@ -8,7 +8,7 @@ const urllib  = require('url');
 const request = require('request');
 
 let is = require('./is.js'); // Test library
-let report = require('./report.js').report; // Logging 
+let report = require('./report.js').report; // Logging
 
 exports.run = run;
 function run(opts, clientRequest, clientResponse) {
@@ -1366,7 +1366,7 @@ function selectDatasets(datasets,opts) {
 
   // 'id' given in client request
   // Assume opts["id"] is a regular expression if starts with ^
-  if (opts["id"].startsWith("^")) {
+  if (!opts["id"].startsWith("^")) {
     // Only check one dataset with id = opts["id"].
     datasets = selectOne(datasets,'id',opts["id"]);
   } else {

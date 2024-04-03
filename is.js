@@ -1260,7 +1260,7 @@ function BinsCentersOrRangesOK(parameters, pn, d, which, version) {
   let param = parameters[pn];
   let name = parameters[pn]["name"];
   let bins = parameters[pn]["bins"];
-  if (!bins) return;
+  if (!bins || !bins[d] || !!bins[d][which]) return;
 
   if (typeof bins[d][which] === 'string') {
 
@@ -1551,6 +1551,24 @@ function SizeCorrect(nc, nf, header) {
   };
 }
 exports.SizeCorrect = SizeCorrect;
+
+function HTTP302or200(res) {
+  let desc = "Expect HTTP status code to be <code>200</code> or <code>302</code> and Location header to have URL that ends with <code>/hapi/</code>.";
+  let got = `HTTP status code <code>${res.statusCode}</code> and Location header <code>${res.headers.location}</code>`;
+  let err = true;
+  if (200 === res.statusCode) {
+    got = `HTTP status code <code>${res.statusCode}</code>.`
+    err = false;
+  } else if (302 === res.statusCode && /\/hapi\/$/.test(res.headers.location)) {
+    err = false;
+  }
+  return {
+    "description": callerName() + desc,
+    "error": err,
+    "got": got
+  };
+}
+exports.HTTP302or200 = HTTP302or200;
 
 function HTTP200(res){
   var body = "";

@@ -117,6 +117,7 @@ function run(opts, clientRequest, clientResponse) {
     report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)));
     report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
     report(r,url,is.CORSAvailable(res.headers),{"warn":true});
+    report(r,url,is.LastModifiedGiven(res.headers),{"warn":true});
     if (!report(r,url,is.HTTP200(res),{"stop":true})) {
       catalog(['csv']);
       return;
@@ -198,6 +199,7 @@ function run(opts, clientRequest, clientResponse) {
       report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)));
       report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
       report(r,url,is.CORSAvailable(res.headers),{"warn":true});
+      report(r,url,is.LastModifiedGiven(res.headers),{"warn":true});
 
       if (!report(r,url,is.HTTP200(res),{"abort":true})) return;
       if (!report(r,url,is.JSONParsable(body),{"abort":true})) return;
@@ -334,6 +336,8 @@ function run(opts, clientRequest, clientResponse) {
       }
 
       report(r,url,is.ContentType(/^application\/json/,res.headers["content-type"]));
+      report(r,url,is.CORSAvailable(res.headers),{"warn":true});
+      report(r,url,is.LastModifiedGiven(res.headers),{"warn":true});
 
       if (!report(r,url,is.JSONParsable(body),rargs)) {
         nextDataset(r,id);
@@ -498,6 +502,8 @@ function run(opts, clientRequest, clientResponse) {
       }
 
       report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)));
+      report(r,url,is.CORSAvailable(res.headers),{"warn":true});
+      report(r,url,is.LastModifiedGiven(res.headers),{"warn":true});
       if (!report(r,url,is.HTTP200(res),{"stop":true})) {
         dataAll1();
         return;
@@ -584,6 +590,8 @@ function run(opts, clientRequest, clientResponse) {
       }
 
       report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)));
+      report(r,url,is.CORSAvailable(res.headers),{"warn":true});
+      report(r,url,is.LastModifiedGiven(res.headers),{"warn":true});
       if (!report(r,url,is.HTTP200(res),{"stop":true})) {
         dataAll1();
         return;
@@ -704,7 +712,6 @@ function run(opts, clientRequest, clientResponse) {
         next();
         return;
       }
-
 
       report(r,url,is.CompressionAvailable(res.headers),{"warn":true});
       report(r,url,is.ContentType(/^text\/csv/,res.headers["content-type"]));

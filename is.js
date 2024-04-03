@@ -1552,6 +1552,15 @@ function SizeCorrect(nc, nf, header) {
 }
 exports.SizeCorrect = SizeCorrect;
 
+function LastModifiedGiven(headers) {
+  return {
+    "description": callerName() + "Prefer <code>Last-Modified</code> header to be given for responses that return only metadata.",
+    "error": headers["last-modified"] === undefined,
+    "got": "Last-Modified: " + headers["last-modified"]
+  };
+}
+exports.LastModifiedGiven = LastModifiedGiven;
+
 function HTTP302or200(res) {
   let desc = "Expect HTTP status code to be <code>200</code> or <code>302</code> and Location header to have URL that ends with <code>/hapi/</code>.";
   let got = `HTTP status code <code>${res.statusCode}</code> and Location header <code>${res.headers.location}</code>`;

@@ -53,7 +53,7 @@ function run(opts, clientRequest, clientResponse) {
     // Check optional landing page.
 
     let timeoutString = timeoutCondition(landing,'metadata');
-    let url = opts["url"];
+    let url = opts["url"] + "/";
     report(r,url);
     request(requestOptions(url,opts,timeoutString),function (err,res,body) {
       landing.tries = landing.tries === undefined ? 1 : landing.tries + 1;
@@ -62,13 +62,40 @@ function run(opts, clientRequest, clientResponse) {
         if (landing.tries === 1) {
           landing(); // Try again
         } else {
-          capabilities();
+          landingRedirect();
         }
         return;
       }
 
       report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)));
       report(r,url,is.HTTP200(res),{"warn":true});
+      report(r,url,is.ContentType(/^text\/html/,res.headers["content-type"]),{"warn":true});
+
+      landingRedirect();
+    });
+  }
+
+  function landingRedirect() {
+
+    // Check that /hapi redirects to /hapi/
+
+    let timeoutString = timeoutCondition(landingRedirect,'metadata');
+    let url = opts["url"];
+    report(r,url);
+    request(requestOptions(url,opts,timeoutString),function (err,res,body) {
+      landing.tries = landing.tries === undefined ? 1 : landing.tries + 1;
+      if (err) {
+        report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)),{"warn":true});
+        if (landing.tries === 1) {
+          landingRedirect(); // Try again
+        } else {
+          capabilities();
+        }
+        return;
+      }
+
+      report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)));
+      report(r,url,is.HTTP302or200(res),{"warn":true});
       report(r,url,is.ContentType(/^text\/html/,res.headers["content-type"]),{"warn":true});
 
       capabilities();

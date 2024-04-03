@@ -1,6 +1,6 @@
 {
   "name": "hapi-server-verifier",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "license": "MIT",
   "engine-strict": true,
   "engines": {

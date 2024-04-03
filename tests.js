@@ -53,13 +53,13 @@ function run(opts, clientRequest, clientResponse) {
     // Check optional landing page.
 
     let timeoutString = timeoutCondition(landing,'metadata');
-    var url = opts["url"];
+    let url = opts["url"];
     report(r,url);
     request(requestOptions(url,opts,timeoutString),function (err,res,body) {
-
+      landing.tries = landing.tries === undefined ? 1 : landing.tries + 1;
       if (err) {
         report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)),{"warn":true});
-        if (landing.tries == 0) {
+        if (landing.tries === 1) {
           landing(); // Try again
         } else {
           capabilities();
@@ -113,7 +113,7 @@ function run(opts, clientRequest, clientResponse) {
     if (CLOSED) {return;}
 
     let timeoutString = timeoutCondition(capabilities,'metadata');
-    var url = opts["url"] + "/capabilities";
+    let url = opts["url"] + "/capabilities";
 
     report(r,url);
     request(requestOptions(url,opts,timeoutString),function (err,res,body) {
@@ -136,7 +136,7 @@ function run(opts, clientRequest, clientResponse) {
     }
 
     let timeoutString = timeoutCondition(about,'metadata');
-    var url = opts["url"] + "/about";
+    let url = opts["url"] + "/about";
 
     report(r,url);
     request(requestOptions(url,opts,timeoutString),function (err,res,body) {
@@ -153,13 +153,12 @@ function run(opts, clientRequest, clientResponse) {
     if (CLOSED) {return;}
 
     let timeoutString = timeoutCondition(catalog,'metadata');
-    var url = encodeURI(opts["url"] + "/catalog");
+    let url = encodeURI(opts["url"] + "/catalog");
 
     report(r,url);
     request(requestOptions(url,opts,timeoutString),function (err,res,body) {
-
       if (err) {
-        if (catalog.tries == 0) {
+        if (catalog.tries === 0) {
           report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)),{"warn":true});
           catalog(); // Try again
         } else {
@@ -219,14 +218,13 @@ function run(opts, clientRequest, clientResponse) {
     }
 
     let timeoutString = timeoutCondition(infoError,'metadata');
-    var url = encodeURI(opts["url"] + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs");
+    let url = encodeURI(opts["url"] + '/info?id=' + "a_test_of_an_invalid_id_by_verifier-nodejs");
 
     report(r,url);
     request(requestOptions(url,opts,timeoutString),function (err,res,body) {
-
       if (err) {
         report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)),{"warn":true});
-        if (infoError.tries == 0) {
+        if (infoError.tries === 0) {
           infoError(); // Try again
         } else {
           infoAll();
@@ -270,9 +268,9 @@ function run(opts, clientRequest, clientResponse) {
     let datasets = r["datasetsToCheck"];
     let id = datasets[0]["id"];
 
-    url = encodeURI(opts["url"] + '/info?id=' + datasets[0]["id"]);
+    let url = encodeURI(opts["url"] + '/info?id=' + datasets[0]["id"]);
 
-    // Initialize object that stores additional infoSingleParametermation for this dataset.
+    // Initialize object that stores additional info for this dataset.
     r['catalog'][id] = {};
 
     let timeoutString = timeoutCondition(infoAll,'metadata');
@@ -666,7 +664,7 @@ function run(opts, clientRequest, clientResponse) {
         if (opts['parameter']) {
           datar();
         } else {
-          dataAll2();
+          dataAll2('alternateTimeFormat');
         }
       }
 
@@ -701,7 +699,11 @@ function run(opts, clientRequest, clientResponse) {
     })
   }
 
-  function dataAll2() {
+  function dataAll2(testName) {
+
+    if (!dataAll2[testName]) {
+      dataAll2[testName] = {"tries": 0};
+    }
 
     // Same request as dataAll1() but with different time format.
     // If dataAll1() used YMD, then dataAll2() uses YDOY and vice-versa.
@@ -711,22 +713,37 @@ function run(opts, clientRequest, clientResponse) {
     let datasets = r["datasetsToCheck"];
     let id = datasets[0].id;
 
-    let timeoutString = timeoutCondition(dataAll2,"data");
+    let timeoutString = timeoutCondition(dataAll2[testName],"data");
 
-    // switchTimeFormat converts YMD -> DOY or YDOY -> YMD
-    let url = encodeURI(opts["url"] 
-            + '/data?id=' + id
-            + '&time.min=' + switchTimeFormat(r['catalog'][id]['startToUse'])
-            + '&time.max=' + switchTimeFormat(r['catalog'][id]['stopToUse']));
+    let url = "";
+    if (testName === 'alternateTimeFormat') {
+      // switchTimeFormat converts YMD -> DOY or YDOY -> YMD
+      url = encodeURI(opts["url"] 
+          + '/data?id=' + id
+          + '&time.min=' + switchTimeFormat(r['catalog'][id]['startToUse'])
+          + '&time.max=' + switchTimeFormat(r['catalog'][id]['stopToUse']));
+    }
+    if (testName === 'emptyParameters') {
+      url = encodeURI(opts["url"] 
+          + '/data?id=' + id
+          + '&parameters='
+          + '&time.min=' + switchTimeFormat(r['catalog'][id]['startToUse'])
+          + '&time.max=' + switchTimeFormat(r['catalog'][id]['stopToUse']));
+    }
+    if (testName === 'hapi3API') {
+      url = encodeURI(opts["url"] 
+          + '/data?dataset=' + id
+          + '&start=' + switchTimeFormat(r['catalog'][id]['startToUse'])
+          + '&stop=' + switchTimeFormat(r['catalog'][id]['stopToUse']));
+    }
 
     let reqOpts = requestOptions(url,opts,timeoutString,true);
     request(reqOpts,function (err,res,dataAll2Body) {
 
-      // TODO: Code below is very similar to that in dataAll1()
       if (err) {
-        if (dataAll2.tries === 0) {
+        if (dataAll2[testName].tries === 0) {
           report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)),{"warn":true});
-          dataAll2(); // Try again
+          dataAll2(testName); // Try again
         } else {
           report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)),{"warn":true,"stop":true});
           // Start checking individual parameters. Skip test
@@ -737,23 +754,32 @@ function run(opts, clientRequest, clientResponse) {
         return;
       }
 
+      function next() {
+        if (testName === 'alternateTimeFormat') {
+          dataAll2('emptyParameters');
+        } else if (testName === 'emptyParameters' && versionParts(r["catalog"].HAPI)["major"] > 3) {
+          dataAll2('hapi3API');
+        } else {
+          dataAll_Header();
+        }
+      }
+
       report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)));
       if (!report(r,url,is.HTTP200(res),{"stop":true})) {
-        dataAll_Header();
+        next();
         return;
       }
       if (!report(r,url,is.FileStructureOK(dataAll2Body,"empty",res.statusMessage),{"stop":true})) {
-        dataAll_Header();
+        next();
         return;
       }
       if (!dataAll2Body || dataAll2Body.length === 0) {
-        dataAll_Header();
+        next();
         return;
       }
-      // End similar code.
 
       report(r,url,is.FileContentSameOrConsistent(r["infoAll"][id],dataAll2Body,r['dataAll1Body'][id],"same"));
-      dataAll_Header();
+      next();
     });
 
   }
@@ -862,7 +888,6 @@ function run(opts, clientRequest, clientResponse) {
     let reqOpts = requestOptions(url,opts,timeoutString,true);
     request(reqOpts,function (err,res,body) {
 
-      // TODO: Code below is very similar to that in dataAll1()
       if (err) {
         if (dataAll_1201.tries === 0) {
           report(r,url,is.RequestError(err,res,timeout(opts,timeoutString)),{"warn":true});
@@ -1179,6 +1204,7 @@ function version(opts,metaVersion) {
 
 function timeoutCondition(func,reqType) {
 
+  // TODO: Setting tries to 0 in function named timeoutCondition is opaque.
   if (func.tries === undefined) {
     func.tries = 0
   } else {

@@ -22,6 +22,9 @@
 		"https://cdaweb.gsfc.nasa.gov/hapi&id=AC_H0_MFI&time.min=2013-04-13T07:00:00&time.max=2013-04-14T11:00:00",
 		"http://planet.physics.uiowa.edu/das/das2Server/hapi",
 		"https://jfaden.net/HapiServerDemo/hapi",
+		"https://imag-data.bgs.ac.uk/GIN_V1/hapi&dataset=aae/definitive/PT1M/native",
+		"https://api.helioviewer.org/hapi/Helioviewer/hapi",
+		"https://csatools.esac.esa.int/HapiServer/hapi",
 		"http://amda.irap.omp.eu/service/hapi",
 		"https://vires.services/hapi",
 		"https://iswa.gsfc.nasa.gov/IswaSystemWebApp/hapi",
@@ -80,6 +83,7 @@
           <code>?url=URL&...&output=OUTPUT</code>&nbsp;&nbsp;Allowed values are <code>html</code> and <code>json</code>.
         </li>
 			</ul>
+		</p>
 		<p>
 			If <code>id</code> or <code>dataset</code> starts with a <code>^</code>, it is interpreted as a regular expression and only datasets with ids that match will be tested.
 		</p>
@@ -96,19 +100,19 @@
 		<p>
 			<ul>
 				<li>
-					Test all datasets and all parameters: <a href='?url=http://hapi-server.org/servers/TestData2.0/hapi'>?url=http://hapi-server.org/servers/TestData2.0/hapi</a>
+					Test all datasets and all parameters: <a href="?url=http://hapi-server.org/servers/TestData2.0/hapi">?url=http://hapi-server.org/servers/TestData2.0/hapi</a>
 				</li>
 				<li>
-					Test all parameters in <code>dataset1</code> only: <a href='?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1'>?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1</a>
+					Test all parameters in <code>dataset1</code> only: <a href="?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1">?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1</a>
 				</li>
 				<li>
-					Test only parameter <code>scalar</code> in <code>dataset1</code>: <a href='?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&parameter=scalar'>?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&amp;parameter=scalar</a>
+					Test only parameter <code>scalar</code> in <code>dataset1</code>: <a href="?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&parameter=scalar">?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&amp;parameter=scalar</a>
 				</li>
         <li>
-          Return JSON summary for previous test: <a href='?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&parameter=scalar&output=json'>?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&amp;parameter=scalar&output=json</a>
+          Return JSON summary for previous test: <a href="?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&parameter=scalar&output=json">?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&amp;parameter=scalar&output=json</a>
         </li>
 				<li>
-					Test only parameter <code>scalar</code> in <code>dataset1</code> and use a given timerange for data requests: <a href='?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&parameter=scalar&time.min=1970-01-01&time.max=1970-01-01T00:00:10'>?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&amp;parameter=scalar&time.min=1970-01-01&time.max=1970-01-01T00:00:10</a>
+					Test only parameter <code>scalar</code> in <code>dataset1</code> and use a given timerange for data requests: <a href="?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&parameter=scalar&time.min=1970-01-01&time.max=1970-01-01T00:00:10">?url=http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&amp;parameter=scalar&time.min=1970-01-01&time.max=1970-01-01T00:00:10</a>
 				</li>
 			</ul>
 		</p>

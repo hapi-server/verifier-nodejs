@@ -285,12 +285,18 @@ function summary (r) {
   if (reqOpts.output === 'html') {
     res.write('')
     res.write('<p><b>Use the following links for visual checks of data and stress testing server.</b></p>')
-    for (let i = 0; i < CATALOG.catalog.length; i++) {
+    let nDatasets = CATALOG.catalog.length
+    let datasets = CATALOG.catalog
+    if (r.datasetsToCheck) {
+      nDatasets = r.datasetsToCheck.length
+      datasets = r.datasetsToCheck
+    }
+    for (let i = 0; i < nDatasets; i++) {
       const link = reqOpts.plotserver +
                   '?server=' +
                   reqOpts.url +
                   '&id=' +
-                  CATALOG.catalog[i].id +
+                  datasets[i].id +
                   '&format=gallery'
       res.write("<a target='_blank' href='" + link + "'>" + link + '</a><br>')
     }

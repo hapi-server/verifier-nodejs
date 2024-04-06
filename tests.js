@@ -1024,13 +1024,6 @@ function run (opts, clientRequest, clientResponse) {
       report(r, url, is.FileStructureOK(body, 'extranewline'))
       report(r, url, is.FileStructureOK(body, 'numlines'))
 
-      const line1 = lines[0].split(',')
-      const time1 = line1[0].trim()
-      let time2 = null
-      if (lines[1]) {
-        const line2 = lines[1].split(',')[0]
-        time2 = line2.trim()
-      }
       versionCheckAndReport(r, url, opts, r.infoAll[id].HAPI)
       const ret = is.HAPITime(lines, version(opts, r.infoAll[id].HAPI))
       report(r, url, ret)
@@ -1039,19 +1032,20 @@ function run (opts, clientRequest, clientResponse) {
         return
       }
 
-      report(r, url, is.CadenceOK(r.infoAll[id].cadence, time1, time2, 'consecsample'), { warn: true })
-
-      const timeLength = r.infoAll[id].parameters[0].length
-
-      let warn = true
-      if (r.capabilities && r.capabilities.outputFormats.includes('binary')) {
-        // If wrong length and server can serve binary, then error.
-        warn = false
+      const line1 = lines[0].split(',')
+      const time1 = line1[0].trim()
+      let time2 = null
+      if (lines[1]) {
+        const line2 = lines[1].split(',')[0]
+        time2 = line2.trim()
       }
-      report(r, url, is.CorrectLength(time1, timeLength, 'Time', !warn), { warn })
-
+      report(r, url, is.CadenceOK(r.infoAll[id].cadence, time1, time2, 'consecsample'), { warn: true })
       report(r, url, is.TimeIncreasing(lines, 'CSV'))
       report(r, url, is.TimeInBounds(lines, start, stop))
+      report(r, url, is.NumberOfColumnsCorrect(r.infoAll[id], body, pn))
+      report(r, url, is.TypeCorrect(r.infoAll[id], body, pn))
+      report(r, url, is.LengthOK(r.infoAll[id], body, pn))
+      report(r, url, is.FileContentSameOrConsistent(r.infoAll[id], body, r.dataAll1Body[id], 'consistent', pn))
 
       if (pn === 0) {
         // Time was requested parameter, no more columns to check
@@ -1060,10 +1054,6 @@ function run (opts, clientRequest, clientResponse) {
         next(pn)
         return
       }
-
-      report(r, url, is.NumberOfColumnsCorrect(r.infoAll[id], body, pn))
-      report(r, url, is.TypeAndLengthCorrect(r.infoAll[id], body, pn))
-      report(r, url, is.FileContentSameOrConsistent(r.infoAll[id], body, r.dataAll1Body[id], 'consistent', pn))
 
       next(pn)
     })

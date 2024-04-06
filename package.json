@@ -1,10 +1,10 @@
 {
   "name": "hapi-server-verifier",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "license": "MIT",
   "engine-strict": true,
   "engines": {
-    "node": ">=8"
+    "node": ">=16"
   },
   "people": {
     "name": "Bob Weigel",

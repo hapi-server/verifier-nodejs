@@ -51,6 +51,10 @@ function isfloat (str) {
 
 function nFields (header, pn) {
   let nf = 1
+  if (pn === 0) {
+    // Primary time parameter
+    return nf
+  }
   if (pn !== undefined && pn !== null) {
     // One parameter
     // nf = number of fields (columns) counter (start at 1 since time checked already)
@@ -335,7 +339,7 @@ function RequestError (err, res, timeoutInfo) {
     }
   } else {
     return {
-      description: callerName() + 'Probably URL is malformed.',
+      description: callerName() + 'URL is malformed?',
       error: true,
       got: err
     }
@@ -570,8 +574,8 @@ function HeaderParsable (body) {
 }
 exports.HeaderParsable = HeaderParsable
 
-function TypeAndLengthCorrect (header, body, pn) {
-  const nf = nFields(header, 1)
+function TypeCorrect (header, body, pn) {
+  const nf = nFields(header, pn)
   const lines = csvToArray(body)
 
   // TODO: Check all lines?
@@ -580,66 +584,47 @@ function TypeAndLengthCorrect (header, body, pn) {
   let err = false
   let got = ''
   let rObj = {}
-
   for (let j = 0; j < nf; j++) {
-    // Time column is checked elsewhere.
-    const extra = ' in column ' + j + ' on first line.'
+    const extra = ' in column ' + j + ' on first line'
 
     let type = header.parameters[pn].type
-    let len = header.parameters[pn].length
-    let name = header.parameters[pn].name
     if (j === 0) {
       type = header.parameters[0].type
-      len = header.parameters[0].length
-      name = header.parameters[0].name
-    }
-
-    if (type === 'string') {
-      rObj = CorrectLength(line1[j], len, name, true, extra)
-      if (rObj.error) {
-        got = rObj.got + '\n'
-        err = rObj.error
-      }
     }
     if (type === 'isotime') {
       rObj = ISO8601(line1[j].trim(), extra)
       if (rObj.error) {
-        got = rObj.got + '\n'
-        err = rObj.error
-      }
-      rObj = CorrectLength(line1[j], len, name, true, extra)
-      if (rObj.error) {
-        got = rObj.got + '\n'
+        got = rObj.description + `\ngave '<code>${rObj.got}'</code>\n`
         err = rObj.error
       }
     }
     if (type === 'integer') {
       rObj = Integer(line1[j], extra)
       if (rObj.error) {
-        got = rObj.got + '\n'
+        got = rObj.description + `\ngave '<code>${rObj.got}'</code>\n`
         err = rObj.error
       }
     }
     if (type === 'double') {
       rObj = Float(line1[j], extra)
       if (rObj.error) {
-        got = rObj.got + '\n'
+        got = rObj.description + '\ngave <code>' + rObj.got + '<code>\n'
         err = rObj.error
       }
     }
   }
 
   if (got !== '') {
-    got = got + '\n<pre>' + line1 + '</pre>'
+    got = got + 'Line 1: <code>' + line1 + '</code>'
   }
 
   return {
-    description: callerName() + 'Expect values on first line of CSV to have correct length (if non-numeric) and type.',
+    description: callerName() + 'Expect values on first line of CSV to have correct type.',
     error: err,
     got: got || 'Correct length and type.'
   }
 }
-exports.TypeAndLengthCorrect = TypeAndLengthCorrect
+exports.TypeCorrect = TypeCorrect
 
 function NumberOfColumnsCorrect (header, body, pn) {
   const nf = nFields(header, pn)
@@ -691,7 +676,7 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
   // var linesAll = bodyAll.split("\n");
 
   if (what === 'same') {
-    const desc = 'Expect data response for to be same as previous request given differing request URLs.'
+    const desc = 'Expect data response for to be same as previous request with different but equivalent request URL.'
 
     if (bodyAll !== body) { // byte equivalent
       if (lines.length !== linesAll.length) {
@@ -784,7 +769,7 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
     const desc = 'Expect content from one parameter request to' +
                  ' match content from all parameter request.'
     let t = false
-    let got = ''
+    let got = 'Consistent content'
     for (let i = 0; i < lines.length - 1; i++) {
       // let line = lines[i].split(",");
       // let lineAll = linesAll[i].split(",");
@@ -954,6 +939,75 @@ function FileStructureOK (body, what, statusMessage, emptyExpected) {
   }
 }
 exports.FileStructureOK = FileStructureOK
+
+function LengthOK (header, body, pn) {
+  const nf = nFields(header, pn)
+  const lines = csvToArray(body)
+
+  // TODO: Check all lines?
+  const line1 = lines[0]
+
+  if (pn === 0) {
+    const len = header.parameters[0].length
+    const name = header.parameters[0].name
+    const desc = `Expect (length of '<code>${name}</code>' in CSV) == (<code>parameters['${name}'].length</code>).`
+    const err = len !== line1[0].length
+    return {
+      description: callerName() + desc,
+      error: err,
+      got: err ? `${len} != ${line1[0].length}` : `${len} == ${line1[0].length}`
+    }
+  }
+
+  const type = header.parameters[pn].type
+  if (!(type === 'string' || type === 'isotime')) {
+    return
+  }
+  const len = header.parameters[pn].length
+  const name = header.parameters[pn].name
+
+  let desc = `Expect (length of '<code>${name}</code>' in CSV) ≤ (<code>parameters['name'].length</code>).`
+  if (nf > 1) {
+    desc = `Expect (length of '<code>${name}</code>' components in CSV) ≤ (<code>parameters['name'].length</code>).`
+  }
+  let got = ''
+  let err = false
+  for (let j = 1; j < nf; j++) {
+    const extra = ' in column ' + j + ' on first line'
+    err = Buffer.byteLength(line1[j], 'utf8') > len
+    if (err) {
+      got = '(' + (line1[j].length) + ') &gt; (' + (len) + ') ' + extra + '\n'
+    }
+  }
+  return {
+    description: callerName() + desc,
+    error: err,
+    got: got === '' ? 'All values meet expectation.' : got
+  }
+}
+exports.LengthOK = LengthOK
+
+function SizeCorrect (nc, nf, header) {
+  const t = nc === nf
+  let got, extra
+  if (header.size) {
+    extra = 'product of elements in size array ' + JSON.stringify(header.size)
+    got = nc + ' commas and ' + extra + ' = ' + nf
+  } else {
+    if (nf === 0) {
+      extra = '0 because only first parameter (time) requested.'
+    } else {
+      extra = '1 because no size given.'
+    }
+    got = nc + ' commas'
+  }
+  return {
+    description: callerName() + 'Expect number of commas on first line to be ' + extra,
+    error: t !== true,
+    got
+  }
+}
+exports.SizeCorrect = SizeCorrect
 
 function LengthAppropriate (len, type, name) {
   const got = 'Type = <code>' + type + '</code> and length = <code>' +
@@ -1395,35 +1449,6 @@ function AllowedOutputFormat (json) {
 }
 exports.AllowedOutputFormat = AllowedOutputFormat
 
-function TimeParameterUnitsOK (name, units, type, size) {
-  const got = "type = '" + type + "' and units = '" + units + "' for parameter " + name + '.'
-
-  if (type === 'isotime') {
-    let err = false
-    if (typeof (units) === 'object') {
-      for (let i = 0; i < units.length; i++) {
-        for (let j = 0; j < units[i].length; j++) {
-          if (units[i][j] !== 'UTC') {
-            err = true
-            break
-          }
-        }
-      }
-    } else {
-      if (units !== 'UTC') {
-        err = true
-      }
-    }
-
-    return {
-      description: callerName() + "Expect parameter of type <code>isotime</code> to have units of '<code>UTC</code>'.",
-      error: err,
-      got
-    }
-  }
-}
-exports.TimeParameterUnitsOK = TimeParameterUnitsOK
-
 function FillOK (fill, type, len, name, what) {
   if (!fill) { return } // No fill or fill=null so no test needed.
 
@@ -1483,28 +1508,6 @@ function FillOK (fill, type, len, name, what) {
 }
 exports.FillOK = FillOK
 
-function SizeCorrect (nc, nf, header) {
-  const t = nc === nf
-  let got, extra
-  if (header.size) {
-    extra = 'product of elements in size array ' + JSON.stringify(header.size)
-    got = nc + ' commas and ' + extra + ' = ' + nf
-  } else {
-    if (nf === 0) {
-      extra = '0 because only first parameter (time) requested.'
-    } else {
-      extra = '1 because no size given.'
-    }
-    got = nc + ' commas'
-  }
-  return {
-    description: callerName() + 'Expect number of commas on first line to be ' + extra,
-    error: t !== true,
-    got
-  }
-}
-exports.SizeCorrect = SizeCorrect
-
 function LastModifiedGiven (headers) {
   return {
     description: callerName() + 'Prefer <code>Last-Modified</code> header to be given for responses that return only metadata.',
@@ -1557,23 +1560,34 @@ function HTTP200 (res) {
 }
 exports.HTTP200 = HTTP200
 
-function CorrectLength (str, len, name, required, extra) {
-  extra = extra || ''
-  required = required || false
-  let got = '(' + (str.length) + ') - (' + (len) + ') ' + extra
-  const t = str.length !== len
-  if (t && !required) {
-    got = got + ' Not an error for format=csv, but will cause error for format=binary.'
-  }
-  const desc = 'Expect (trimmed length of ' + name +
-               ' string parameter in CSV) - (parameters.' + name + '.length) = 0.'
-  return {
-    description: callerName() + desc,
-    error: t,
-    got
+function TimeParameterUnitsOK (name, units, type, size) {
+  const got = "type = '" + type + "' and units = '" + units + "' for parameter " + name + '.'
+
+  if (type === 'isotime') {
+    let err = false
+    if (typeof (units) === 'object') {
+      for (let i = 0; i < units.length; i++) {
+        for (let j = 0; j < units[i].length; j++) {
+          if (units[i][j] !== 'UTC') {
+            err = true
+            break
+          }
+        }
+      }
+    } else {
+      if (units !== 'UTC') {
+        err = true
+      }
+    }
+
+    return {
+      description: callerName() + "Expect parameter of type <code>isotime</code> to have units of '<code>UTC</code>'.",
+      error: err,
+      got
+    }
   }
 }
-exports.CorrectLength = CorrectLength
+exports.TimeParameterUnitsOK = TimeParameterUnitsOK
 
 function TimeInBounds (lines, start, stop) {
   // Remove Z from all times so Date().getTime() gives local timezone time for all.
@@ -1608,8 +1622,9 @@ function TimeInBounds (lines, start, stop) {
 exports.TimeInBounds = TimeInBounds
 
 function TimeIncreasing (header, what) {
-  let got = ''
+  let got = 'Increasing time values'
   let t
+  let ts = 'increasing first column time values.'
   if (what === 'CSV') {
     const starttest = new Date().getTime()
     // Remove blanks (caused by extra newlines)
@@ -1649,7 +1664,7 @@ function TimeIncreasing (header, what) {
     }
   }
 
-  let start, stop, ts
+  let start, stop
   if (what === '{start,stop}Date') {
     start = trailingZfix(header.startDate)
     stop = trailingZfix(header.stopDate)
@@ -1843,7 +1858,7 @@ function Float (str, extra) {
   const t = isfloat(str)
   const ts = "Math.abs(parseFloat('" + str + "')) &lt; " +
              Number.MAX_VALUE + ' && ' +
-             "<pre>/^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('" + str + "'.trim()) == true</pre>" +
+             "<code>/^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('" + str + "'.trim()) == true</code>" +
          extra
   return {
     description: callerName() + 'Expect ' + ts,

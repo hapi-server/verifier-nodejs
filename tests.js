@@ -165,11 +165,14 @@ function run (opts, clientRequest, clientResponse) {
     })
   }
 
-  function catalog () {
+  function catalog (depthCheck) {
     if (CLOSED) { return }
 
     const timeoutString = timeoutCondition(catalog, 'metadata')
-    const url = encodeURI(opts.url + '/catalog')
+    let url = encodeURI(opts.url + '/catalog')
+    if (depthCheck !== undefined) {
+      url = url + '?depth=' + depthCheck
+    }
 
     report(r, url)
     request(requestOptions(url, opts, timeoutString), function (err, res, body) {
@@ -215,6 +218,20 @@ function run (opts, clientRequest, clientResponse) {
         if (!report(r, url, robj, { abort: true })) {
           return
         }
+      }
+
+      if (r.capabilities.catalogDepthOptions) {
+        if (catalog.catalogDepthOptionsToCheck === undefined) {
+          // Copy
+          const toCheck = JSON.parse(JSON.stringify(r.capabilities.catalogDepthOptions))
+          // Remove 'dataset', which was already checked.
+          catalog.catalogDepthOptionsToCheck = toCheck.filter(el => el !== 'dataset')
+        }
+      }
+
+      if (catalog.catalogDepthOptionsToCheck && catalog.catalogDepthOptionsToCheck.length > 0) {
+        catalog(catalog.catalogDepthOptionsToCheck.shift())
+        return
       }
 
       if (opts.parameter) {

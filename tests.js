@@ -1,10 +1,14 @@
-const moment = require('moment')
 const ip = require('ip')
-const { URL } = require('url')
+const moment = require('moment')
 const request = require('request')
+const { URL } = require('url')
 
 const is = require('./is.js') // Test library
 const report = require('./report.js').report // Logging
+
+// TODO: The control flow of this code is difficult to follow because of
+// the callbacks. The code runs tests in serial, so it should be modified
+// to use async/await so control flow is clear.
 
 exports.run = run
 function run (opts, clientRequest, clientResponse) {
@@ -30,6 +34,24 @@ function run (opts, clientRequest, clientResponse) {
   // Catch uncaught exceptions. TODO: This will over-write any previous handler
   // (will it?). Should move this to verifier.js.
   process.on('uncaughtException', (err) => uncaughtException(err, clientResponse))
+
+  function finished () {
+    // All datasets have been checked.
+    if (r.catalogAll) {
+      // Restructure r.catalogAll to match r.catalog.
+      const catalogAll = {}
+      for (const idx in r.catalogAll.catalog) {
+        const id = r.catalogAll.catalog[idx].id
+        catalogAll[id] = r.catalogAll.catalog[idx].info
+        delete catalogAll[id].stopDate
+      }
+      for (const id in r.infoAll) {
+        const rObj = is.InfoSame(catalogAll[id], r.infoAll[id], 'infoVsDepthAll')
+        report(r, opts.url + '/catalog?depth=all', rObj)
+      }
+    }
+    report(r)
+  }
 
   if (opts.parameter) {
     // Client wants to test one parameter.
@@ -195,28 +217,35 @@ function run (opts, clientRequest, clientResponse) {
       if (!report(r, url, is.HTTP200(res), { abort: true })) return
       if (!report(r, url, is.JSONParsable(body), { abort: true })) return
 
-      const CATALOG = JSON.parse(body)
-      versionCheckAndReport(r, url, opts, CATALOG.HAPI)
+      const catalogObj = JSON.parse(body)
+      versionCheckAndReport(r, url, opts, catalogObj.HAPI)
 
-      r.catalog = CATALOG
-      r.datasetsToCheck = JSON.parse(JSON.stringify(CATALOG.catalog))
-      report(r, url, is.HAPIJSON(body, version(opts, CATALOG.HAPI), 'catalog', ignoreVersionError))
+      if (depthCheck === undefined) {
+        r.catalog = catalogObj
+        r.datasetsToCheck = JSON.parse(JSON.stringify(catalogObj.catalog))
 
-      report(r, url, is.Unique(r.datasetsToCheck, 'datasets', 'id'))
-      r.datasetsToCheck = removeDuplicates(r.datasetsToCheck, 'id')
-      report(r, url, is.TooLong(r.datasetsToCheck, 'catalog', 'id', 'title', 40), { warn: true })
-      report(r, url, is.CIdentifier(r.datasetsToCheck, 'dataset id'), { warn: true })
+        report(r, url, is.HAPIJSON(body, version(opts, catalogObj.HAPI), 'catalog', ignoreVersionError))
+        report(r, url, is.Unique(r.datasetsToCheck, 'datasets', 'id'))
+        r.datasetsToCheck = removeDuplicates(r.datasetsToCheck, 'id')
+        report(r, url, is.TooLong(r.datasetsToCheck, 'catalog', 'id', 'title', 40), { warn: true })
+        report(r, url, is.CIdentifier(r.datasetsToCheck, 'dataset id'), { warn: true })
 
-      r.datasetsToCheck = selectDatasets(r.datasetsToCheck, opts)
+        r.datasetsToCheck = selectDatasets(r.datasetsToCheck, opts)
 
-      if (r.datasetsToCheck.length === 0) {
-        let desc = 'Dataset ' + opts.id + ' is not in catalog'
-        if (opts.id.startsWith('^')) {
-          desc = `<code>${opts.id} did not match any dataset id in catalog.`
+        if (r.datasetsToCheck.length === 0) {
+          let desc = 'Dataset ' + opts.id + ' is not in catalog'
+          if (opts.id.startsWith('^')) {
+            desc = `<code>${opts.id} did not match any dataset id in catalog.`
+          }
+          const robj = { description: desc, error: true, got: 'to abort' }
+          if (!report(r, url, robj, { abort: true })) {
+            return
+          }
         }
-        const robj = { description: desc, error: true, got: 'to abort' }
-        if (!report(r, url, robj, { abort: true })) {
-          return
+      } else {
+        if (depthCheck === 'all') {
+          // r.catalogAll is compared with r.catalog after infoAll request.
+          r.catalogAll = catalogObj
         }
       }
 
@@ -284,12 +313,10 @@ function run (opts, clientRequest, clientResponse) {
   function nextDataset (r, currentId) {
     if (r.datasetsToCheck.length > 1) {
       r.datasetsToCheck.shift() // Remove first element
-      delete r.infoAll[currentId]
       delete r.dataAll1Body[currentId]
       infoAll() // Start next dataset
     } else {
-      // All datasets have been checked.
-      report(r)
+      finished()
     }
   }
 
@@ -357,24 +384,21 @@ function run (opts, clientRequest, clientResponse) {
           report(r, url, is.Unique(json.parameters, 'parameters', 'name'))
           // json.parameters = removeDuplicates(header.parameters,'name');
         } else {
-          report(r, url,
-            {
-              description:
-              "Expect first parameter object to have a key 'name'",
-              error: true,
-              got: JSON.stringify(json.parameters[0])
-            },
-            { abort: true })
+          const rObj = {
+            description: "Expect first parameter object to have a key 'name'",
+            error: true,
+            got: JSON.stringify(json.parameters[0])
+          }
+          report(r, url, rObj, { abort: true })
           return
         }
       } else {
-        report(r, url,
-          {
-            description: 'Expect parameters element in catalog',
-            error: true,
-            got: json.parameters
-          },
-          { abort: true })
+        const rObj = {
+          description: 'Expect parameters element in catalog',
+          error: true,
+          got: json.parameters
+        }
+        report(r, url, rObj, { abort: true })
         return
       }
 
@@ -389,15 +413,14 @@ function run (opts, clientRequest, clientResponse) {
       if (opts.parameter) {
         const tmp = selectOne(json.parameters, 'name', opts.parameter)
         if (tmp.length !== 1) {
-          if (!report(r, url,
-            {
-              description: 'Parameter ' + opts.parameter + ' given in URL or on command line is not in parameter array returned by ' + url,
-              error: true,
-              got: 'To abort'
-            },
-            {
-              abort: true
-            })) { return }
+          const rOpts = {
+            description: 'Parameter ' + opts.parameter + ' given in URL or on command line is not in parameter array returned by ' + url,
+            error: true,
+            got: 'To abort'
+          }
+          if (!report(r, url, rOpts, { abort: true })) {
+            return
+          }
         }
       }
 
@@ -855,7 +878,7 @@ function run (opts, clientRequest, clientResponse) {
       const ret = is.HeaderParsable(body)
       if (report(r, url, ret, { stop: true })) {
         report(r, url, is.FormatInHeader(ret.csvparts.header, 'data'))
-        report(r, url, is.InfoSame(r.infoAll[id], ret.csvparts.header), { warn: true })
+        report(r, url, is.InfoSame(r.infoAll[id], ret.csvparts.header, 'infoVsHeader'), { warn: true })
         report(r, url, is.FileContentSameOrConsistent(r.infoAll[id], r.dataAll1Body[id], ret.csvparts.data, 'same'))
       }
       dataAll1201()

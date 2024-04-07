@@ -7,6 +7,7 @@ const wikiURL = 'https://github.com/hapi-server/verifier-nodejs/wiki'
 const requestURL = 'https://github.com/request/request#requestoptions-callback'
 const jsonLintLink = "<a href='http://jsonlint.org/'>http://jsonlint.org/</a>"
 const unitsAndLabels = 'https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#369-unit-and-label-arrays'
+const deepDiffLink = '<a href="https://www.npmjs.com/package/deep-diff">deep-diff</a>'
 
 // TODO: Get this list by reading directory.
 const base = './data-specification-schema/HAPI-data-access-schema'
@@ -96,7 +97,12 @@ function csvToArray (text) {
 
 function versionWarning (version) {
   if (parseFloat(version) >= 3.2) {
-    return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. Some errors reported by schema check may not actually be errors and not all features are checked.</span>`
+    // GitHub does not allow link to milestone string. Instead, it uses the milestone number.
+    // To link directly, would need to create a label that is same as milestone string.
+    const verifierMileStone = `<a href="https://github.com/hapi-server/verifier-nodejs/issues">verifier ${version} milestone issues</a>`
+    const schemaMileStone = `<a href="https://github.com/hapi-server/data-specification-schema/issues">schema ${version}  milestone issues</a>`
+    return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. ` +
+           `See ${verifierMileStone} and ${schemaMileStone}</span>`
   }
   return ''
 }
@@ -1040,37 +1046,72 @@ function LengthAppropriate (len, type, name) {
 exports.LengthAppropriate = LengthAppropriate
 
 function InfoSame (headerInfo, headerBody, whatCompared) {
-  // InfoSame(headerInfo, headerBody)
-  //  Compare /info response with info header in data response.
-  // InfoSame(headerInfo, headerBody, "APIvsAPI")
-  //  Compare /info?id= response with /dataset?id= response.
+  // If whatCompared === 'infoVsHeader',
+  // compares /info response with info header in data response.
+
+  // If whatCompared === 'APIvsAPI',
+  // compare /info?id= response with /info?dataset= response.
+
+  // If whatCompared === 'infoVsDepthAll',
+  // compare /catalog?depth=all response with all /info?id=... responses.
 
   const differences = diff(headerInfo, headerBody)
   const keptDiffs = []
 
+  let lhs = ''
+  let rhs = ''
+  if (whatCompared === 'infoVsHeader') {
+    lhs = '/info'
+    rhs = 'info in header of data response'
+  }
+  if (whatCompared === 'APIvsAPI') {
+    lhs = '/info?id='
+    rhs = '/info?dataset='
+  }
+  if (whatCompared === 'infoVsDepthAll') {
+    lhs = '/catalog?depth=all'
+    rhs = 'Combined /info?id=... responses'
+  }
+
   if (differences) {
     for (let i = 0; i < differences.length; i++) {
-      if (differences[i].path[0] !== 'format' && differences[i].path[0] !== 'creationDate') {
-        // console.log('path: ' + differences[i].path);
-        let keep = true
-        for (let j = 0; j < differences[i].path.length; j++) {
-          // console.log("path[" + j + "] = " + differences[i].path[j]);
-          if (typeof (differences[i].path[j]) === 'string' && differences[i].path[j].substring(0, 2) === 'x_') {
-            keep = false
-            break
-          }
+      let keep = true
+      if (whatCompared === 'infoVsHeader' && differences[i].path) {
+        if (differences[i].path[0] === 'format' || differences[i].path[0] === 'creationDate') {
+          //console.log(`Ignoring path[0] = ${differences[i].path[0]}`)
+          continue
         }
-        if (keep) {
-          keptDiffs.push(differences[i])
+      }
+      if (whatCompared === 'infoVsDepthAll' && differences[i].path) {
+        if (differences[i].path[0] === 'HAPI' || differences[i].path[0] === 'status') {
+          //console.log(`Ignoring path[0] = ${differences[i].path[0]}`)
+          continue
         }
+      }
+
+      for (let j = 0; j < differences[i].path.length; j++) {
+        if (typeof (differences[i].path[j]) === 'string' && differences[i].path[j].substring(0, 2) === 'x_') {
+          //console.log(`Ignoring path[${j}] = ${differences[i].path[j]}`)
+          keep = false
+          break
+        }
+      }
+      if (keep === true) {
+        keptDiffs.push(differences[i])
       }
     }
   }
-
-  let desc = 'Expect <code>/info</code> response to match header' +
-             " in data response when '<code>include=header</code>' requested."
+  let desc = ''
+  if (whatCompared === 'infoVsHeader') {
+    desc = 'Expect <code>/info</code> response to match header' +
+           " in data response when '<code>include=header</code>' requested."
+  }
   if (whatCompared === 'APIvsAPI') {
     desc = 'Expect <code>/info?id=</code> response to match <code>/info?dataset=</code>.'
+  }
+  if (whatCompared === 'infoVsDepthAll') {
+    desc = 'Expect <code>/catalog?depth=all</code> content to match what' +
+           ' obtained for <code>/info?dataset=...</code> for all datasets.'
   }
 
   if (keptDiffs.length === 0) {
@@ -1080,7 +1121,10 @@ function InfoSame (headerInfo, headerBody, whatCompared) {
       got: ''
     }
   } else {
-    const got = 'Differences:\n<pre>' + JSON.stringify(keptDiffs, null, 2) + '</pre>'
+    const got = `Differences:\n<pre>${JSON.stringify(keptDiffs, null, 2)}</pre>` +
+                `where\nlhs = <code>${lhs}</code>\nrhs = <code>${rhs}</code>\n` +
+                `See ${deepDiffLink} for notation explanation.\n`
+
     return {
       description: callerName() + desc,
       error: true,

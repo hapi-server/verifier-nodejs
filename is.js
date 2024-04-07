@@ -99,8 +99,8 @@ function versionWarning (version) {
   if (parseFloat(version) >= 3.2) {
     // GitHub does not allow link to milestone string. Instead, it uses the milestone number.
     // To link directly, would need to create a label that is same as milestone string.
-    const verifierMileStone = `<a href="https://github.com/hapi-server/verifier-nodejs/issues">verifier ${version} milestone issues</a>`
-    const schemaMileStone = `<a href="https://github.com/hapi-server/data-specification-schema/issues">schema ${version}  milestone issues</a>`
+    const verifierMileStone = `<a href="https://github.com/hapi-server/verifier-nodejs/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">verifier ${version} milestone issues</a>`
+    const schemaMileStone = `<a href="https://github.com/hapi-server/data-specification-schema/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">schema ${version}  milestone issues</a>`
     return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. ` +
            `See ${verifierMileStone} and ${schemaMileStone}</span>`
   }

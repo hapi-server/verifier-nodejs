@@ -1045,6 +1045,20 @@ function LengthAppropriate (len, type, name) {
 }
 exports.LengthAppropriate = LengthAppropriate
 
+function DefinitionsOK (json) {
+  const desc = 'Expect no <code>definitions</code> element in JSON response unless ' +
+               " request URL has '<code>resolve_references=false</code>'"
+  const got = '<code>definitions</code> element in JSON response.'
+  const error = json.definitions !== undefined
+  const obj = {
+    description: callerName() + desc,
+    error,
+    got: error ? got : 'No ' + got
+  }
+  return obj
+}
+exports.DefinitionsOK = DefinitionsOK
+
 function InfoSame (headerInfo, headerBody, whatCompared) {
   // If whatCompared === 'infoVsHeader',
   // compares /info response with info header in data response.
@@ -1190,7 +1204,7 @@ function FormatInHeader (header, type) {
     if (t) {
       got = "Format of '<code>" + header.format + "</code>' specified."
     }
-    const desc = "<code>/info</code> response should not have '<code>format</code>' specified."
+    const desc = "<code>/info</code> response should not have '<code>format</code>' specified for this type of request."
     return {
       description: callerName() + desc,
       error: t,
@@ -1203,8 +1217,7 @@ function FormatInHeader (header, type) {
     if (!t) {
       got = "Format of '<code>" + header.format + "</code>' specified."
     }
-    const desc = 'Header in CSV response should have' +
-             " '<code>format: csv</code>' specified."
+    const desc = "JSON header in CSV response should have '<code>format: csv</code>' specified."
     return {
       description: callerName() + desc,
       error: t,
@@ -1315,7 +1328,8 @@ function BinsCentersOrRangesOK (parameters, pn, d, which, version) {
   const param = parameters[pn]
   const name = parameters[pn].name
   const bins = parameters[pn].bins
-  if (!bins || !bins[d] || !!bins[d][which]) return
+
+  if (!bins || !bins[d] || !bins[d][which]) return
 
   if (typeof bins[d][which] === 'string') {
     const rname = bins[d][which] // referenced parameter name
@@ -1503,7 +1517,7 @@ function FillOK (fill, type, len, name, what) {
   }
   let desc = ''
   if (what === 'nullstring') {
-    desc = "Expect fill value to not be the string 'null'."
+    desc = "Expect fill value to not be the string '<code>null</code>'."
     if (fill === 'null') {
       t = true
       got = " The string 'null'; Probably fill=null and not fill='null' was intended."
@@ -1530,15 +1544,15 @@ function FillOK (fill, type, len, name, what) {
     }
   }
   if (what === 'integer') {
-    desc = 'Expect fill value for a integer parameter to not have a decimal point'
+    desc = "Expect fill value for a parameter with type='<code>integer</code>' to not have a decimal point"
     if (/\./.test(fill)) {
       t = true
       got = got + ' This was probably not intended.'
     }
   }
   if (what === 'double') {
-    desc = 'Expect fill value for a double parameter to not have a two' +
-         ' or more non-zero decimal places.'
+    desc = "Expect fill value for a parameter with type='<code>double</code>' to not have two" +
+           ' or more non-zero digits after decimal point.'
     if (/\.[1-9][1-9]/.test(fill)) {
       t = true
       got = got + ' This is uncommon and was probably not intended.'

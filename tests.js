@@ -409,6 +409,7 @@ function run (opts, clientRequest, clientResponse) {
       report(r, url, is.FirstParameterOK(json, 'fill'))
       report(r, url, is.TimeIncreasing(json, '{start,stop}Date'))
       report(r, url, is.TimeIncreasing(json, 'sample{Start,Stop}Date'))
+      report(r, url, is.DefinitionsOK(json))
 
       if (opts.parameter) {
         const tmp = selectOne(json.parameters, 'name', opts.parameter)

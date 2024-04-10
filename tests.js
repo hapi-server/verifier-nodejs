@@ -43,7 +43,6 @@ function run (opts, clientRequest, clientResponse) {
       for (const idx in r.catalogAll.catalog) {
         const id = r.catalogAll.catalog[idx].id
         catalogAll[id] = r.catalogAll.catalog[idx].info
-        delete catalogAll[id].stopDate
       }
       for (const id in r.infoAll) {
         const rObj = is.InfoSame(catalogAll[id], r.infoAll[id], 'infoVsDepthAll')

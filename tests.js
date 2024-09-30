@@ -121,7 +121,7 @@ function run (opts, clientRequest, clientResponse) {
       if (func.tries === 0) {
         func() // Try again
       } else {
-        catalog(['csv'])
+        catalog()
       }
       return
     }
@@ -131,18 +131,18 @@ function run (opts, clientRequest, clientResponse) {
     report(r, url, is.CORSAvailable(res.headers), { warn: true })
     report(r, url, is.LastModifiedGiven(res.headers), { warn: true })
     if (!report(r, url, is.HTTP200(res), { stop: true })) {
-      catalog(['csv'])
+      catalog()
       return
     }
     if (!report(r, url, is.JSONParsable(body), { stop: true })) {
-      catalog(['csv'])
+      catalog()
       return
     }
     const json = JSON.parse(body)
     versionCheckAndReport(r, url, opts, json.HAPI)
 
     if (!report(r, url, is.HAPIJSON(body, version(opts, json.HAPI), funcName, ignoreVersionError), { stop: true })) {
-      catalog(['csv'])
+      catalog()
       return
     }
     return json

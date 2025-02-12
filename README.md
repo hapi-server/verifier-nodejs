@@ -17,7 +17,7 @@ Installation is only required if the server to test is not available from a publ
 ```
 # Install Node Version Manager (NVM)
 curl https://raw.githubusercontent.com/creationix/nvm/v0.39.3/install.sh | bash
-nvm install
+nvm install 16
 # Clone repository
 git clone https://github.com/hapi-server/verifier-nodejs.git
 # Install required Node.js packages

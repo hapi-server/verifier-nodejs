@@ -776,6 +776,9 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
                  ' match content from all parameter request.'
     let t = false
     let got = 'Consistent content'
+    let gotCount=0
+    let gotLimit=4
+
     for (let i = 0; i < lines.length - 1; i++) {
       // let line = lines[i].split(",");
       // let lineAll = linesAll[i].split(",");
@@ -814,10 +817,13 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
       for (let j = 0; j < nf - 1; j++) {
         if (!line[1 + j] || !lineAll[fc + j]) {
           t = true
-          got += '\nProblem with line <code>' + (j) + '</code>:\n' +
+          if ( gotCount<gotLimit ) {
+            got += '\nProblem with line <code>' + (i) + '</code>:\n' +
               'Single parameter request: <code>' + line[1 + j] +
               '</code>; All parameter request: <code>' + lineAll[fc + j] +
               '</code>.'
+          }
+          gotCount++
           break
         }
 
@@ -828,19 +834,28 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
           }
           if (nf === 2) {
             t = true
-            got += '\nParameter <code>' + name + '</code> does not match at time ' +
-                line[0] + ': Single parameter request: <code>' + line[1] +
-                '</code>; All parameter request: <code>' + lineAll[fc + j] +
-                '</code>.\n'
+            if ( gotCount<gotLimit ) {
+                got += '\nParameter <code>' + name + '</code> does not match at time ' +
+                    line[0] + ': Single parameter request: <code>' + line[1] +
+                    '</code>; All parameter request: <code>' + lineAll[fc + j] +
+                    '</code>.\n'
+            }
+            gotCount++
           } else {
-            got += '\nParameter <code>' + name + '</code> field #<code>' + j +
-                '</code> does not match at time <code>' + line[0] +
-                '</code>: Single parameter request: <code>' + line[1 + j] +
-                '</code>; All parameter request: <code>' + lineAll[fc + j] +
-                '</code>.\n'
+            if ( gotCount<gotLimit ) {
+                got += '\nParameter <code>' + name + '</code> field #<code>' + j +
+                    '</code> does not match at time <code>' + line[0] +
+                    '</code>: Single parameter request: <code>' + line[1 + j] +
+                    '</code>; All parameter request: <code>' + lineAll[fc + j] +
+                    '</code>.\n'
+            }
+            gotCount++
           }
         }
-      }
+      } 
+    }
+    if ( gotCount>gotLimit ) {
+      got += "\n("+(gotCount-gotLimit)+" additional messages suppressed.)\n"
     }
 
     return {

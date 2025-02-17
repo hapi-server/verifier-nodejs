@@ -1638,6 +1638,13 @@ function TimeParameterUnitsOK (name, units, type, size) {
 
   if (type === 'isotime') {
     let err = false
+    if ( units===null ) {
+        return {
+            description: callerName() + "Expect parameter of type <code>isotime</code> to have non-null units of \"UTC\".",
+            error: true,
+            got
+        };
+    }
     if (typeof (units) === 'object') {
       for (let i = 0; i < units.length; i++) {
         for (let j = 0; j < units[i].length; j++) {

@@ -1,6 +1,8 @@
+const fs = require('fs')
+const path = require('path')
+const diff = require('deep-diff').diff
 const moment = require('moment')
 const Validator = require('jsonschema').Validator
-const diff = require('deep-diff').diff
 
 const schemaURL = 'https://github.com/hapi-server/verifier-nodejs/tree/master/schemas'
 const wikiURL = 'https://github.com/hapi-server/verifier-nodejs/wiki'
@@ -9,15 +11,17 @@ const jsonLintLink = "<a href='http://jsonlint.org/'>http://jsonlint.org/</a>"
 const unitsAndLabels = 'https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#369-unit-and-label-arrays'
 const deepDiffLink = '<a href="https://www.npmjs.com/package/deep-diff">deep-diff</a>'
 
-// TODO: Get this list by reading directory.
-const base = './data-specification-schema/HAPI-data-access-schema'
+const base = path.join(__dirname, '..', 'data-specification-schema/')
 const schemas = {}
-schemas['1.1'] = require(base + '-1.1.json')
-schemas['2.0'] = require(base + '-2.0-1.json')
-schemas['2.1'] = require(base + '-2.1.json')
-schemas['3.0'] = require(base + '-3.0.json')
-schemas['3.1'] = require(base + '-3.1.json')
-schemas['3.2'] = require(base + '-3.2.json')
+fs.readdirSync(base).forEach(file => {
+  if (file.startsWith('HAPI-data-access-schema') && path.extname(file) === '.json') {
+    const version = path.basename(file, '.json').split('schema-').pop();
+    schemas[version] = require(path.join(base, file))
+  }
+})
+
+const schemaVersions = Object.keys(schemas).sort()
+exports.schemaVersions = schemaVersions
 
 function schema (version) {
   const json = schemas[version]
@@ -107,15 +111,6 @@ function versionWarning (version) {
   return ''
 }
 
-function versions () {
-  const arr = []
-  for (const key in schemas) {
-    arr.push(key)
-  }
-  return arr.sort()
-}
-exports.versions = versions
-
 function HAPIVersionSame (url, version, urlLast, versionLast) {
   const des = 'Expect HAPI version to match that from previous requests when given.'
   let got = `Current: '<code>${version}</code>' and Last: '<code>${versionLast}</code>'`
@@ -135,17 +130,17 @@ exports.HAPIVersionSame = HAPIVersionSame
 function HAPIVersion (version, ignoreVersionError) {
   let got = '<code>' + version + '</code>'
   let err = false
-  if (!versions().includes(version)) {
+  if (!schemaVersions.includes(version)) {
     err = true
     got = "'<code>" + version + "</code>', which is not valid or not implemented by verifier."
     if (ignoreVersionError) {
-      got += ' Will use latest version implemented by verifier: ' + versions().pop()
+      got += ' Will use latest version implemented by verifier: ' + schemaVersions.pop()
     }
   }
 
   const des = 'Expect HAPI version in JSON response to be one of ' +
           '<code>' +
-          JSON.stringify(versions()) +
+          JSON.stringify(schemaVersions) +
           '</code>'
   return {
     description: callerName() + des,

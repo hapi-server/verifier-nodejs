@@ -13,7 +13,7 @@ const argv = require('yargs')
               .default({
                 "test": false
               })
-              .choices('version', is.versions())
+              .choices('version', is.schemaVersions)
               .demandCommand()
               .help()
               .argv;

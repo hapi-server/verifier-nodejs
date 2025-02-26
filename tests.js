@@ -1123,12 +1123,12 @@ function setAndCheckOptions (argv, res) {
     plotserver: argv.plotserver || 'http://hapi-server.org/plot'
   }
 
-  if (opts.version && !versions().includes(opts.version)) {
+  if (opts.version && !schemaVersions.includes(opts.version)) {
     if (res) {
-      res.status(400).end('<code>version</code> must be one of ' + versions())
+      res.status(400).end('<code>version</code> must be one of ' + schemaVersions)
       return
     }
-    console.error("'version' must be one of ", versions())
+    console.error("'version' must be one of ", schemaVersions)
     process.exit(1)
   }
 
@@ -1186,7 +1186,7 @@ function versionCheckAndReport (r, url, opts, metaVersion) {
   versionCheckAndReport[baseURL].lastURL = url
 
   if (!report(r, url, is.HAPIVersion(metaVersion), { stop: false })) {
-    return is.versions().pop() // Use latest version
+    return is.schemaVersions.pop() // Use latest version
   } else {
     return metaVersion
   }
@@ -1213,7 +1213,7 @@ function version (opts, metaVersion) {
     return opts.version // Use version given in URL
   } else {
     if (!is.HAPIVersion(metaVersion)) {
-      return is.versions().pop() // Use latest version
+      return is.schemaVersions.pop() // Use latest version
     } else {
       return metaVersion
     }

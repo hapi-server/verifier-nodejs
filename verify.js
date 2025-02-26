@@ -41,7 +41,7 @@ const argv = require('yargs')
 
 
 const tests = require('./tests.js'); // Test runner
-const versions = require('./is.js').versions; // Array of implemented versions
+const schemaVersions = require('./is.js').schemaVersions; // Array of implemented versions
 
 
 function fixurl(q) {
@@ -80,8 +80,8 @@ if (argv.url !== "" || argv.test == true) {
 
   argv.parameter = argv.parameter || argv.parameters || "";
 
-  if (argv.version !== "" && !versions().includes(argv.version)) {
-    console.log("Version must be one of ", versions());
+  if (argv.version !== "" && !schemaVersions.includes(argv.version)) {
+    console.log("Version must be one of ", schemaVersions);
   }
 
   let opts = {
@@ -133,8 +133,8 @@ if (argv.url !== "" || argv.test == true) {
     fixurl(req.query);
 
     let version = req.query["version"] || argv["version"];
-    if (version && !versions().includes(version)) {
-      let vers = JSON.stringify(versions());
+    if (version && !schemaVersions.includes(version)) {
+      let vers = JSON.stringify(schemaVersions);
       res.status(400).end("<code>version</code> must be one of " + vers);
     }
 

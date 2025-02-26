@@ -32,6 +32,7 @@
     "start2": "node verify.js --port 9999 --plotserver 'http://localhost:5000/'"
   },
   "devDependencies": {
+    "standard": "^17.1.2",
     "tinyify": "^4.0.0"
   }
 }

@@ -5,26 +5,30 @@ var diff      = require('deep-diff').diff;
 
 let schemaURL = "https://github.com/hapi-server/verifier-nodejs/tree/master/schemas";
 let wikiURL   = 'https://github.com/hapi-server/verifier-nodejs/wiki';
-let requestURL   = 'https://github.com/request/request#requestoptions-callback';
+let requestURL = 'https://github.com/request/request#requestoptions-callback';
 let jsonLintLink = "<a href='http://jsonlint.org/'>http://jsonlint.org/</a>";
 let unitsAndLabels = "https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#369-unit-and-label-arrays";
 
+const path = require('path')
 // TODO: Get this list by reading directory.
-let base = "./data-specification-schema/HAPI-data-access-schema";
-var schemas = {};
-schemas["1.1"] = require(base + "-1.1.json");
-schemas["2.0"] = require(base + "-2.0-1.json");
-schemas["2.1"] = require(base + "-2.1.json");
-schemas["3.0"] = require(base + "-3.0.json");
-schemas["3.1"] = require(base + "-3.1.json");
-schemas["3.2"] = require(base + "-3.2.json");
+const base = path.join(__dirname, '..', 'data-specification-schema/')
+const schemas = {}
+fs.readdirSync(base).forEach(file => {
+  if (file.startsWith('HAPI-data-access-schema') && path.extname(file) === '.json') {
+    const version = path.basename(file, '.json').split('schema-').pop();
+    schemas[version] = require(path.join(base, file))
+  }
+})
 
-function schema(version) {
-  let json = schemas[version];
+const schemaVersions = Object.keys(schemas).sort()
+exports.schemaVersions = schemaVersions
+
+function schema (version) {
+  const json = schemas[version]
   if (!json) {
-    return false;
+    return false
   } else {
-    return schemas[version];
+    return schemas[version]
   }
 }
 
@@ -111,15 +115,6 @@ function versionWarning(version) {
   return "";
 }
 
-function versions() {
-  let arr = [];
-  for (key in schemas) {
-    arr.push(key);
-  }
-  return arr.sort();
-}
-exports.versions = versions;
-
 function HAPIVersionSame(url, version, urlLast, versionLast) {
   let des = "Expect HAPI version to match that from previous requests when given.";
   let got = `Current: '<code>${version}</code>' and Last: '<code>${versionLast}</code>'`;
@@ -140,17 +135,17 @@ function HAPIVersion(version, ignoreVersionError) {
 
   let got = "<code>" + version + "</code>";
   let err = false;
-  if (!versions().includes(version)) {
+  if (!schemaVersions.includes(version)) {
     err = true;
     got = "'<code>" + version + "</code>', which is not valid or not implemented by verifier.";
     if (ignoreVersionError) {
-      got += " Will use latest version implemented by verifier: " + versions().pop();
+      got += " Will use latest version implemented by verifier: " + schemaVersions.pop();
     }
   }
 
   let des = "Expect HAPI version in JSON response to be one of "
           + "<code>"
-          + JSON.stringify(versions())
+          + JSON.stringify(schemaVersions)
           + "</code>";
   return {
     "description": callerName() + des,

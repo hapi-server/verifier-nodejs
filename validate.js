@@ -13,7 +13,7 @@ const argv = require('yargs')
               .default({
                 "test": false
               })
-              .choices('version', is.versions())
+              .choices('version', is.schemaVersions)
               .demandCommand()
               .help()
               .argv;
@@ -84,7 +84,7 @@ function getVersion(argv, json) {
   if (version === undefined) {
     versionResult = is.HAPIVersion(json['HAPI']);
     writeResult(versionResult);
-    if (versionResult['error'] == true) {
+    if (versionResult['error'] === true) {
       process.exit(1);
     } else {
       version = json['HAPI'];

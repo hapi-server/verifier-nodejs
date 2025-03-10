@@ -65,7 +65,9 @@ function fixurl (q) {
 }
 
 if (process.argv.includes('--port') && process.argv.includes('--url')) {
-  console.error('Both --url and --port given. Setting --port starts a verifier server application in which the URL, dataset, etc. are entered there.')
+  let msg = 'Both --url and --port given. Setting --port starts a verifier '
+  msg += 'server application in which the URL, dataset, etc. are entered there.'
+  console.error(msg)
   process.exit(1)
 }
 

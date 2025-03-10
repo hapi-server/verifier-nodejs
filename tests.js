@@ -232,7 +232,7 @@ function run (opts, clientRequest, clientResponse) {
         r.datasetsToCheck = selectDatasets(r.datasetsToCheck, opts)
 
         if (r.datasetsToCheck.length === 0) {
-          let desc = 'Dataset ' + opts.id + ' is not in catalog'
+          let desc = 'Dataset "' + opts.id + '" is not in catalog'
           if (opts.id.startsWith('^')) {
             desc = `<code>${opts.id} did not match any dataset id in catalog.`
           }
@@ -1118,8 +1118,8 @@ function setAndCheckOptions (argv, res) {
     stop: argv.timemax || argv.stop,
     version: argv.version,
     output,
-    datatimeout: parseInt(argv.datatimeout) || 5000,
-    metatimeout: parseInt(argv.metatimeout) || 1000,
+    datatimeout: parseInt(argv.datatimeout),
+    metatimeout: parseInt(argv.metatimeout),
     plotserver: argv.plotserver || 'http://hapi-server.org/plot'
   }
 

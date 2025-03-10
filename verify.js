@@ -15,21 +15,20 @@ const argv = require('yargs')
     timemin: '',
     stop: '',
     version: '',
-    datatimeout: 0,
-    metatimeout: 0,
+    datatimeout: 5000,
+    metatimeout: 1000,
     output: 'console',
     test: false,
     plotserver: 'https://hapi-server.org/plot'
   })
-  .describe('port', 'If URL not given, starts verifier server on this port.')
-  .describe('url', 'URL to test. No server is started.')
+  .describe('url', 'URL to test.')
   .describe('dataset', 'Start with "^" to indicate a regular expression')
   .describe('parameter', '')
   .describe('start', '')
   .describe('stop', '')
   .describe('version', 'Validate against a HAPI version. Defaults to what given in JSON responses.')
-  .describe('datatimeout', '')
-  .describe('metatimeout', '')
+  .describe('datatimeout', 'ms to wait for /data response')
+  .describe('metatimeout', 'ms to wait for response that returns metadata')
   .describe('output', '')
   .describe('test', 'Run a unit test and exit. All other arguments ignored.')
   .boolean('test')
@@ -38,6 +37,7 @@ const argv = require('yargs')
   .deprecateOption('timemin', 'use --start')
   .deprecateOption('timemax', 'use --stop')
   .choices('output', ['console', 'json'])
+  .describe('port', 'Starts verifier server on this port.')
   .argv
 
 const tests = require('./tests.js') // Test runner
@@ -62,6 +62,11 @@ function fixurl (q) {
       .replace(/\/info$|\/data$|\/catalog$/, '')
   }
   q.url = q.url.replace(/\/$/, '')
+}
+
+if (process.argv.includes('--port') && process.argv.includes('--url')) {
+  console.error('Both --url and --port given. Setting --port starts a verifier server application in which the URL, dataset, etc. are entered there.')
+  process.exit(1)
 }
 
 if (argv.url !== '' || argv.test === true) {

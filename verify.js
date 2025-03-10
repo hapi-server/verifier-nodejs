@@ -37,7 +37,7 @@ const argv = require('yargs')
   .deprecateOption('timemin', 'use --start')
   .deprecateOption('timemax', 'use --stop')
   .choices('output', ['console', 'json'])
-  .describe('port', 'Starts verifier server on this port.')
+  .describe('port', 'Starts verifier server app on this port (no other command line arguments allowed).')
   .argv
 
 const tests = require('./tests.js') // Test runner

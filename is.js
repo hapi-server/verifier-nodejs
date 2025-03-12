@@ -1553,19 +1553,33 @@ function FillOK (fill, type, len, name, what) {
       got = got + ' This was probably not intended.'
     }
   }
-  if (what === 'integer') {
+  // TODO: Check integer is not NaN.
+  //       Check isinteger(fill)
+  if (what === 'integer-decimal') {
     desc = "Expect fill value for a parameter with type='<code>integer</code>' to not have a decimal point"
     if (/\./.test(fill)) {
       t = true
-      got = got + ' This was probably not intended.'
+      got = got + ' This was probably not intended. '
     }
   }
-  if (what === 'double') {
-    desc = "Expect fill value for a parameter with type='<code>double</code>' to not have two" +
-           ' or more non-zero digits after decimal point.'
-    if (/\.[1-9][1-9]/.test(fill)) {
-      t = true
-      got = got + ' This is uncommon and was probably not intended.'
+
+  if (what === 'double' || what === 'integer') {
+    desc += `Expect fill value for a parameter with type='<code>${what}</code>' to be 'NaN' or parse to a ${what}`
+    if (fill.toLowerCase() === 'nan') {
+      got = got + ' fill.toLowerCase() == "nan"'
+    } else {
+      if (what === 'integer') {
+        if (!isinteger(fill)) {
+          t = true
+        }
+        got = got + ` isinteger(fill) = ${isinteger(fill)}`
+      }
+      if (what === 'double') {
+        if (!isfloat(fill)) {
+          t = true
+        }
+        got = got + ` isfloat(fill) = ${isfloat(fill)}`
+      }
     }
   }
   return {

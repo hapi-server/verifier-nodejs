@@ -24,6 +24,8 @@ function run (opts, clientRequest, clientResponse) {
     clientRequest.connection.on('close', function () { CLOSED = true })
   }
 
+  report.shush = opts.quiet
+
   // First object passed to report().
   const r = { res: clientResponse, opts, infoAll: {}, dataAll1Body: {} }
 
@@ -196,7 +198,7 @@ function run (opts, clientRequest, clientResponse) {
     }
 
     report(r, url)
-    request(requestOptions(url, opts, timeoutString), function (err, res, body) {
+    const emitter = request(requestOptions(url, opts, timeoutString), function (err, res, body) {
       if (err) {
         if (catalog.tries === 0) {
           report(r, url, is.RequestError(err, res, timeout(opts, timeoutString)), { warn: true })
@@ -268,6 +270,9 @@ function run (opts, clientRequest, clientResponse) {
       } else {
         infoError()
       }
+    })
+    emitter.on('error', (err) => {
+      console.error('An error occurred:', err)
     })
   }
 
@@ -692,6 +697,7 @@ function run (opts, clientRequest, clientResponse) {
 
     report(r, url)
     const reqOpts = requestOptions(url, opts, timeoutString, true)
+
     request(reqOpts, function (err, res, dataAll1Body) {
       if (err) {
         if (dataAll1.tries === 0) {
@@ -1118,6 +1124,7 @@ function setAndCheckOptions (argv, res) {
     stop: argv.timemax || argv.stop,
     version: argv.version,
     output,
+    quiet: argv.quiet,
     datatimeout: parseInt(argv.datatimeout),
     metatimeout: parseInt(argv.metatimeout),
     plotserver: argv.plotserver || 'http://hapi-server.org/plot'

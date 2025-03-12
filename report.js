@@ -15,16 +15,14 @@ function report (r, url, obj, opts) {
   let warn = false
   let stop = false
   let abort = false
-  let shush = false
-
   if (opts) {
     warn = opts.warn || false // Warn not fail message on error
     stop = opts.stop || false // Need to stop tests on current URL
     abort = opts.abort || false // Stop and send abort all processing
-    shush = opts.shush || false // Don't print unless warning, error, or url changed
   }
 
-  shush = false
+  const shush = report.shush || false // Don't print unless warning, error, or url changed
+
   stop = stop || abort // Make stop true when abort true.
 
   let firstshush = false

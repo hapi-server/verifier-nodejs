@@ -18,6 +18,7 @@ const argv = require('yargs')
     datatimeout: 5000,
     metatimeout: 1000,
     output: 'console',
+    quiet: false,
     test: false,
     plotserver: 'https://hapi-server.org/plot'
   })
@@ -32,6 +33,8 @@ const argv = require('yargs')
   .describe('output', '')
   .describe('test', 'Run a unit test and exit. All other arguments ignored.')
   .boolean('test')
+  .describe('quiet', 'Do not print unless warning or error.')
+  .boolean('quiet')
   .describe('plotserver', '')
   .deprecateOption('id', 'use --dataset')
   .deprecateOption('timemin', 'use --start')
@@ -78,7 +81,6 @@ if (argv.url !== '' || argv.test === true) {
     argv.url = 'https://hapi-server.org/servers/TestData2.0/hapi'
     argv.id = 'dataset1'
   }
-
   fixurl(argv)
   tests.run(argv)
 } else {

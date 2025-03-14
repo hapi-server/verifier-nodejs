@@ -198,7 +198,7 @@ function run (opts, clientRequest, clientResponse) {
     }
 
     report(r, url)
-    const emitter = request(requestOptions(url, opts, timeoutString), function (err, res, body) {
+    request(requestOptions(url, opts, timeoutString), function (err, res, body) {
       if (err) {
         if (catalog.tries === 0) {
           report(r, url, is.RequestError(err, res, timeout(opts, timeoutString)), { warn: true })
@@ -270,9 +270,6 @@ function run (opts, clientRequest, clientResponse) {
       } else {
         infoError()
       }
-    })
-    emitter.on('error', (err) => {
-      console.error('An error occurred:', err)
     })
   }
 

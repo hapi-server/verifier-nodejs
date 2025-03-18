@@ -11,7 +11,7 @@ const jsonLintLink = "<a href='http://jsonlint.org/'>http://jsonlint.org/</a>"
 const unitsAndLabels = 'https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#369-unit-and-label-arrays'
 const deepDiffLink = '<a href="https://www.npmjs.com/package/deep-diff">deep-diff</a>'
 
-const base = path.join(__dirname, '..', 'data-specification-schema/')
+const base = path.join(__dirname, 'data-specification-schema/')
 const schemas = {}
 fs.readdirSync(base).forEach(file => {
   if (file.startsWith('HAPI-data-access-schema') && path.extname(file) === '.json') {

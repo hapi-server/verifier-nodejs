@@ -82,6 +82,9 @@ if (argv.url !== '' || argv.test === true) {
     argv.id = 'dataset1'
   }
   fixurl(argv)
+
+  console.log('✗ is failure which must be fixed, ⚠ is warning which should be fixed if possible.');  
+
   tests.run(argv)
 } else {
   // Server mode

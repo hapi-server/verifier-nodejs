@@ -2,8 +2,32 @@ checkNodeJSVersion()
 
 const fs = require('fs')
 const path = require('path')
-const argv = require('yargs')
-  .help()
+const yargs = require('yargs')
+const tests = require('./tests.js') // Test runner
+
+function fixurl (q) {
+  // Allow typical copy/paste error
+  //   ?url=http://server/hapi/info?{id,dataset}=abc
+  // and treat as equivalent to
+  //   ?url=http://server/hapi&{id,dataset}=abc
+  // for web interface and similar for command line.
+
+  if (/\?id=/.test(q.url)) {
+    q.id = q.url.split('?id=')[1]
+    q.url = q.url
+      .split('?id=')[0]
+      .replace(/\/info$|\/data$|\/catalog$/, '')
+  }
+  if (/\?dataset=/.test(q.url)) {
+    q.id = q.url.split('?datset=')[1]
+    q.url = q.url
+      .split('?dataset=')[0]
+      .replace(/\/info$|\/data$|\/catalog$/, '')
+  }
+  q.url = q.url.replace(/\/$/, '')
+}
+
+const argv = yargs.help()
   .default({
     port: 9999,
     url: '',
@@ -41,31 +65,9 @@ const argv = require('yargs')
   .deprecateOption('timemax', 'use --stop')
   .choices('output', ['console', 'json'])
   .describe('port', 'Starts verifier server app on this port (no other command line arguments allowed).')
+  .strict()  // No unknown args
   .argv
 
-const tests = require('./tests.js') // Test runner
-
-function fixurl (q) {
-  // Allow typical copy/paste error
-  //   ?url=http://server/hapi/info?{id,dataset}=abc
-  // and treat as equivalent to
-  //   ?url=http://server/hapi&{id,dataset}=abc
-  // for web interface and similar for command line.
-
-  if (/\?id=/.test(q.url)) {
-    q.id = q.url.split('?id=')[1]
-    q.url = q.url
-      .split('?id=')[0]
-      .replace(/\/info$|\/data$|\/catalog$/, '')
-  }
-  if (/\?dataset=/.test(q.url)) {
-    q.id = q.url.split('?datset=')[1]
-    q.url = q.url
-      .split('?dataset=')[0]
-      .replace(/\/info$|\/data$|\/catalog$/, '')
-  }
-  q.url = q.url.replace(/\/$/, '')
-}
 
 if (process.argv.includes('--port') && process.argv.includes('--url')) {
   let msg = 'Both --url and --port given. Setting --port starts a verifier '

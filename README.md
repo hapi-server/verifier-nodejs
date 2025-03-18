@@ -18,8 +18,10 @@ Installation is only required if the server to test is not available from a publ
 # Install Node Version Manager (NVM)
 curl https://raw.githubusercontent.com/creationix/nvm/v0.39.3/install.sh | bash
 nvm install 16
+# Clone schema repository; verifier-nodejs expects this to be in the parent directory.
+git clone https://github.com/hapi-server/data-specification-schema
 # Clone repository
-git clone https://github.com/hapi-server/verifier-nodejs.git
+git clone https://github.com/hapi-server/verifier-nodejs
 # Install required Node.js packages
 cd verifier-nodejs; npm install
 # Run unit test

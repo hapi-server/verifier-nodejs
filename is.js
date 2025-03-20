@@ -50,7 +50,7 @@ function isinteger (str) {
 }
 
 function isfloat (str) {
-  return Math.abs(parseFloat(str)) < Number.MAX_VALUE &&
+  return str.trim() === "NaN" || Math.abs(parseFloat(str)) < Number.MAX_VALUE &&
          /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
 }
 

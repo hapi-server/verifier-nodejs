@@ -616,7 +616,11 @@ function TypeCorrect (header, body, pn) {
   }
 
   if (got !== '') {
-    got = got + 'Line 1: <code>' + line1 + '</code>'
+    sline= "" + line1;
+    if ( sline.length>200 ) {
+        sline= sline.substring(0,200)+'...('+(sline.length)+' chars)';
+    }  
+    got = got + 'Line 1: <code>' + sline + '</code>'
   }
 
   return {

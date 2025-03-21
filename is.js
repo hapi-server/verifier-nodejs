@@ -1590,6 +1590,61 @@ function FillOK (fill, type, len, name, what) {
 }
 exports.FillOK = FillOK
 
+function LocationOK (name, location) {
+  if (!location) { return }
+
+  if (!location.point) { return }
+  if (!location.vectorComponents) { return }
+
+  const err = location.point.length !== location.vectorComponents.length
+  const desc = "Expect length of location.point array to match length of location.vectorComponents array."
+  return {
+    description: callerName() + desc,
+    error: err,
+    got: `location.point.length = ${location.point.length} and location.vectorComponents.length = ${location.vectorComponents.length}`
+  }
+}
+exports.LocationOK = LocationOK
+
+function VectorComponentsOK (name, size, vectorComponents) {
+  if (!vectorComponents) { return }
+
+  if (!Array.isArray(size)) {
+    size = [size]
+  }
+
+  const if_ = "If vectorComponents given, "
+
+  const c1 = "size array must have length of 1"
+  const desc1 = if_ + c1 + "."
+  const err1 = size.length !== 1
+  if (err1) {
+    return {
+      description: callerName() + desc1,
+      error: err1,
+      got: `size.length = ${size.length}`
+    }
+  }
+
+  const c2 = "number of elements in vectorComponents to equal size[0]"
+  const desc2 = if_ + c2 + "."
+  const err2 = size[0] !== vectorComponents.length
+  if (err2) {
+    return {
+      description: callerName() + desc2,
+      error: err2,
+      got: `size[0] = ${size[0]} and vectorComponents.length = ${vectorComponents.length}`
+    }
+  }
+
+  return {
+    description: callerName() + if_ + c1 + " and " + c2 + ".",
+    error: false,
+    got: 'All conditions satisfied.'
+  }
+}
+exports.VectorComponentsOK = VectorComponentsOK
+
 function LastModifiedGiven (headers) {
   return {
     description: callerName() + 'Prefer <code>Last-Modified</code> header to be given for responses that return only metadata.',

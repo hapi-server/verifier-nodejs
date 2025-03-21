@@ -586,7 +586,7 @@ function TypeCorrect (header, body, pn) {
   let got = ''
   let rObj = {}
   for (let j = 0; j < nf; j++) {
-    const extra = ' in column ' + j + ' on first line'
+    const extra = ' in column ' + j + ' on first line '
 
     let type = header.parameters[pn].type
     if (j === 0) {
@@ -608,6 +608,7 @@ function TypeCorrect (header, body, pn) {
     }
     if (type === 'double') {
       rObj = Float(line1[j], extra)
+      console.log(rObj)
       if (rObj.error) {
         got = rObj.description + '\ngave <code>' + rObj.got + '<code>\n'
         err = rObj.error
@@ -1569,21 +1570,17 @@ function FillOK (fill, type, len, name, what) {
 
   if (what === 'double' || what === 'integer') {
     desc += `Expect fill value for a parameter with type='<code>${what}</code>' to be 'NaN' or parse to a ${what}`
-    if (fill.toLowerCase() === 'nan') {
-      got = got + ' fill.toLowerCase() == "nan"'
-    } else {
-      if (what === 'integer') {
-        if (!isinteger(fill)) {
-          t = true
-        }
-        got = got + ` isinteger(fill) = ${isinteger(fill)}`
+    if (what === 'integer') {
+      if (!isinteger(fill)) {
+        t = true
       }
-      if (what === 'double') {
-        if (!isfloat(fill)) {
-          t = true
-        }
-        got = got + ` isfloat(fill) = ${isfloat(fill)}`
+      got = got + ` isinteger(fill) = ${isinteger(fill)}`
+    }
+    if (what === 'double') {
+      if (!isfloat(fill)) {
+        t = true
       }
+      got = got + ` isfloat(fill) = ${isfloat(fill)}`
     }
   }
   return {
@@ -1949,7 +1946,7 @@ exports.Integer = Integer
 function Float (str, extra) {
   extra = extra || ''
   const t = isfloat(str)
-  const ts = "Math.abs(parseFloat('" + str + "')) &lt; " +
+  const ts = `'${str}'.trim() === 'NaN' || Math.abs(parseFloat('${str}')) &lt; ` +
              Number.MAX_VALUE + ' && ' +
              "<code>/^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('" + str + "'.trim()) == true</code>" +
          extra

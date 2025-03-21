@@ -472,7 +472,7 @@ function run (opts, clientRequest, clientResponse) {
           report(r, url, is.FillOK(fill, type, len, name, 'stringparse'))
         }
       }
-      process.exit()
+
       if (opts.parameter) {
         // No need to check single parameter request, because already checked above.
         dataAll1()

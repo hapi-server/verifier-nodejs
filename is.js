@@ -608,7 +608,6 @@ function TypeCorrect (header, body, pn) {
     }
     if (type === 'double') {
       rObj = Float(line1[j], extra)
-      console.log(rObj)
       if (rObj.error) {
         got = rObj.description + '\ngave <code>' + rObj.got + '<code>\n'
         err = rObj.error

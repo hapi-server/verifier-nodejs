@@ -426,6 +426,8 @@ function run (opts, clientRequest, clientResponse) {
         }
       }
 
+      const location = json.location
+
       for (let i = 0; i < json.parameters.length; i++) {
         if (opts.parameter && (json.parameters[i].name !== opts.parameter)) {
           continue
@@ -439,10 +441,14 @@ function run (opts, clientRequest, clientResponse) {
         const units = json.parameters[i].units
         const label = json.parameters[i].label
         const bins = json.parameters[i].bins
+        const vectorComponents = json.parameters[i].vectorComponents || null
 
         if (size === undefined) {
           size = [1]
         }
+
+        report(r, url, is.VectorComponentsOK(name, size, vectorComponents))
+        report(r, url, is.LocationOK(name, location, size, vectorComponents))
 
         report(r, url, is.TimeParameterUnitsOK(name, units, type, size))
         report(r, url, is.LengthAppropriate(len, type, name))

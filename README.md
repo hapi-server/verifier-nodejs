@@ -51,9 +51,18 @@ If no arguments are provided, a web server is started on port `9999` and `plotse
 
 See http://localhost:9999/ for API documentation.
 
-## StackBlitz
+## 🌏  Open in the Cloud 
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/edit/verify-nodejs-dev?file=README.md&file=md!README.md)
+Click any of the buttons below to start a new development environment to demo or contribute to the codebase without having to install anything on your machine:
+
+[![Open in VS Code](https://img.shields.io/badge/Open%20in-VS%20Code-blue?logo=visualstudiocode)](https://vscode.dev/github/hapi-server/verifier-nodejs)
+[![Open in Glitch](https://img.shields.io/badge/Open%20in-Glitch-blue?logo=glitch)](https://glitch.com/edit/#!/import/github/hapi-server/verifier-nodejs)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/hapi-server/verifier-nodejs)
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/edit/verify-nodejs-dev?file=README.md&file=md!README.md)[![Edit in Codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/hapi-server/verifier-nodejs)
+[![Open in Repl.it](https://replit.com/badge/github/withastro/astro)](https://replit.com/github/hapi-server/verifier-nodejs)
+[![Open in Codeanywhere](https://codeanywhere.com/img/open-in-codeanywhere-btn.svg)](https://app.codeanywhere.com/#https://github.com/hapi-server/verifier-nodejs)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/hapi-server/verifier-nodejs)
+
 
 # Schema Validation Only
 

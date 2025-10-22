@@ -14,18 +14,19 @@ http://hapi-server.org/verify-dev
 
 Installation is only required if the server to test is not available from a public IP address.
 
-*Install Node Version Manager (NVM)*
+## Install Node Version Manager (NVM)
 
-Linux/Mac
+### Linux/Mac
+
 ```
 curl https://raw.githubusercontent.com/creationix/nvm/v0.39.3/install.sh | bash
 ```
 
-Windows: Download and execute `nvm-setup.exe` at https://github.com/coreybutler/nvm-windows/releases
+### Windows
 
-# Install Node Version Manager (NVM)
+Download and execute [`nvm-setup.exe`](https://github.com/coreybutler/nvm-windows/releases/download/1.2.2/nvm-setup.exe)
 
-https://github.com/coreybutler/nvm-windows/releases
+# Install Verifier
 
 ```
 nvm install 16

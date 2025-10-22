@@ -18,13 +18,13 @@ Installation is only required if the server to test is not available from a publ
 
 ### Linux/Mac
 
-```
-curl https://raw.githubusercontent.com/creationix/nvm/v0.39.3/install.sh | bash
-```
+1. ```curl https://raw.githubusercontent.com/creationix/nvm/v0.39.3/install.sh | bash```
+2. Open a new shell and enter `nvm` to verify `nvm` was installed.
 
 ### Windows
 
-Download and execute [`nvm-setup.exe`](https://github.com/coreybutler/nvm-windows/releases/download/1.2.2/nvm-setup.exe)
+1. Download and execute [`nvm-setup.exe`](https://github.com/coreybutler/nvm-windows/releases/download/1.2.2/nvm-setup.exe)
+2. Open a new PowerShell window and enter `nvm` to verify `nvm` was installed.
 
 # Install Node and Verifier
 

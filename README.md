@@ -26,14 +26,18 @@ curl https://raw.githubusercontent.com/creationix/nvm/v0.39.3/install.sh | bash
 
 Download and execute [`nvm-setup.exe`](https://github.com/coreybutler/nvm-windows/releases/download/1.2.2/nvm-setup.exe)
 
-# Install Verifier
+# Install Node and Verifier
 
 ```
-nvm install 16
+# Install NodeJS 16
+nvm install 16 
+
 # Clone repository
 git clone https://github.com/hapi-server/verifier-nodejs.git
+
 # Install required Node.js packages
 cd verifier-nodejs; npm install
+
 # Run unit test
 node verify.js --test
 ```

@@ -33,7 +33,7 @@ Installation is only required if the server to test is not available from a publ
 nvm install 16 
 
 # Clone repository
-git clone https://github.com/hapi-server/verifier-nodejs.git
+git clone --recurse-submodules https://github.com/hapi-server/verifier-nodejs.git
 
 # Install required Node.js packages
 cd verifier-nodejs; npm install

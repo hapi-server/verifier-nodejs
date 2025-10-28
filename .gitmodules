@@ -1,0 +1,3 @@
+[submodule "data-specification-schema"]
+	path = data-specification-schema
+	url = https://github.com/hapi-server/data-specification-schema.git

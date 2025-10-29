@@ -44,15 +44,19 @@ function callerName () {
 }
 
 function isinteger (str) {
-  return parseInt(str) < 2 ^ 31 - 1 &&
-         parseInt(str) > -2 ^ 31 &&
+  return parseInt(str) <= Math.pow(2, 31) - 1 &&
+         parseInt(str) >= -1 * Math.pow(2, 31) &&
          parseInt(str) === parseFloat(str) &&
          /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
 }
 
 function isfloat (str) {
-  return str.trim() === "NaN" || Math.abs(parseFloat(str)) < Number.MAX_VALUE &&
-         /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
+  if (str.trim().toLowerCase() === 'nan') {
+    return true
+  }
+  const a = Math.abs(parseFloat(str)) < Number.MAX_VALUE
+  const b = /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
+  return a && b
 }
 
 function nFields (header, pn) {
@@ -1563,11 +1567,11 @@ function FillOK (fill, type, len, name, what) {
       got += ' This was probably not intended.'
     }
   }
-  if (what === 'nullstring') {
+  if (what === 'string-null') {
     desc = "Expect fill value to not be the string '<code>null</code>'."
     if (fill === 'null') {
       t = true
-      got += " The string 'null'; Probably fill=null and not fill='null' was intended."
+      got += ' The string "null"; Probably "fill": null and not "fill": "null" was intended.'
     }
   }
   if (what === 'integer-nan') {
@@ -1588,11 +1592,12 @@ function FillOK (fill, type, len, name, what) {
   }
   if (what === 'double-nan') {
     desc = "If type='<code>double</code>' and fill.toLowerCase() === 'nan' "
-    desc += "expect fill to be '<code>NaN</code>' or '<code>nan</code>' for "
-    desc += ` <a href="${specURL}/issues/262">compatability with clients.</a>`
-    if (/\./.test(fill)) {
-      t = true
-      got += ' This was probably not intended. '
+    desc += "prefer fill to be '<code>NaN</code>' or '<code>nan</code>' for "
+    desc += `<a href="${specURL}/issues/262">compatability with clients.</a>`
+    if (fill.toLowerCase() === 'nan') {
+      if (!(/^(nan|NaN)$/.test(fill))) {
+        t = true
+      }
     }
   }
   if (what === 'integer') {

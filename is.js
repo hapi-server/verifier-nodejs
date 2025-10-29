@@ -4,6 +4,7 @@ const diff = require('deep-diff').diff
 const moment = require('moment')
 const Validator = require('jsonschema').Validator
 
+const specURL = 'https://github.com/hapi-server/data-specification/'
 const schemaURL = 'https://github.com/hapi-server/verifier-nodejs/tree/master/schemas'
 const wikiURL = 'https://github.com/hapi-server/verifier-nodejs/wiki'
 const requestURL = 'https://github.com/request/request#requestoptions-callback'
@@ -1529,58 +1530,86 @@ function FillOK (fill, type, len, name, what) {
   if (typeof (fill) === 'string') {
     got = "fill = '" + fill + "' for parameter " + name + '.'
   }
+
   let desc = ''
-  if (what === 'nullstring') {
-    desc = "Expect fill value to not be the string '<code>null</code>'."
-    if (fill === 'null') {
-      t = true
-      got = " The string 'null'; Probably fill=null and not fill='null' was intended."
+  if (typeof (fill) !== 'string') {
+    desc = `Expect fill value be a string <a href="${specURL}/issues/40">`
+    desc += '(even if type of data it fills is not string)</a>.'
+    return {
+      description: callerName() + desc,
+      error: true,
+      got: got + '. Cannot perform further fill tests.'
     }
   }
+
   if (what === 'isotime') {
     desc = 'Expect length of fill value for a isotime parameter to be equal to length of the string parameter'
     if (len === fill.length && name !== 'Time') {
       t = true
+      got += ' isotime length = ' + len + '; fill length = ' + fill.length
     }
   }
   if (what === 'string') {
     desc = 'Expect length of fill value for a string parameter to be &lt;= length of the string parameter'
     if (len < fill.length) {
       t = true
-      got = got + ' string length = ' + len + '; fill length = ' + fill.length
+      got += ' string length = ' + len + '; fill length = ' + fill.length
     }
   }
-  if (what === 'stringparse') {
+  if (what === 'string-parse') {
     desc = 'Expect fill value for a string parameter to not parse to an integer or float'
     if (isinteger(fill) || isfloat(fill)) {
       t = true
-      got = got + ' This was probably not intended.'
+      got += ' This was probably not intended.'
     }
   }
-  // TODO: Check integer is not NaN.
-  //       Check isinteger(fill)
+  if (what === 'nullstring') {
+    desc = "Expect fill value to not be the string '<code>null</code>'."
+    if (fill === 'null') {
+      t = true
+      got += " The string 'null'; Probably fill=null and not fill='null' was intended."
+    }
+  }
+  if (what === 'integer-nan') {
+    desc = 'Expect fill.toLowerCase() for a parameter with '
+    desc += "type='<code>integer</code>' to not be the string '<code>nan</code>'"
+    if (fill.toLowerCase() === 'nan') {
+      t = true
+      got += ' IEEE-754 32 bit integers do not have a NaN value.'
+    }
+  }
   if (what === 'integer-decimal') {
-    desc = "Expect fill value for a parameter with type='<code>integer</code>' to not have a decimal point"
+    desc = "Expect fill value for a parameter with type='<code>integer</code>' "
+    desc += 'to not have a decimal point'
     if (/\./.test(fill)) {
       t = true
-      got = got + ' This was probably not intended. '
+      got += ' This was probably not intended. '
     }
   }
-
-  if (what === 'double' || what === 'integer') {
-    desc += `Expect fill value for a parameter with type='<code>${what}</code>' to be 'NaN' or parse to a ${what}`
-    if (what === 'integer') {
-      if (!isinteger(fill)) {
-        t = true
-      }
-      got = got + ` isinteger(fill) = ${isinteger(fill)}`
+  if (what === 'double-nan') {
+    desc = "If type='<code>double</code>' and fill.toLowerCase() === 'nan' "
+    desc += "expect fill to be '<code>NaN</code>' or '<code>nan</code>' for "
+    desc += ` <a href="${specURL}/issues/262">compatability with clients.</a>`
+    if (/\./.test(fill)) {
+      t = true
+      got += ' This was probably not intended. '
     }
-    if (what === 'double') {
-      if (!isfloat(fill)) {
-        t = true
-      }
-      got = got + ` isfloat(fill) = ${isfloat(fill)}`
+  }
+  if (what === 'integer') {
+    desc = `Expect fill value for a parameter with type='<code>${what}</code>'`
+    desc += ` to parse to a ${what}`
+    if (!isinteger(fill)) {
+      t = true
     }
+    got += ` isinteger(fill) = ${isinteger(fill)}`
+  }
+  if (what === 'double') {
+    desc = `Expect fill value for a parameter with type='<code>${what}</code>'`
+    desc += ` to parse to a ${what} or satisfy fill.toLowerCase() === 'nan'.`
+    if (!isfloat(fill)) {
+      t = true
+    }
+    got += ` isfloat(fill) = ${isfloat(fill)}`
   }
   return {
     description: callerName() + desc,

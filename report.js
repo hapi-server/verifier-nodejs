@@ -151,11 +151,12 @@ function rmHTML (str) {
   if (typeof str !== 'string') {
     return str
   }
+  // TODO: Does not handle nested tags.
   return str.replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/<code>/g, '').replace(/<\/code>/g, '')
     .replace(/<pre>/g, '').replace(/<\/pre>/g, '')
     .replace(/<span .*?>(.*)<\/span>/gi, '$1')
-    .replace(/<a .*?>(.*)<\/a>/gi, '$1')
+//    .replace(/<a .*?>(.*)<\/a>/gi, '$1')
 }
 
 function writeNote (msg, style, res) {

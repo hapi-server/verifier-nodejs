@@ -106,7 +106,7 @@ function csvToArray (text) {
 }
 
 function versionWarning (version) {
-  if (parseFloat(version) >= 3.2) {
+  if (parseFloat(version) >= 3.3) {
     // GitHub does not allow link to milestone string. Instead, it uses the milestone number.
     // To link directly, would need to create a label that is same as milestone string.
     const verifierMileStone = `<a href="${verifierURL}/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">verifier ${version} milestone issues</a>`

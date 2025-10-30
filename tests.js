@@ -466,10 +466,17 @@ function run (opts, clientRequest, clientResponse) {
 
         report(r, url, is.FillOK(fill, type, len, name, type))
 
+        // Additional checks on fill
+        if (type === 'integer') {
+          report(r, url, is.FillOK(fill, type, len, name, 'integer-decimal'))
+          report(r, url, is.FillOK(fill, type, len, name, 'integer-nan'))
+        }
+        if (type === 'double') {
+          report(r, url, is.FillOK(fill, type, len, name, 'double-nan'), { warn: true })
+        }
         if (type === 'string') {
-          // Additional checks.
-          report(r, url, is.FillOK(fill, type, len, name, 'nullstring'))
-          report(r, url, is.FillOK(fill, type, len, name, 'stringparse'))
+          report(r, url, is.FillOK(fill, type, len, name, 'string-null', { warn: true }))
+          report(r, url, is.FillOK(fill, type, len, name, 'string-parse', { warn: true }))
         }
       }
 

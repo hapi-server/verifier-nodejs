@@ -4,8 +4,9 @@ const diff = require('deep-diff').diff
 const moment = require('moment')
 const Validator = require('jsonschema').Validator
 
-const schemaURL = 'https://github.com/hapi-server/verifier-nodejs/tree/master/schemas'
-const wikiURL = 'https://github.com/hapi-server/verifier-nodejs/wiki'
+const schemaURL = 'https://github.com/hapi-server/data-specification-schema'
+const verifierURL = 'https://github.com/hapi-server/verifier-nodejs'
+const wikiURL = `${verifierURL}/wiki`
 const requestURL = 'https://github.com/request/request#requestoptions-callback'
 const jsonLintLink = "<a href='http://jsonlint.org/'>http://jsonlint.org/</a>"
 const unitsAndLabels = 'https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#369-unit-and-label-arrays'
@@ -103,10 +104,11 @@ function versionWarning (version) {
   if (parseFloat(version) >= 3.2) {
     // GitHub does not allow link to milestone string. Instead, it uses the milestone number.
     // To link directly, would need to create a label that is same as milestone string.
-    const verifierMileStone = `<a href="https://github.com/hapi-server/verifier-nodejs/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">verifier ${version} milestone issues</a>`
-    const schemaMileStone = `<a href="https://github.com/hapi-server/data-specification-schema/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">schema ${version}  milestone issues</a>`
-    return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. ` +
-           `See ${verifierMileStone} and ${schemaMileStone}</span>`
+    const verifierMileStone = `<a href="${verifierURL}/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">verifier ${version} milestone issues</a>`
+    const schemaMileStone = `<a href="${schemaURL}/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">schema ${version} milestone issues</a>`
+    let spanText = `Warning: HAPI schema version ${version} is in development. `
+    spanText += `See ${verifierMileStone} and ${schemaMileStone}`
+    return `; <span style="background-color: yellow">${spanText}</span>`
   }
   return ''
 }
@@ -248,7 +250,7 @@ function HAPIJSON (text, version, part, ignoreVersionError) {
     }
   }
 
-  const url = schemaURL + '/HAPI-data-access-schema-' + version + '.json'
+  const url = schemaURL + '/blob/main/HAPI-data-access-schema-' + version + '.json'
   const desc = 'Expect body to be valid ' +
            "<a href='" + url + "'>HAPI " +
            version + " '" + part + "' schema</a>." +
@@ -1896,7 +1898,7 @@ function HAPITime (isostr, version) {
       }
       // console.log(isostr[i] + " " + t)
     }
-    const url = schemaURL + '/HAPI-data-access-schema-' + version + '.json'
+    const url = schemaURL + '/blob/main/HAPI-data-access-schema-' + version + '.json'
     const desc = 'Expect time column to contain valid ' +
                  "<a href='" + url + "'>HAPI " + version + ' HAPITime strings</a>'
     return {

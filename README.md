@@ -14,14 +14,30 @@ http://hapi-server.org/verify-dev
 
 Installation is only required if the server to test is not available from a public IP address.
 
+## Install Node Version Manager (NVM)
+
+### Linux/Mac
+
+1. ```curl https://raw.githubusercontent.com/creationix/nvm/v0.39.3/install.sh | bash```
+2. Open a new shell and enter `nvm` to verify `nvm` was installed.
+
+### Windows
+
+1. Download and execute [`nvm-setup.exe`](https://github.com/coreybutler/nvm-windows/releases/download/1.2.2/nvm-setup.exe)
+2. Open a new PowerShell window and enter `nvm` to verify `nvm` was installed.
+
+# Install Node and Verifier
+
 ```
-# Install Node Version Manager (NVM)
-curl https://raw.githubusercontent.com/creationix/nvm/v0.39.3/install.sh | bash
-nvm install
+# Install NodeJS 16
+nvm install 16 
+
 # Clone repository
-git clone https://github.com/hapi-server/verifier-nodejs.git
+git clone --recurse-submodules https://github.com/hapi-server/verifier-nodejs.git
+
 # Install required Node.js packages
 cd verifier-nodejs; npm install
+
 # Run unit test
 node verify.js --test
 ```

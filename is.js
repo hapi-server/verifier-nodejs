@@ -1,23 +1,29 @@
+const fs = require('fs')
+const path = require('path')
+const diff = require('deep-diff').diff
 const moment = require('moment')
 const Validator = require('jsonschema').Validator
-const diff = require('deep-diff').diff
 
-const schemaURL = 'https://github.com/hapi-server/verifier-nodejs/tree/master/schemas'
-const wikiURL = 'https://github.com/hapi-server/verifier-nodejs/wiki'
+const specURL = 'https://github.com/hapi-server/data-specification/'
+const schemaURL = 'https://github.com/hapi-server/data-specification-schema'
+const verifierURL = 'https://github.com/hapi-server/verifier-nodejs'
+const wikiURL = `${verifierURL}/wiki`
 const requestURL = 'https://github.com/request/request#requestoptions-callback'
 const jsonLintLink = "<a href='http://jsonlint.org/'>http://jsonlint.org/</a>"
 const unitsAndLabels = 'https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#369-unit-and-label-arrays'
 const deepDiffLink = '<a href="https://www.npmjs.com/package/deep-diff">deep-diff</a>'
 
-// TODO: Get this list by reading directory.
-const base = './data-specification-schema/HAPI-data-access-schema'
+const base = path.join(__dirname, 'data-specification-schema/')
 const schemas = {}
-schemas['1.1'] = require(base + '-1.1.json')
-schemas['2.0'] = require(base + '-2.0-1.json')
-schemas['2.1'] = require(base + '-2.1.json')
-schemas['3.0'] = require(base + '-3.0.json')
-schemas['3.1'] = require(base + '-3.1.json')
-schemas['3.2'] = require(base + '-3.2.json')
+fs.readdirSync(base).forEach(file => {
+  if (file.startsWith('HAPI-data-access-schema') && path.extname(file) === '.json') {
+    const version = path.basename(file, '.json').split('schema-').pop();
+    schemas[version] = require(path.join(base, file))
+  }
+})
+
+const schemaVersions = Object.keys(schemas).sort()
+exports.schemaVersions = schemaVersions
 
 function schema (version) {
   const json = schemas[version]
@@ -39,15 +45,19 @@ function callerName () {
 }
 
 function isinteger (str) {
-  return parseInt(str) < 2 ^ 31 - 1 &&
-         parseInt(str) > -2 ^ 31 &&
+  return parseInt(str) <= Math.pow(2, 31) - 1 &&
+         parseInt(str) >= -1 * Math.pow(2, 31) &&
          parseInt(str) === parseFloat(str) &&
          /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
 }
 
 function isfloat (str) {
-  return Math.abs(parseFloat(str)) < Number.MAX_VALUE &&
-         /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
+  if (str.trim().toLowerCase() === 'nan') {
+    return true
+  }
+  const a = Math.abs(parseFloat(str)) < Number.MAX_VALUE
+  const b = /^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test(str.trim())
+  return a && b
 }
 
 function nFields (header, pn) {
@@ -96,25 +106,17 @@ function csvToArray (text) {
 }
 
 function versionWarning (version) {
-  if (parseFloat(version) >= 3.2) {
+  if (parseFloat(version) >= 3.3) {
     // GitHub does not allow link to milestone string. Instead, it uses the milestone number.
     // To link directly, would need to create a label that is same as milestone string.
-    const verifierMileStone = `<a href="https://github.com/hapi-server/verifier-nodejs/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">verifier ${version} milestone issues</a>`
-    const schemaMileStone = `<a href="https://github.com/hapi-server/data-specification-schema/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">schema ${version}  milestone issues</a>`
-    return `; <span style="background-color: yellow">Warning: HAPI schema version ${version} is in development. ` +
-           `See ${verifierMileStone} and ${schemaMileStone}</span>`
+    const verifierMileStone = `<a href="${verifierURL}/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">verifier ${version} milestone issues</a>`
+    const schemaMileStone = `<a href="${schemaURL}/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">schema ${version} milestone issues</a>`
+    let spanText = `Warning: HAPI schema version ${version} is in development. `
+    spanText += `See ${verifierMileStone} and ${schemaMileStone}`
+    return `; <span style="background-color: yellow">${spanText}</span>`
   }
   return ''
 }
-
-function versions () {
-  const arr = []
-  for (const key in schemas) {
-    arr.push(key)
-  }
-  return arr.sort()
-}
-exports.versions = versions
 
 function HAPIVersionSame (url, version, urlLast, versionLast) {
   const des = 'Expect HAPI version to match that from previous requests when given.'
@@ -135,17 +137,17 @@ exports.HAPIVersionSame = HAPIVersionSame
 function HAPIVersion (version, ignoreVersionError) {
   let got = '<code>' + version + '</code>'
   let err = false
-  if (!versions().includes(version)) {
+  if (!schemaVersions.includes(version)) {
     err = true
     got = "'<code>" + version + "</code>', which is not valid or not implemented by verifier."
     if (ignoreVersionError) {
-      got += ' Will use latest version implemented by verifier: ' + versions().pop()
+      got += ' Will use latest version implemented by verifier: ' + schemaVersions.pop()
     }
   }
 
   const des = 'Expect HAPI version in JSON response to be one of ' +
           '<code>' +
-          JSON.stringify(versions()) +
+          JSON.stringify(schemaVersions) +
           '</code>'
   return {
     description: callerName() + des,
@@ -253,7 +255,7 @@ function HAPIJSON (text, version, part, ignoreVersionError) {
     }
   }
 
-  const url = schemaURL + '/HAPI-data-access-schema-' + version + '.json'
+  const url = schemaURL + '/blob/main/HAPI-data-access-schema-' + version + '.json'
   const desc = 'Expect body to be valid ' +
            "<a href='" + url + "'>HAPI " +
            version + " '" + part + "' schema</a>." +
@@ -591,7 +593,7 @@ function TypeCorrect (header, body, pn) {
   let got = ''
   let rObj = {}
   for (let j = 0; j < nf; j++) {
-    const extra = ' in column ' + j + ' on first line'
+    const extra = ' in column ' + j + ' on first line '
 
     let type = header.parameters[pn].type
     if (j === 0) {
@@ -621,7 +623,11 @@ function TypeCorrect (header, body, pn) {
   }
 
   if (got !== '') {
-    got = got + 'Line 1: <code>' + line1 + '</code>'
+    sline= "" + line1;
+    if ( sline.length>200 ) {
+        sline= sline.substring(0,200)+'...('+(sline.length)+' chars)';
+    }  
+    got = got + 'Line 1: <code>' + sline + '</code>'
   }
 
   return {
@@ -776,6 +782,9 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
                  ' match content from all parameter request.'
     let t = false
     let got = 'Consistent content'
+    let gotCount=0
+    let gotLimit=4
+
     for (let i = 0; i < lines.length - 1; i++) {
       // let line = lines[i].split(",");
       // let lineAll = linesAll[i].split(",");
@@ -814,10 +823,13 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
       for (let j = 0; j < nf - 1; j++) {
         if (!line[1 + j] || !lineAll[fc + j]) {
           t = true
-          got += '\nProblem with line <code>' + (j) + '</code>:\n' +
+          if ( gotCount<gotLimit ) {
+            got += '\nProblem with line <code>' + (i) + '</code>:\n' +
               'Single parameter request: <code>' + line[1 + j] +
               '</code>; All parameter request: <code>' + lineAll[fc + j] +
               '</code>.'
+          }
+          gotCount++
           break
         }
 
@@ -828,19 +840,28 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
           }
           if (nf === 2) {
             t = true
-            got += '\nParameter <code>' + name + '</code> does not match at time ' +
-                line[0] + ': Single parameter request: <code>' + line[1] +
-                '</code>; All parameter request: <code>' + lineAll[fc + j] +
-                '</code>.\n'
+            if ( gotCount<gotLimit ) {
+                got += '\nParameter <code>' + name + '</code> does not match at time ' +
+                    line[0] + ': Single parameter request: <code>' + line[1] +
+                    '</code>; All parameter request: <code>' + lineAll[fc + j] +
+                    '</code>.\n'
+            }
+            gotCount++
           } else {
-            got += '\nParameter <code>' + name + '</code> field #<code>' + j +
-                '</code> does not match at time <code>' + line[0] +
-                '</code>: Single parameter request: <code>' + line[1 + j] +
-                '</code>; All parameter request: <code>' + lineAll[fc + j] +
-                '</code>.\n'
+            if ( gotCount<gotLimit ) {
+                got += '\nParameter <code>' + name + '</code> field #<code>' + j +
+                    '</code> does not match at time <code>' + line[0] +
+                    '</code>: Single parameter request: <code>' + line[1 + j] +
+                    '</code>; All parameter request: <code>' + lineAll[fc + j] +
+                    '</code>.\n'
+            }
+            gotCount++
           }
         }
-      }
+      } 
+    }
+    if ( gotCount>gotLimit ) {
+      got += "\n("+(gotCount-gotLimit)+" additional messages suppressed.)\n"
     }
 
     return {
@@ -1515,48 +1536,87 @@ function FillOK (fill, type, len, name, what) {
   if (typeof (fill) === 'string') {
     got = "fill = '" + fill + "' for parameter " + name + '.'
   }
+
   let desc = ''
-  if (what === 'nullstring') {
-    desc = "Expect fill value to not be the string '<code>null</code>'."
-    if (fill === 'null') {
-      t = true
-      got = " The string 'null'; Probably fill=null and not fill='null' was intended."
+  if (typeof (fill) !== 'string') {
+    desc = `Expect fill value be a string <a href="${specURL}/issues/40">`
+    desc += '(even if type of data it fills is not string)</a>.'
+    return {
+      description: callerName() + desc,
+      error: true,
+      got: got + '. Cannot perform further fill tests.'
     }
   }
+
   if (what === 'isotime') {
     desc = 'Expect length of fill value for a isotime parameter to be equal to length of the string parameter'
     if (len === fill.length && name !== 'Time') {
       t = true
+      got += ' isotime length = ' + len + '; fill length = ' + fill.length
     }
   }
   if (what === 'string') {
     desc = 'Expect length of fill value for a string parameter to be &lt;= length of the string parameter'
     if (len < fill.length) {
       t = true
-      got = got + ' string length = ' + len + '; fill length = ' + fill.length
+      got += ' string length = ' + len + '; fill length = ' + fill.length
     }
   }
-  if (what === 'stringparse') {
+  if (what === 'string-parse') {
     desc = 'Expect fill value for a string parameter to not parse to an integer or float'
     if (isinteger(fill) || isfloat(fill)) {
       t = true
-      got = got + ' This was probably not intended.'
+      got += ' This was probably not intended.'
+    }
+  }
+  if (what === 'string-null') {
+    desc = "Expect fill value to not be the string '<code>null</code>'."
+    if (fill === 'null') {
+      t = true
+      got += ' The string "null"; Probably "fill": null and not "fill": "null" was intended.'
+    }
+  }
+  if (what === 'integer-nan') {
+    desc = 'Expect fill.toLowerCase() for a parameter with '
+    desc += "type='<code>integer</code>' to not be the string '<code>nan</code>'"
+    if (fill.toLowerCase() === 'nan') {
+      t = true
+      got += ' IEEE-754 32 bit integers do not have a NaN value.'
+    }
+  }
+  if (what === 'integer-decimal') {
+    desc = "Expect fill value for a parameter with type='<code>integer</code>' "
+    desc += 'to not have a decimal point'
+    if (/\./.test(fill)) {
+      t = true
+      got += ' This was probably not intended. '
+    }
+  }
+  if (what === 'double-nan') {
+    desc = "If type='<code>double</code>' and fill.toLowerCase() === 'nan' "
+    desc += "prefer fill to be '<code>NaN</code>' or '<code>nan</code>' for "
+    desc += `<a href="${specURL}/issues/262">compatability with clients.</a>`
+    if (fill.toLowerCase() === 'nan') {
+      if (!(/^(nan|NaN)$/.test(fill))) {
+        t = true
+      }
     }
   }
   if (what === 'integer') {
-    desc = "Expect fill value for a parameter with type='<code>integer</code>' to not have a decimal point"
-    if (/\./.test(fill)) {
+    desc = `Expect fill value for a parameter with type='<code>${what}</code>'`
+    desc += ` to parse to a ${what}`
+    if (!isinteger(fill)) {
       t = true
-      got = got + ' This was probably not intended.'
     }
+    got += ` isinteger(fill) = ${isinteger(fill)}`
   }
   if (what === 'double') {
-    desc = "Expect fill value for a parameter with type='<code>double</code>' to not have two" +
-           ' or more non-zero digits after decimal point.'
-    if (/\.[1-9][1-9]/.test(fill)) {
+    desc = `Expect fill value for a parameter with type='<code>${what}</code>'`
+    desc += ` to parse to a ${what} or satisfy fill.toLowerCase() === 'nan'.`
+    if (!isfloat(fill)) {
       t = true
-      got = got + ' This is uncommon and was probably not intended.'
     }
+    got += ` isfloat(fill) = ${isfloat(fill)}`
   }
   return {
     description: callerName() + desc,
@@ -1565,6 +1625,61 @@ function FillOK (fill, type, len, name, what) {
   }
 }
 exports.FillOK = FillOK
+
+function LocationOK (name, location) {
+  if (!location) { return }
+
+  if (!location.point) { return }
+  if (!location.vectorComponents) { return }
+
+  const err = location.point.length !== location.vectorComponents.length
+  const desc = "Expect length of location.point array to match length of location.vectorComponents array."
+  return {
+    description: callerName() + desc,
+    error: err,
+    got: `location.point.length = ${location.point.length} and location.vectorComponents.length = ${location.vectorComponents.length}`
+  }
+}
+exports.LocationOK = LocationOK
+
+function VectorComponentsOK (name, size, vectorComponents) {
+  if (!vectorComponents) { return }
+
+  if (!Array.isArray(size)) {
+    size = [size]
+  }
+
+  const if_ = "If vectorComponents given, "
+
+  const c1 = "size array must have length of 1"
+  const desc1 = if_ + c1 + "."
+  const err1 = size.length !== 1
+  if (err1) {
+    return {
+      description: callerName() + desc1,
+      error: err1,
+      got: `size.length = ${size.length}`
+    }
+  }
+
+  const c2 = "number of elements in vectorComponents to equal size[0]"
+  const desc2 = if_ + c2 + "."
+  const err2 = size[0] !== vectorComponents.length
+  if (err2) {
+    return {
+      description: callerName() + desc2,
+      error: err2,
+      got: `size[0] = ${size[0]} and vectorComponents.length = ${vectorComponents.length}`
+    }
+  }
+
+  return {
+    description: callerName() + if_ + c1 + " and " + c2 + ".",
+    error: false,
+    got: 'All conditions satisfied.'
+  }
+}
+exports.VectorComponentsOK = VectorComponentsOK
 
 function LastModifiedGiven (headers) {
   return {
@@ -1623,6 +1738,13 @@ function TimeParameterUnitsOK (name, units, type, size) {
 
   if (type === 'isotime') {
     let err = false
+    if ( units===null ) {
+        return {
+            description: callerName() + "Expect parameter of type <code>isotime</code> to have non-null units of \"UTC\".",
+            error: true,
+            got
+        };
+    }
     if (typeof (units) === 'object') {
       for (let i = 0; i < units.length; i++) {
         for (let j = 0; j < units[i].length; j++) {
@@ -1810,7 +1932,7 @@ function HAPITime (isostr, version) {
       }
       // console.log(isostr[i] + " " + t)
     }
-    const url = schemaURL + '/HAPI-data-access-schema-' + version + '.json'
+    const url = schemaURL + '/blob/main/HAPI-data-access-schema-' + version + '.json'
     const desc = 'Expect time column to contain valid ' +
                  "<a href='" + url + "'>HAPI " + version + ' HAPITime strings</a>'
     return {
@@ -1914,7 +2036,7 @@ exports.Integer = Integer
 function Float (str, extra) {
   extra = extra || ''
   const t = isfloat(str)
-  const ts = "Math.abs(parseFloat('" + str + "')) &lt; " +
+  const ts = `'${str}'.trim() === 'NaN' || Math.abs(parseFloat('${str}')) &lt; ` +
              Number.MAX_VALUE + ' && ' +
              "<code>/^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('" + str + "'.trim()) == true</code>" +
          extra

@@ -24,6 +24,8 @@ function run (opts, clientRequest, clientResponse) {
     clientRequest.connection.on('close', function () { CLOSED = true })
   }
 
+  report.shush = opts.quiet
+
   // First object passed to report().
   const r = { res: clientResponse, opts, infoAll: {}, dataAll1Body: {} }
 
@@ -232,7 +234,7 @@ function run (opts, clientRequest, clientResponse) {
         r.datasetsToCheck = selectDatasets(r.datasetsToCheck, opts)
 
         if (r.datasetsToCheck.length === 0) {
-          let desc = 'Dataset ' + opts.id + ' is not in catalog'
+          let desc = 'Dataset "' + opts.id + '" is not in catalog'
           if (opts.id.startsWith('^')) {
             desc = `<code>${opts.id} did not match any dataset id in catalog.`
           }
@@ -424,6 +426,8 @@ function run (opts, clientRequest, clientResponse) {
         }
       }
 
+      const location = json.location
+
       for (let i = 0; i < json.parameters.length; i++) {
         if (opts.parameter && (json.parameters[i].name !== opts.parameter)) {
           continue
@@ -437,10 +441,14 @@ function run (opts, clientRequest, clientResponse) {
         const units = json.parameters[i].units
         const label = json.parameters[i].label
         const bins = json.parameters[i].bins
+        const vectorComponents = json.parameters[i].vectorComponents || null
 
         if (size === undefined) {
           size = [1]
         }
+
+        report(r, url, is.VectorComponentsOK(name, size, vectorComponents))
+        report(r, url, is.LocationOK(name, location, size, vectorComponents))
 
         report(r, url, is.TimeParameterUnitsOK(name, units, type, size))
         report(r, url, is.LengthAppropriate(len, type, name))
@@ -458,10 +466,17 @@ function run (opts, clientRequest, clientResponse) {
 
         report(r, url, is.FillOK(fill, type, len, name, type))
 
+        // Additional checks on fill
+        if (type === 'integer') {
+          report(r, url, is.FillOK(fill, type, len, name, 'integer-decimal'))
+          report(r, url, is.FillOK(fill, type, len, name, 'integer-nan'))
+        }
+        if (type === 'double') {
+          report(r, url, is.FillOK(fill, type, len, name, 'double-nan'), { warn: true })
+        }
         if (type === 'string') {
-          // Additional checks.
-          report(r, url, is.FillOK(fill, type, len, name, 'nullstring'))
-          report(r, url, is.FillOK(fill, type, len, name, 'stringparse'))
+          report(r, url, is.FillOK(fill, type, len, name, 'string-null', { warn: true }))
+          report(r, url, is.FillOK(fill, type, len, name, 'string-parse', { warn: true }))
         }
       }
 
@@ -697,6 +712,7 @@ function run (opts, clientRequest, clientResponse) {
 
     report(r, url)
     const reqOpts = requestOptions(url, opts, timeoutString, true)
+
     request(reqOpts, function (err, res, dataAll1Body) {
       if (err) {
         if (dataAll1.tries === 0) {
@@ -1123,17 +1139,18 @@ function setAndCheckOptions (argv, res) {
     stop: argv.timemax || argv.stop,
     version: argv.version,
     output,
-    datatimeout: parseInt(argv.datatimeout) || 5000,
-    metatimeout: parseInt(argv.metatimeout) || 1000,
+    quiet: argv.quiet,
+    datatimeout: parseInt(argv.datatimeout),
+    metatimeout: parseInt(argv.metatimeout),
     plotserver: argv.plotserver || 'http://hapi-server.org/plot'
   }
 
-  if (opts.version && !versions().includes(opts.version)) {
+  if (opts.version && !schemaVersions.includes(opts.version)) {
     if (res) {
-      res.status(400).end('<code>version</code> must be one of ' + versions())
+      res.status(400).end('<code>version</code> must be one of ' + schemaVersions)
       return
     }
-    console.error("'version' must be one of ", versions())
+    console.error("'version' must be one of ", schemaVersions)
     process.exit(1)
   }
 
@@ -1191,7 +1208,7 @@ function versionCheckAndReport (r, url, opts, metaVersion) {
   versionCheckAndReport[baseURL].lastURL = url
 
   if (!report(r, url, is.HAPIVersion(metaVersion), { stop: false })) {
-    return is.versions().pop() // Use latest version
+    return is.schemaVersions.pop() // Use latest version
   } else {
     return metaVersion
   }
@@ -1218,7 +1235,7 @@ function version (opts, metaVersion) {
     return opts.version // Use version given in URL
   } else {
     if (!is.HAPIVersion(metaVersion)) {
-      return is.versions().pop() // Use latest version
+      return is.schemaVersions.pop() // Use latest version
     } else {
       return metaVersion
     }

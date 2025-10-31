@@ -2,44 +2,7 @@ checkNodeJSVersion()
 
 const fs = require('fs')
 const path = require('path')
-const argv = require('yargs')
-  .help()
-  .default({
-    port: 9999,
-    url: '',
-    id: '',
-    dataset: '',
-    parameter: '',
-    timemax: '',
-    start: '',
-    timemin: '',
-    stop: '',
-    version: '',
-    datatimeout: 0,
-    metatimeout: 0,
-    output: 'console',
-    test: false,
-    plotserver: 'https://hapi-server.org/plot'
-  })
-  .describe('port', 'If URL not given, starts verifier server on this port.')
-  .describe('url', 'URL to test. No server is started.')
-  .describe('dataset', 'Start with "^" to indicate a regular expression')
-  .describe('parameter', '')
-  .describe('start', '')
-  .describe('stop', '')
-  .describe('version', 'Validate against a HAPI version. Defaults to what given in JSON responses.')
-  .describe('datatimeout', '')
-  .describe('metatimeout', '')
-  .describe('output', '')
-  .describe('test', 'Run a unit test and exit. All other arguments ignored.')
-  .boolean('test')
-  .describe('plotserver', '')
-  .deprecateOption('id', 'use --dataset')
-  .deprecateOption('timemin', 'use --start')
-  .deprecateOption('timemax', 'use --stop')
-  .choices('output', ['console', 'json'])
-  .argv
-
+const yargs = require('yargs')
 const tests = require('./tests.js') // Test runner
 
 function fixurl (q) {
@@ -64,6 +27,55 @@ function fixurl (q) {
   q.url = q.url.replace(/\/$/, '')
 }
 
+const argv = yargs.help()
+  .default({
+    port: 9999,
+    url: '',
+    id: '',
+    dataset: '',
+    parameter: '',
+    timemax: '',
+    start: '',
+    timemin: '',
+    stop: '',
+    version: '',
+    datatimeout: 5000,
+    metatimeout: 1000,
+    output: 'console',
+    quiet: false,
+    test: false,
+    plotserver: 'https://hapi-server.org/plot'
+  })
+  .describe('url', 'URL to test.')
+  .describe('dataset', 'Start with "^" to indicate a regular expression')
+  .describe('parameter', '')
+  .describe('start', '')
+  .describe('stop', '')
+  .describe('version', 'Validate against a HAPI version. Defaults to what given in JSON responses.')
+  .describe('datatimeout', 'ms to wait for /data response')
+  .describe('metatimeout', 'ms to wait for response that returns metadata')
+  .describe('output', '')
+  .describe('test', 'Run a unit test and exit. All other arguments ignored.')
+  .boolean('test')
+  .describe('quiet', 'Do not print unless warning or error.')
+  .boolean('quiet')
+  .describe('plotserver', '')
+  .deprecateOption('id', 'use --dataset')
+  .deprecateOption('timemin', 'use --start')
+  .deprecateOption('timemax', 'use --stop')
+  .choices('output', ['console', 'json'])
+  .describe('port', 'Starts verifier server app on this port (no other command line arguments allowed).')
+  .strict()  // No unknown args
+  .argv
+
+
+if (process.argv.includes('--port') && process.argv.includes('--url')) {
+  let msg = 'Both --url and --port given. Setting --port starts a verifier '
+  msg += 'server application in which the URL, dataset, etc. are entered there.'
+  console.error(msg)
+  process.exit(1)
+}
+
 if (argv.url !== '' || argv.test === true) {
   // Command-line mode
 
@@ -71,8 +83,10 @@ if (argv.url !== '' || argv.test === true) {
     argv.url = 'https://hapi-server.org/servers/TestData2.0/hapi'
     argv.id = 'dataset1'
   }
-
   fixurl(argv)
+
+  console.log('✗ is failure which must be fixed, ⚠ is warning which should be fixed if possible.');  
+
   tests.run(argv)
 } else {
   // Server mode

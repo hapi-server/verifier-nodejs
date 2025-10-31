@@ -15,16 +15,14 @@ function report (r, url, obj, opts) {
   let warn = false
   let stop = false
   let abort = false
-  let shush = false
-
   if (opts) {
     warn = opts.warn || false // Warn not fail message on error
     stop = opts.stop || false // Need to stop tests on current URL
     abort = opts.abort || false // Stop and send abort all processing
-    shush = opts.shush || false // Don't print unless warning, error, or url changed
   }
 
-  shush = false
+  const shush = report.shush || false // Don't print unless warning, error, or url changed
+
   stop = stop || abort // Make stop true when abort true.
 
   let firstshush = false
@@ -153,11 +151,12 @@ function rmHTML (str) {
   if (typeof str !== 'string') {
     return str
   }
+  // TODO: Does not handle nested tags.
   return str.replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/<code>/g, '').replace(/<\/code>/g, '')
     .replace(/<pre>/g, '').replace(/<\/pre>/g, '')
     .replace(/<span .*?>(.*)<\/span>/gi, '$1')
-    .replace(/<a .*?>(.*)<\/a>/gi, '$1')
+//    .replace(/<a .*?>(.*)<\/a>/gi, '$1')
 }
 
 function writeNote (msg, style, res) {

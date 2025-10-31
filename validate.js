@@ -1,117 +1,129 @@
-const fs      = require('fs');
-const clc     = require('chalk');
-const request = require('request');
+const fs = require('fs')
+const clc = require('chalk')
+const path = require('path')
+const request = require('request')
 
-const is = require('./is.js');
-const writeResult = require('./report.js').writeResult;
-const writeURL = require('./report.js').writeURL;
+const is = require('./is.js')
+const writeURL = require('./report.js').writeURL
+const writeResult = require('./report.js').writeResult
 
-const argv = require('yargs')
-              .usage("$0 <url|file> [options]")
-              .version(false) // Disable default version meaning
-              .options({ version: { string: true, alias: "v" } })
-              .default({
-                "test": false
-              })
-              .choices('version', is.versions())
-              .demandCommand()
-              .help()
-              .argv;
+const argv =
+  require('yargs')
+    .usage('$0 <url|file> [options]')
+    .version(false) // Disable default version meaning
+    .options({ version: { string: true, alias: 'v' } })
+    .default({
+      test: false
+    })
+    .choices('version', is.schemaVersions)
+    .demandCommand()
+    .help()
+    .argv
 
-const arg = argv['_'][0];
+let arg = argv._[0]
 
-writeURL(arg);
+// Remove cwd from beginning of path so full path not in logs in repo
+const cwd = process.cwd()
+if (arg && arg.indexOf(cwd) === 0) {
+  arg = arg.slice(cwd.length)
+  if (arg.startsWith(path.sep)) {
+    arg = './' + arg.slice(1)
+  }
+}
+
+writeURL(arg)
 
 if (arg.startsWith('http')) {
   request(arg, (err, res, body) => {
     if (!err) {
-      validate(body);
-      return;
+      validate(body)
+      return
     }
-    console.error("Request failure for " + arg + ":");
-    console.log(err);
-    process.exit(1);
-  });
+    console.error(`Request failure for ${arg}:`)
+    console.log(err)
+    process.exit(1)
+  })
 } else {
   fs.readFile(arg, (err, buff) => {
     if (!err) {
-      validate(buff.toString());
-      return;
+      validate(buff.toString())
+      return
     }
-    console.error("Read failure for " + arg + ":");
-    console.log(err.message);
-    process.exit(1);
-  });
+    console.error(`Read failure for ${arg}:`)
+    console.log(err.message)
+    process.exit(1)
+  })
 }
 
-function validate(str) {
-
-  let parseResult = is.JSONParsable(str);
-  if (parseResult['error'] == true) {
-    writeResult(parseResult);
-    process.exit(1);
+function validate (str) {
+  const parseResult = is.JSONParsable(str)
+  if (parseResult.error === true) {
+    writeResult(parseResult)
+    process.exit(1)
   }
-  let json = parseResult['json'];
+  const json = parseResult.json
 
-  let version = getVersion(argv, json);
-  let subSchema = inferSubSchema(json);
+  const version = getVersion(argv, json)
+  const subSchema = inferSubSchema(json)
   if (subSchema === undefined) {
-    let msg = "Could not infer subschema from JSON.";
-    let obj = { "error": true, "description": msg, "got": undefined };
-    writeResult(obj);
-    process.exit(1);
+    const msg = 'Could not infer subschema from JSON.'
+    const obj = { error: true, description: msg, got: undefined }
+    writeResult(obj)
+    process.exit(1)
   }
-  let ignoreVersionError = argv['version'] ? true : false;
+  const ignoreVersionError = Boolean(argv.version)
   if (ignoreVersionError) {
-    console.log("  " + clc.yellowBright.inverse("⚠") + " Ignoring version in JSON b/c version given on command line.");
+    let msg = '  ' + clc.yellowBright.inverse('⚠')
+    msg += ' Ignoring version in JSON b/c version given on command line.'
+    console.log(msg)
   }
-  let jsonResult = is.HAPIJSON(json, version, subSchema, ignoreVersionError);
-  writeResult(jsonResult);
-  process.exit(0);
+  const jsonResult = is.HAPIJSON(json, version, subSchema, ignoreVersionError)
+  writeResult(jsonResult)
+  process.exit(0)
 }
 
-function getVersion(argv, json) {
-  let version = undefined;
-  if (argv['version']) {
-    versionResult = is.HAPIVersion(argv['version']);
-    if (versionResult['error'] == true) {
-      writeResult(versionResult, 'warn');
-      process.exit(1);
+function getVersion (argv, json) {
+  let version
+  if (argv.version) {
+    const versionResult = is.HAPIVersion(argv.version)
+    if (versionResult.error === true) {
+      writeResult(versionResult, 'warn')
+      process.exit(1)
     }
-    version = argv['version'];
+    version = argv.version
   }
 
   if (version === undefined) {
-    versionResult = is.HAPIVersion(json['HAPI']);
-    writeResult(versionResult);
-    if (versionResult['error'] == true) {
-      process.exit(1);
+    const versionResult = is.HAPIVersion(json.HAPI)
+    writeResult(versionResult)
+    if (versionResult.error === true) {
+      process.exit(1)
     } else {
-      version = json['HAPI'];
+      version = json.HAPI
     }
   }
 
-  return version;
+  return version
 }
 
-function inferSubSchema(json) {
-  if (json['id']) {
-    return "about";
+function inferSubSchema (json) {
+  if (json.id) {
+    return 'about'
   }
-  if (json['outputFormats']) {
-    return "capabilities";
+  if (json.outputFormats) {
+    return 'capabilities'
   }
-  if (json['catalog']) {
-    return "catalog";
+  if (json.catalog) {
+    return 'catalog'
   }
-  if (json['parameters']) {
-    if (json['data']) {
-      return "data";
+  if (json.parameters) {
+    if (json.data) {
+      return 'data'
     } else {
-      return "info";
+      return 'info'
     }
   }
-  if (json['status'] && json['status']['code'] >= 1400) {
-    return "error";
+  if (json.status && json.status.code >= 1400) {
+    return 'error'
   }
 }

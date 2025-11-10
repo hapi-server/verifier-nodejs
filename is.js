@@ -54,6 +54,9 @@ function isinteger (str) {
 }
 
 function isfloat (str) {
+  if (!(typeof str === 'string')) {
+    return false
+  }
   if (str.trim().toLowerCase() === 'nan') {
     return true
   }
@@ -801,9 +804,9 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
     const desc = 'Expect content from one parameter request to' +
                  ' match content from all parameter request.'
     let t = false
-    let got = 'Consistent content'
-    let gotCount=0
-    let gotLimit=4
+    let got = ''
+    let gotCount = 0
+    const gotLimit = 4
 
     for (let i = 0; i < lines.length - 1; i++) {
       // let line = lines[i].split(",");
@@ -843,11 +846,11 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
       for (let j = 0; j < nf - 1; j++) {
         if (!line[1 + j] || !lineAll[fc + j]) {
           t = true
-          if ( gotCount<gotLimit ) {
+          if (gotCount < gotLimit) {
             got += '\nProblem with line <code>' + (i) + '</code>:\n' +
-              'Single parameter request: <code>' + line[1 + j] +
-              '</code>; All parameter request: <code>' + lineAll[fc + j] +
-              '</code>.'
+              '  Single parameter request: <code>' + line[1 + j] +
+              '</code>\n  All parameter request: <code>' + lineAll[fc + j] +
+              '</code>'
           }
           gotCount++
           break
@@ -878,16 +881,16 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
             gotCount++
           }
         }
-      } 
+      }
     }
-    if ( gotCount>gotLimit ) {
-      got += "\n("+(gotCount-gotLimit)+" additional messages suppressed.)\n"
+    if (gotCount > gotLimit) {
+      got += `\n(${gotCount-gotLimit} additional messages suppressed.)\n`
     }
 
     return {
       description: callerName() + desc,
       error: t,
-      got
+      got: got || 'Consistent content.'
     }
   }
 }
@@ -997,7 +1000,7 @@ function LengthOK (header, body, pn) {
   if (pn === 0) {
     const len = header.parameters[0].length
     const name = header.parameters[0].name
-    const desc = `Expect (length of '<code>${name}</code>' in CSV) == (<code>parameters['${name}'].length</code>).`
+    const desc = `Expect (length of '<code>${name}</code>' in CSV) = (<code>parameters['${name}'].length</code>).`
     const err = len !== line1[0].length
     return {
       description: callerName() + desc,
@@ -1013,14 +1016,19 @@ function LengthOK (header, body, pn) {
   const len = header.parameters[pn].length
   const name = header.parameters[pn].name
 
-  let desc = `Expect (length of '<code>${name}</code>' in CSV) ≤ (<code>parameters['name'].length</code>).`
+  let desc = `Expect (length of type='${type}' parameter '<code>${name}</code>' in CSV) ≤ (<code>parameters['${name}'].length</code>).`
   if (nf > 1) {
-    desc = `Expect (length of '<code>${name}</code>' components in CSV) ≤ (<code>parameters['name'].length</code>).`
+    desc = `Expect (length of type='${type}' parameter '<code>${name}</code>' components in CSV) ≤ (<code>parameters['${name}'].length</code>).`
   }
   let got = ''
   let err = false
   for (let j = 1; j < nf; j++) {
     const extra = ' in column ' + j + ' on first line'
+    if (!line1[j]) {
+      err = true
+      got = 'Column ' + j + ' is undefined' + '\n'
+      continue
+    }
     err = Buffer.byteLength(line1[j], 'utf8') > len
     if (err) {
       got = '(' + (line1[j].length) + ') &gt; (' + (len) + ') ' + extra + '\n'

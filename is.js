@@ -1016,10 +1016,12 @@ function LengthOK (header, body, pn) {
   const len = header.parameters[pn].length
   const name = header.parameters[pn].name
 
-  let desc = `Expect (length of type='${type}' parameter '<code>${name}</code>' in CSV) ≤ (<code>parameters['${name}'].length</code>).`
+  let desc = `Expect (length of type='${type}' parameter '<code>${name}</code>'`
+  let components = ''
   if (nf > 1) {
-    desc = `Expect (length of type='${type}' parameter '<code>${name}</code>' components in CSV) ≤ (<code>parameters['${name}'].length</code>).`
+    components = 'components '
   }
+  desc += `${components}in CSV) ≤ (<code>parameters['${name}'].length</code>).`
   let got = ''
   let err = false
   for (let j = 1; j < nf; j++) {

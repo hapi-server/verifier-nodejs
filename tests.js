@@ -650,6 +650,7 @@ function run (opts, clientRequest, clientResponse) {
     }
     validCadence = !obj.error
 
+    // TODO: Handle YYYY-DDD
     let start, stop, dataTimeout
     if (opts.start && opts.stop) {
       // start/stop given in verifier request URL
@@ -672,8 +673,12 @@ function run (opts, clientRequest, clientResponse) {
         dataTimeout = 'datasample10xcadence'
         report(r, url, is.CadenceOK(json.cadence, start, stop, 'start/stop'))
         const md = moment.duration(json.cadence)
-        stop = new Date(start).valueOf() + 10 * md._milliseconds
+        stopo = stop;
+        stop = new Date(start).valueOf() + 100 * md.asMilliseconds()
         stop = new Date(stop).toISOString()
+        if (new Date(stop).valueOf() > new Date(stopo).valueOf()) {
+          stop = stopo;
+        }
       } else {
         dataTimeout = 'datadefault'
         // Use one day

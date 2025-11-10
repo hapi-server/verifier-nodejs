@@ -7,17 +7,19 @@ const Validator = require('jsonschema').Validator
 const specURL = 'https://github.com/hapi-server/data-specification/'
 const schemaURL = 'https://github.com/hapi-server/data-specification-schema'
 const verifierURL = 'https://github.com/hapi-server/verifier-nodejs'
-const wikiURL = `${verifierURL}/wiki`
+const verifierWikiURL = `${verifierURL}/wiki`
+let unitsAndLabelsURL = `${specURL}blob/master/hapi-dev/`
+unitsAndLabelsURL += 'HAPI-data-access-spec-dev.md#369-unit-and-label-arrays'
+
 const requestURL = 'https://github.com/request/request#requestoptions-callback'
-const jsonLintLink = "<a href='http://jsonlint.org/'>http://jsonlint.org/</a>"
-const unitsAndLabels = 'https://github.com/hapi-server/data-specification/blob/master/hapi-dev/HAPI-data-access-spec-dev.md#369-unit-and-label-arrays'
 const deepDiffLink = '<a href="https://www.npmjs.com/package/deep-diff">deep-diff</a>'
+const jsonLintLink = "<a href='http://jsonlint.org/'>http://jsonlint.org/</a>"
 
 const base = path.join(__dirname, 'data-specification-schema/')
 const schemas = {}
 fs.readdirSync(base).forEach(file => {
   if (file.startsWith('HAPI-data-access-schema') && path.extname(file) === '.json') {
-    const version = path.basename(file, '.json').split('schema-').pop();
+    const version = path.basename(file, '.json').split('schema-').pop()
     schemas[version] = require(path.join(base, file))
   }
 })
@@ -68,7 +70,8 @@ function nFields (header, pn) {
   }
   if (pn !== undefined && pn !== null) {
     // One parameter
-    // nf = number of fields (columns) counter (start at 1 since time checked already)
+    // nf = number of fields (columns) counter
+    // (starts at 1 since time checked already)
     if (!header.parameters[pn].size) {
       nf = nf + 1 // Width of field (number of columns of field)
     } else {
@@ -106,11 +109,14 @@ function csvToArray (text) {
 }
 
 function versionWarning (version) {
-  if (parseFloat(version) >= 3.3) {
-    // GitHub does not allow link to milestone string. Instead, it uses the milestone number.
-    // To link directly, would need to create a label that is same as milestone string.
-    const verifierMileStone = `<a href="${verifierURL}/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">verifier ${version} milestone issues</a>`
-    const schemaMileStone = `<a href="${schemaURL}/issues?q=is%3Aissue+is%3Aopen+label%3A3.2">schema ${version} milestone issues</a>`
+  if (parseFloat(version) > 3.3) {
+    // GitHub does not allow link to milestone string; it uses the milestone #.
+    // (To link directly, need to create a label that is same as milestone string.)
+    let href = `${verifierURL}/issues?q=is%3Aissue+is%3Aopen+label%3A${version}`
+    const verifierMileStone = `<a href="${href}">verifier ${version} milestone issues</a>`
+    href = `${schemaURL}/issues?q=is%3Aissue+is%3Aopen+label%3A${version}`
+    const schemaMileStone = `<a href="${href}">schema ${version} milestone issues</a>`
+
     let spanText = `Warning: HAPI schema version ${version} is in development. `
     spanText += `See ${verifierMileStone} and ${schemaMileStone}`
     return `; <span style="background-color: yellow">${spanText}</span>`
@@ -139,7 +145,7 @@ function HAPIVersion (version, ignoreVersionError) {
   let err = false
   if (!schemaVersions.includes(version)) {
     err = true
-    got = "'<code>" + version + "</code>', which is not valid or not implemented by verifier."
+    got = `'<code>${version}</code>', which is not valid and/or implemented by verifier.`
     if (ignoreVersionError) {
       got += ' Will use latest version implemented by verifier: ' + schemaVersions.pop()
     }
@@ -158,8 +164,9 @@ function HAPIVersion (version, ignoreVersionError) {
 exports.HAPIVersion = HAPIVersion
 
 function JSONParsable (text) {
+  const desc = 'Expect <code>JSON.parse(response)</code> to not throw error'
   const ret = {
-    description: callerName() + 'Expect <code>JSON.parse(response)</code> to not throw error',
+    description: callerName() + desc,
     error: false,
     got: ''
   }
@@ -179,9 +186,9 @@ function JSONParsable (text) {
 exports.JSONParsable = JSONParsable
 
 function HAPIJSON (text, version, part, ignoreVersionError) {
-  const s = schema(version)
+  const schemaFull = schema(version)
 
-  if (s === false) {
+  if (schemaFull === false) {
     const known = JSON.stringify(Object.keys(schemas))
     const desc = 'Expect HAPI version to be one of <code>' + known + '</code>'
     const got = `Schema version '<code>${version}</code>' is not one of <code>${known}</code>`
@@ -198,12 +205,14 @@ function HAPIJSON (text, version, part, ignoreVersionError) {
   }
 
   const v = new Validator()
+
   // Look for all top-level elements that have an id starting with a /.
   // These are subschemas that are used.
-  for (const key in s) {
-    if (s[key].id && s[key].id[0] === '/') {
-      // console.log("Adding schema " + s[key]["id"]);
-      v.addSchema(s[key], s[key].id)
+
+  for (const key in schemaFull) {
+    if (schemaFull[key].id && schemaFull[key].id[0] === '/') {
+      //console.log("Adding schema " + s[key]["id"]);
+      v.addSchema(schemaFull[key], schemaFull[key].id)
     }
   }
 
@@ -212,12 +221,13 @@ function HAPIJSON (text, version, part, ignoreVersionError) {
     part = 'HAPIStatus'
   }
 
-  if (ignoreVersionError && !s[part]) {
+  if (ignoreVersionError && !schemaFull[part]) {
     return
   }
-  if (!s[part]) {
+  if (!schemaFull[part]) {
     const desc = `Expect HAPI JSON schema to have a element named '${part}'.`
-    const got = `No element named '${part}' in HAPI schema. Is HAPI schema version '${version}' correct?`
+    let got = `No element named '${part}' in HAPI schema. `
+    got += `Is HAPI schema version '${version}' correct?`
     return {
       description: callerName() + desc,
       error: true,
@@ -227,44 +237,47 @@ function HAPIJSON (text, version, part, ignoreVersionError) {
 
   let vr
   try {
-    vr = v.validate(json, s[part])
+    vr = v.validate(json, schemaFull[part])
   } catch (e) {
     console.log(json)
     console.log(part)
     console.log(e)
     return {
-      description: callerName() + 'Call to JSON validator failed.',
+      description: callerName + 'Call to JSON validator failed.',
       error: true,
       got: e.toString()
     }
   }
 
-  const ve = vr.errors
-  let got = 'JSON is valid with respect to JSON schema.'
-  const err = []
-  if (ve.length !== 0) {
-    for (let i = 0; i < ve.length; i++) {
-      if (ignoreVersionError && ve[i].property === 'instance.HAPI') {
-        continue
+  return result(vr, ignoreVersionError, callerName())
+
+  function result (vr, ignoreVersionError, callerName) {
+    const ve = vr.errors
+    let got = 'JSON is valid with respect to JSON schema.'
+    const err = []
+    if (ve.length !== 0) {
+      for (let i = 0; i < ve.length; i++) {
+        if (ignoreVersionError && ve[i].property === 'instance.HAPI') {
+          continue
+        }
+        err[i] = ve[i].property.replace('instance.', '') +
+              ' ' + ve[i].message.replace(/"/g, "'")
       }
-      err[i] = ve[i].property.replace('instance.', '') +
-             ' ' + ve[i].message.replace(/"/g, "'")
+      if (err.length > 0) {
+        got = '\n  <pre>' + JSON.stringify(err, null, 4) + '</pre>'
+      }
     }
-    if (err.length > 0) {
-      got = '\n  <pre>' + JSON.stringify(err, null, 4) + '</pre>'
+
+    const url = `${schemaURL}/blob/main/HAPI-data-access-schema-${version}.json`
+    text = `HAPI ${version} '${part}' schema`
+    let desc = `Expect body to be valid <a href="${url}">${text}</a>.`
+    desc += versionWarning(version)
+
+    return {
+      description: callerName + desc,
+      error: err.length !== 0,
+      got
     }
-  }
-
-  const url = schemaURL + '/blob/main/HAPI-data-access-schema-' + version + '.json'
-  const desc = 'Expect body to be valid ' +
-           "<a href='" + url + "'>HAPI " +
-           version + " '" + part + "' schema</a>." +
-           versionWarning(version)
-
-  return {
-    description: callerName() + desc,
-    error: err.length !== 0,
-    got
   }
 }
 exports.HAPIJSON = HAPIJSON
@@ -285,7 +298,8 @@ exports.timeregexes = timeregexes
 
 function trailingZfix (str) {
   // moment.js does not consider date only with trailing Z to be valid ISO8601
-  if (/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]Z$|^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9]Z$/.test(str)) {
+  const re = /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]Z$|^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9]Z$/
+  if (re.test(str)) {
     str = str.slice(0, -1) + 'T00Z'
   }
   return str
@@ -312,8 +326,9 @@ function RequestError (err, res, timeoutInfo) {
       timeInfo = JSON.stringify(timings) + ', ' + JSON.stringify(timingPhases)
       timeInfo = ` <a href='${requestURL}'>Timing info [ms]</a>: ${timeInfo}`
     }
+    const desc = `Expect no request error for timeout of ${tout} ms when ${when}`
     return {
-      description: callerName() + 'Expect no request error for timeout of ' + tout + ' ms when ' + when,
+      description: callerName() + desc,
       error: false,
       got: timeInfo
     }
@@ -321,15 +336,19 @@ function RequestError (err, res, timeoutInfo) {
 
   if (err.code === 'ETIMEDOUT') {
     // https://github.com/request/request/blob/master/request.js#L846
+    const desc = 'Expect HTTP headers and start of response body in less than'
+    desc += `${tout} ms when ${when}`
     return {
-      description: callerName() + 'Expect HTTP headers and start of response body in less than ' + tout + ' ms when ' + when,
+      description: callerName() + desc,
       error: true,
       got: err.code
     }
   } else if (err.code === 'ESOCKETTIMEDOUT') {
     // https://github.com/request/request/blob/master/request.js#L811
+    let desc = 'Expect time interval between bytes sent to be less than '
+    desc += `${tout} ms when ${when}`
     return {
-      description: callerName() + 'Expect time interval between bytes sent to be less than ' + tout + ' ms when ' + when,
+      description: callerName() + desc ,
       error: true,
       got: err.code
     }
@@ -358,10 +377,9 @@ exports.RequestError = RequestError
 function CadenceGiven (cadence) {
   const base = 'https://github.com/hapi-server/data-specification/'
   const url = base + 'blob/master/hapi-dev/HAPI-data-access-spec-dev.md'
-  const desc = 'Expect the nominal cadence to be given ' +
-           `(see <a href='${url}'>` +
-           'the HAPI spec for definition</a>). A nominal cadence is useful ' +
-           'for clients and obviates the need for it to be inferred programatically.'
+  let desc = `Expect the nominal cadence to be given (see <a href='${url}'>`
+  desc += 'the HAPI spec for definition</a>). A nominal cadence is useful '
+  desc += 'for clients and obviates the need for it to be inferred programatically.'
   return {
     description: callerName() + desc,
     error: typeof (cadence) !== 'string',
@@ -396,8 +414,8 @@ function CadenceOK (cadence, start, stop, what) {
   if (!cadence) return // Don't do test; no cadence given.
 
   if (!stop) {
-    const desc = 'Need more than two lines to do cadence ' +
-             'comparison with consecutive samples.'
+    let desc = 'Need more than two lines to do cadence '
+    desc += 'comparison with consecutive samples.'
     return {
       description: callerName() + desc,
       error: true,
@@ -411,8 +429,9 @@ function CadenceOK (cadence, start, stop, what) {
   const t1 = moment(trailingZfix(start), moment.ISO_8601).isValid()
   const t2 = moment(trailingZfix(stop), moment.ISO_8601).isValid()
   if (!t1 || !t2) {
+    const desc = `Could not parse start = '${start}' or stop = '${stop}'`
     return {
-      description: callerName() + `Could not parse start = '${start}' or stop = '${stop}'`,
+      description: callerName() + desc,
       error: true,
       got: `start = '${start}' and stop = '${stop}'`
     }
@@ -425,7 +444,7 @@ function CadenceOK (cadence, start, stop, what) {
   const R = (stopms - startms) / md._milliseconds
   if (what === 'start/stop') {
     const t = R > 1
-    const got = '(stopDate-startDate)/cadence = ' + (stopms - startms) / md._milliseconds
+    const got = `(stopDate-startDate)/cadence = ${R}`
     return {
       description: callerName() + 'Expect (stopDate-startDate)/cadence > 1',
       error: t !== true,
@@ -434,7 +453,7 @@ function CadenceOK (cadence, start, stop, what) {
   }
   if (what === 'sampleStart/sampleStop') {
     const t = R > 10
-    const got = '(sampleStartDate-sampleStopDate)/cadence = ' + (stopms - startms) / md._milliseconds
+    const got = `(sampleStartDate-sampleStopDate)/cadence = ${R}`
     const desc = 'Expect (sampleStopDate-sampleStartDate)/cadence &gt; 10'
     return {
       description: callerName() + desc,
@@ -444,7 +463,7 @@ function CadenceOK (cadence, start, stop, what) {
   }
   if (what === 'consecsamples') {
     const t = R > 10
-    const got = 'Cadence/(time[i+1]-time[i]) = ' + (stopms - startms) / md._milliseconds
+    const got = `Cadence/(time[i+1]-time[i]) = ${R}`
     return {
       description: callerName() + 'Expect (t[i+1]-t[i])/cadence &gt; 10',
       error: t !== true,
@@ -519,7 +538,7 @@ function StatusInformative (message, wanted, what) {
   const err = re.test(message) === false
   const got = `'${message}'.`
 
-  const link = `<a href='${wikiURL}#status-informative'>(Explanation.)</a>`
+  const link = `<a href='${verifierWikiURL}#status-informative'>(Explanation.)</a>`
   const post = `to contain the string '${wanted}' (default HAPI error message). ${link}`
   let desc = 'Want HAPI status message in JSON response' + post
   if (what === 'httpstatus') {
@@ -556,8 +575,8 @@ function HeaderParsable (body) {
     ret.csvparts.header = JSON.parse(csvparts.header)
     return ret
   } catch (error) {
-    ret.got = '<code>JSON.parse()</code> of \n\n' + csvparts.header + '\n\nresulted in ' +
-            error + `. Use ${jsonLintLink} for a more detailed error report.`
+    ret.got = `<code>JSON.parse()</code> of \n\n${csvparts.header}\n\nresulted in `
+    ret.got += `${error}. Use ${jsonLintLink} for a more detailed error report.`
     ret.error = true
     return ret
   }
@@ -688,12 +707,13 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
   // var linesAll = bodyAll.split("\n");
 
   if (what === 'same') {
-    const desc = 'Expect data response for to be same as previous request with different but equivalent request URL.'
+    let desc = 'Expect data response for to be same as previous request '
+    desc += 'with different but equivalent request URL.'
 
     if (bodyAll !== body) { // byte equivalent
       if (lines.length !== linesAll.length) {
-        const got = '<code>' + lines.length + '</code> rows here vs. <code>' +
-                    linesAll.length + '</code> rows previously.'
+        let got = `<code>${lines.length}</code> rows here vs. <code>`
+        got += linesAll.length + '</code> rows previously.'
         return {
           description: callerName() + desc,
           error: true,
@@ -840,20 +860,20 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
           }
           if (nf === 2) {
             t = true
-            if ( gotCount<gotLimit ) {
-                got += '\nParameter <code>' + name + '</code> does not match at time ' +
-                    line[0] + ': Single parameter request: <code>' + line[1] +
-                    '</code>; All parameter request: <code>' + lineAll[fc + j] +
-                    '</code>.\n'
+            if (gotCount < gotLimit) {
+              got += '\nParameter <code>' + name + '</code> does not match at time ' +
+                  line[0] + ': Single parameter request: <code>' + line[1] +
+                  '</code>; All parameter request: <code>' + lineAll[fc + j] +
+                  '</code>.\n'
             }
             gotCount++
           } else {
-            if ( gotCount<gotLimit ) {
-                got += '\nParameter <code>' + name + '</code> field #<code>' + j +
-                    '</code> does not match at time <code>' + line[0] +
-                    '</code>: Single parameter request: <code>' + line[1 + j] +
-                    '</code>; All parameter request: <code>' + lineAll[fc + j] +
-                    '</code>.\n'
+            if (gotCount < gotLimit) {
+              got += '\nParameter <code>' + name + '</code> field #<code>' + j +
+                  '</code> does not match at time <code>' + line[0] +
+                  '</code>: Single parameter request: <code>' + line[1 + j] +
+                  '</code>; All parameter request: <code>' + lineAll[fc + j] +
+                  '</code>.\n'
             }
             gotCount++
           }
@@ -875,7 +895,7 @@ exports.FileContentSameOrConsistent = FileContentSameOrConsistent
 
 function FileStructureOK (body, what, statusMessage, emptyExpected) {
   if (what === 'empty') {
-    const link = `<a href='${wikiURL}#empty-body'> (Details.)</a>`
+    const link = `<a href='${verifierWikiURL}#empty-body'> (Details.)</a>`
 
     const emptyIndicated = /HAPI 1201/.test(statusMessage)
     if (!body || body.length === 0) {
@@ -1288,7 +1308,7 @@ function LabelOrUnitsOK (name, array, size, which, version) {
   }
 
   let desc = `Expect <code>${which}</code> for parameter '<code>${name}</code>'`
-  desc += ` to have a <a href="${unitsAndLabels}">valid structure</a>.`
+  desc += ` to have a <a href="${unitsAndLabelsURL}">valid structure</a>.`
 
   const checkArray = require('./lib/checkArray.js').checkArray
 

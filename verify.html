@@ -9,7 +9,7 @@
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
 	<script>
 
-	var testURLs = [
+	const testURLs = [
 		"http://hapi-server.org/servers/TestData2.0/hapi",
 		"http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
     "http://hapi-server.org/servers/TestData2.0/hapi&id=dataset1&parameter=scalar&time.min=1970-01-01T00:00:10.000Z&time.max=1970-01-01T00:00:20.000Z",
@@ -18,6 +18,7 @@
 		"http://hapi-server.org/servers/TestData3.0/hapi",
 		"http://hapi-server.org/servers/TestData3.1/hapi",
 		"http://hapi-server.org/servers/TestData3.2/hapi",
+		"http://hapi-server.org/servers/TestData3.3/hapi",
 		"http://hapi-server.org/servers/SSCWeb/hapi&id=ace",
 		"https://cdaweb.gsfc.nasa.gov/hapi&id=AC_H0_MFI&time.min=2013-04-13T07:00:00&time.max=2013-04-14T11:00:00",
 		"http://planet.physics.uiowa.edu/das/das2Server/hapi",
@@ -31,26 +32,28 @@
 		"http://lasp.colorado.edu/lisird/hapi",
 		"https://pds-ppi.igpp.ucla.edu/hapi&id=urn:nasa:pds:maven.anc:data.drf.eps",
 		"http://hapi.ftecs.com/hapi&id=rbsp_a_rbspice_esrhelt"
-		];
+	];
 
 	//"http://datashop.elasticbeanstalk.com/hapi/info?id=CASSINI_MAG_HI_RES&datatimeout=5000",
 	//"http://datashop.elasticbeanstalk.com/hapi/info?id=CASSINI_LEMMS_PHA_PITCH_ANGLES_10_MIN",
 
 	$(document).ready(function(){
 		var list = $('#tests');
-		$.each(testURLs, function(i)
-		{
-			var li = $('<li/>').appendTo(list);
-			var a  = $('<a/>')
-						.attr("href","?url=" + testURLs[i])
-						.text("?" + testURLs[i])
-						.appendTo(li);
+		$.each(testURLs, function(i) {
+			const li = $('<li/>').appendTo(list);
+			$('<a/>')
+				.attr("href","?url=" + testURLs[i])
+				.text("?" + testURLs[i])
+				.appendTo(li);
 		});
 	})
 	</script>
 	<body>
 		<p>
-			<a href="https://github.com/hapi-server/data-specification/">HAPI</a> server verifier. See <a href="https://github.com/hapi-server/verifier-nodejs">verifier-nodejs</a> for source code for tests.
+			<a href="https://github.com/hapi-server/data-specification/">HAPI</a> 
+			server verifier. See 
+			<a href="https://github.com/hapi-server/verifier-nodejs">verifier-nodejs</a> 
+			for source code for tests.
 		</p>
 		<h3>Usage</h3>
 		<p>

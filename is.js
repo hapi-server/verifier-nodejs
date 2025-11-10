@@ -339,7 +339,7 @@ function RequestError (err, res, timeoutInfo) {
 
   if (err.code === 'ETIMEDOUT') {
     // https://github.com/request/request/blob/master/request.js#L846
-    const desc = 'Expect HTTP headers and start of response body in less than'
+    let desc = 'Expect HTTP headers and start of response body in less than'
     desc += `${tout} ms when ${when}`
     return {
       description: callerName() + desc,
@@ -351,7 +351,7 @@ function RequestError (err, res, timeoutInfo) {
     let desc = 'Expect time interval between bytes sent to be less than '
     desc += `${tout} ms when ${when}`
     return {
-      description: callerName() + desc ,
+      description: callerName() + desc,
       error: true,
       got: err.code
     }
@@ -645,15 +645,15 @@ function TypeCorrect (header, body, pn) {
   }
 
   if (got !== '') {
-    sline= "" + line1;
-    if ( sline.length>200 ) {
-        sline= sline.substring(0,200)+'...('+(sline.length)+' chars)';
-    }  
+    let sline = '' + line1
+    if (sline.length > 200) {
+      sline = sline.substring(0, 200) + '...(' + (sline.length) + ' chars)'
+    }
     got = got + 'Line 1: <code>' + sline + '</code>'
   }
-
+  const desc = 'Expect values on first line of CSV to have correct type.'
   return {
-    description: callerName() + 'Expect values on first line of CSV to have correct type.',
+    description: callerName() + desc,
     error: err,
     got: got || 'Correct length and type.'
   }
@@ -777,10 +777,10 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
 
   if (what === 'consistent') {
     if (lines.length !== linesAll.length) {
-      const desc = 'Expect number of rows from one parameter request to' +
-                   ' match data from all parameter request.'
-      const got = ' # rows in single parameter request = <code>' + lines.length + '</code>' +
-                  ' # in all parameter request = <code>' + linesAll.length + '</code>'
+      let desc = 'Expect number of rows from one parameter request to '
+      desc += 'match data from all parameter request.'
+      let got = ` # rows in single parameter request = <code>${lines.length}</code>`
+      got += ` # in all parameter request = <code>${linesAll.length}</code>`
       return {
         description: callerName() + desc,
         error: true,
@@ -884,7 +884,7 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
       }
     }
     if (gotCount > gotLimit) {
-      got += `\n(${gotCount-gotLimit} additional messages suppressed.)\n`
+      got += `\n(${gotCount - gotLimit} additional messages suppressed.)\n`
     }
 
     return {
@@ -903,13 +903,13 @@ function FileStructureOK (body, what, statusMessage, emptyExpected) {
     const emptyIndicated = /HAPI 1201/.test(statusMessage)
     if (!body || body.length === 0) {
       if (emptyExpected) {
-        const desc = "If data part of response has zero length, prefer '<code>HAPI 1201</code>'" +
-                ' (no data in time range) in HTTP header status message' +
-                ' (if possible).' + link
+        let desc = 'If data part of response has zero length, prefer '
+        desc += '<code>HAPI 1201</code> (no data in time range) in HTTP '
+        desc += 'header status message (if possible).' + link
         return {
           description: callerName() + desc,
           error: emptyIndicated === false,
-          got: "Zero bytes and HTTP header status message of '<code>" + statusMessage + "</code>'"
+          got: `Zero bytes and HTTP header status message of <code>${statusMessage}</code>`
         }
       } else {
         const desc = 'The verifier should have enough information to make a' +
@@ -925,17 +925,20 @@ function FileStructureOK (body, what, statusMessage, emptyExpected) {
       }
     }
     if (body && body.length !== 0 && emptyIndicated) {
-      const desc = 'A data part of response with zero bytes was expected' +
-              " because '<code>HAPI 1201</code>' (no data in time range) in HTTP header" +
-              ' status message.' + link
+      let desc = 'A data part of response with zero bytes was expected'
+      desc += ' because <code>HAPI 1201</code> (no data in time range) in HTTP '
+      desc += ` header status message. ${link}`
+      let got = '<code>HAPI 1201</code> HTTP header status message and '
+      got += `<code>${body.length}</code> bytes`
       return {
         description: callerName() + desc,
         error: false,
-        got: "'<code>HAPI 1201</code>' in HTTP header status message and <code>" + body.length + '</code> bytes.'
+        got
       }
     }
+    const desc = callerName() + 'Expect nonzero length for data part of response.'
     return {
-      description: callerName() + 'Expect nonzero length for data part of response.',
+      description: desc,
       error: false,
       got: `<code>${body.length}</code> bytes.`
     }
@@ -1000,7 +1003,8 @@ function LengthOK (header, body, pn) {
   if (pn === 0) {
     const len = header.parameters[0].length
     const name = header.parameters[0].name
-    const desc = `Expect (length of '<code>${name}</code>' in CSV) = (<code>parameters['${name}'].length</code>).`
+    let desc = `Expect (length of '<code>${name}</code>' in CSV) = `
+    desc += `(<code>parameters['${name}'].length</code>).`
     const err = len !== line1[0].length
     return {
       description: callerName() + desc,
@@ -1049,7 +1053,7 @@ function SizeCorrect (nc, nf, header) {
   let got, extra
   if (header.size) {
     extra = 'product of elements in size array ' + JSON.stringify(header.size)
-    got = nc + ' commas and ' + extra + ' = ' + nf
+    got = `{nc} commas and ${extra} = ${nf}`
   } else {
     if (nf === 0) {
       extra = '0 because only first parameter (time) requested.'
@@ -1058,8 +1062,9 @@ function SizeCorrect (nc, nf, header) {
     }
     got = nc + ' commas'
   }
+  const desc = callerName() + `Expect number of commas on first line to be ${extra}.`
   return {
-    description: callerName() + 'Expect number of commas on first line to be ' + extra,
+    description: desc,
     error: t !== true,
     got
   }
@@ -1067,9 +1072,10 @@ function SizeCorrect (nc, nf, header) {
 exports.SizeCorrect = SizeCorrect
 
 function LengthAppropriate (len, type, name) {
-  const got = 'Type = <code>' + type + '</code> and length = <code>' +
-          len + "</code> for parameter '<code>" + name + "</code>'"
-  let desc = 'If <code>type = string</code> or <code>isotime</code>, length must be given'
+  let got = `Type = <code>${type}</code> and length = <code>${len}</code>`
+  got += `for parameter <code>${name}</code>`
+  let desc = 'If <code>type = string</code> or <code>isotime</code>, '
+  desc += 'length must be given'
   let obj
   if (/isotime|string/.test(type) && !len) {
     obj = {
@@ -1097,8 +1103,8 @@ function LengthAppropriate (len, type, name) {
 exports.LengthAppropriate = LengthAppropriate
 
 function DefinitionsOK (json) {
-  const desc = 'Expect no <code>definitions</code> element in JSON response unless ' +
-               " request URL has '<code>resolve_references=false</code>'"
+  let desc = 'Expect no <code>definitions</code> element in JSON response '
+  desc += ' unless request URL has <code>resolve_references=false</code>'
   const got = '<code>definitions</code> element in JSON response.'
   const error = json.definitions !== undefined
   const obj = {
@@ -1141,21 +1147,23 @@ function InfoSame (headerInfo, headerBody, whatCompared) {
   if (differences) {
     for (let i = 0; i < differences.length; i++) {
       let keep = true
+      const path0 = differences[i].path[0]
       if (whatCompared === 'infoVsHeader' && differences[i].path) {
-        if (differences[i].path[0] === 'format' || differences[i].path[0] === 'creationDate') {
+        if (path0 === 'format' || path0 === 'creationDate') {
           //console.log(`Ignoring path[0] = ${differences[i].path[0]}`)
           continue
         }
       }
       if (whatCompared === 'infoVsDepthAll' && differences[i].path) {
-        if (differences[i].path[0] === 'HAPI' || differences[i].path[0] === 'status') {
+        if (path0 === 'HAPI' || path0 === 'status') {
           //console.log(`Ignoring path[0] = ${differences[i].path[0]}`)
           continue
         }
       }
 
       for (let j = 0; j < differences[i].path.length; j++) {
-        if (typeof (differences[i].path[j]) === 'string' && differences[i].path[j].substring(0, 2) === 'x_') {
+        const pathj = differences[i].path[j]
+        if (typeof (pathj) === 'string' && pathj.substring(0, 2) === 'x_') {
           //console.log(`Ignoring path[${j}] = ${differences[i].path[j]}`)
           keep = false
           break
@@ -1172,7 +1180,8 @@ function InfoSame (headerInfo, headerBody, whatCompared) {
            " in data response when '<code>include=header</code>' requested."
   }
   if (whatCompared === 'APIvsAPI') {
-    desc = 'Expect <code>/info?id=</code> response to match <code>/info?dataset=</code>.'
+    desc = 'Expect <code>/info?id=</code> response to match '
+    desc += '<code>/info?dataset=</code>.'
   }
   if (whatCompared === 'infoVsDepthAll') {
     desc = 'Expect <code>/catalog?depth=all</code> content to match what' +
@@ -1200,7 +1209,8 @@ function InfoSame (headerInfo, headerBody, whatCompared) {
 exports.InfoSame = InfoSame
 
 function InfoEquivalent (infoAll, infoSingle) {
-  const desc = 'Expect info response for one parameter to match content in response for all parameters'
+  let desc = 'Expect info response for one parameter to match content in '
+  desc += 'response for all parameters'
   const robj = {
     description: callerName() + desc,
     error: false,
@@ -1223,7 +1233,8 @@ function InfoEquivalent (infoAll, infoSingle) {
       continue
     }
     if (!require('util').isDeepStrictEqual(infoAll[key], infoSingle[key])) {
-      robj.got = `Full info response value of <code>${key}</code> does not match that in single parameter info response.`
+      robj.got = `Full info response value of <code>${key}</code> does not `
+      robj.got += 'match that in single parameter info response.'
       robj.error = true
       return robj
     }
@@ -1233,8 +1244,9 @@ function InfoEquivalent (infoAll, infoSingle) {
     for (const parameterFull of infoAll.parameters) {
       if (parameterFull.name === parameterReduced.name) {
         if (!require('util').isDeepStrictEqual(parameterFull, parameterReduced)) {
-          robj.got = `Parameter object for <code>${parameterFull.name}</code> in request for all parameters `
-          robj.got += 'does not match corresponding parameter object in request for one parameter.'
+          robj.got = `Parameter object for <code>${parameterFull.name}</code> `
+          robj.got += 'in request for all parameters does not match '
+          robj.got += 'corresponding parameter object in request for one parameter.'
           robj.error = true
           return robj
         }
@@ -1255,7 +1267,8 @@ function FormatInHeader (header, type) {
     if (t) {
       got = "Format of '<code>" + header.format + "</code>' specified."
     }
-    const desc = "<code>/info</code> response should not have '<code>format</code>' specified for this type of request."
+    let desc = '<code>/info</code> response should not have '
+    desc += '<code>format</code> specified for this type of request.'
     return {
       description: callerName() + desc,
       error: t,
@@ -1268,7 +1281,8 @@ function FormatInHeader (header, type) {
     if (!t) {
       got = "Format of '<code>" + header.format + "</code>' specified."
     }
-    const desc = "JSON header in CSV response should have '<code>format: csv</code>' specified."
+    let desc = 'JSON header in CSV response should have '
+    desc += '<code>format: csv</code> specified.'
     return {
       description: callerName() + desc,
       error: t,
@@ -1281,10 +1295,10 @@ exports.FormatInHeader = FormatInHeader
 function FirstParameterOK (header, what) {
   if (what === 'name') {
     const desc = 'First parameter should (not must) be named' +
-             " '<code>Time</code>' b/c clients will likely label first" +
-             " parameter as '<code>Time</code>'" +
-             ' on plot to protect against first parameter names that are' +
-             ' not sensible.'
+                 '<code>Time</code> b/c clients will likely label first' +
+                 ' parameter as <code>Time</code>' +
+                 ' on plot to protect against first parameter names that are' +
+                 ' not sensible.'
     return {
       description: callerName() + desc,
       error: header.parameters[0].name !== 'Time',
@@ -1355,8 +1369,8 @@ function BinsLabelOrUnitsOK (name, bins, size, d, which, version) {
 
   if (!bins) return
   if (Array.isArray(bins[which]) && bins[which].length > 1) {
-    const msg = `${name}[${which}]["units"] is an array with length > 1, so expect ` +
-            `${name}[${which}]["units"].length == ${name}["size"][${d}]`
+    let msg = `${name}[${which}]["units"] is an array with length > 1, so `
+    msg += `expect ${name}[${which}]["units"].length == ${name}["size"][${d}]`
     if (bins[which].length === size[d]) {
       return {
         description: callerName() + msg,
@@ -1393,20 +1407,23 @@ function BinsCentersOrRangesOK (parameters, pn, d, which, version) {
       }
     }
 
-    const msgo = `${name}["bins"][${d}]["${which}"] is a string that references ` +
-                 'another parameter, so expect'
+    let msgo = `${name}["bins"][${d}]["${which}"] is a string that references `
+    msgo += 'another parameter, so expect'
 
     if (!rpn) {
+      const desc = callerName() + `${msgo} referenced parameter to be in dataset.`
       return {
-        description: callerName() + msgo + ' referenced parameter to be in dataset.',
+        description: desc,
         got: `No parameter named '${rname}'`,
         error: true
       }
     }
 
     if (rpn === pn) {
+      let desc = ' referenced parameter to have a different name than '
+      desc += 'bins parent parameter.'
       return {
-        description: callerName() + msgo + ' referenced parameter to have a different name than bins parent parameter.',
+        description: callerName() + msgo + desc,
         got: 'Self reference',
         error: true
       }
@@ -1415,8 +1432,9 @@ function BinsCentersOrRangesOK (parameters, pn, d, which, version) {
     const rparam = parameters[rpn]
 
     if (rparam.bins) {
+      const desc = ' referenced parameter to not have a bins element.'
       return {
-        description: callerName() + msgo + ' referenced parameter to not have a bins element.',
+        description: callerName() + msgo + desc,
         got: `Parameter ${rname}["bins"] may not be given.`,
         error: true
       }
@@ -1466,9 +1484,12 @@ function BinsCentersOrRangesOK (parameters, pn, d, which, version) {
         }
       }
       if (rparam.size[0] !== param.size[d]) {
+        let got = `Parameter ${rname}["size"][0] = ${rparam.size[0]} `
+        got += `and ${name}["size"][${d}] = ${param.size[d]}`
+        const desc = ` ${rname}["size"][0] = ${name}["size"][${d}]`
         return {
-          description: callerName() + msgo + ` ${rname}["size"][0] = ${name}["size"][${d}]`,
-          got: `Parameter ${rname}["size"][0] = ${rparam.size[0]} and ${name}["size"][${d}] = ${param.size[d]}`,
+          description: callerName() + msgo + desc,
+          got,
           error: true
         }
       }
@@ -1490,16 +1511,21 @@ function BinsCentersOrRangesOK (parameters, pn, d, which, version) {
         }
       }
       if (rparam.size[0] !== param.size[d]) {
+        const desc = ` ${rname}["size"][0] = ${name}["size"][${d}].`
+        let got = `Parameter ${rname}["size"][0] = ${rparam.size[0]} and `
+        got += `${name}["size"][${d}] = ${param.size[d]}`
         return {
-          description: callerName() + msgo + ` ${rname}["size"][0] = ${name}["size"][${d}].`,
-          got: `Parameter ${rname}["size"][0] = ${rparam.size[0]} and ${name}["size"][${d}] = ${param.size[d]}`,
+          description: callerName() + msgo + desc,
+          got,
           error: true
         }
       }
     }
     // TODO: Check values are numbers?
+    let desc = ' referenced parameter to exist, have correct size, and '
+    desc += 'statisfy other constraints.'
     return {
-      description: callerName() + msgo + ' referenced parameter to exist, have correct size, and statisfy other constraints.',
+      description: callerName() + msgo + desc,
       got: 'Referenced parameter found is an acceptable reference.',
       error: false
     }
@@ -1507,10 +1533,13 @@ function BinsCentersOrRangesOK (parameters, pn, d, which, version) {
 
   if (bins[d][which]) {
     if (bins[d][which].length === param.size[d]) {
-      const msg = callerName() + `Expect bins[${d}]["${which}"].length = ${name}["size"][${d}]`
+      let msg = callerName()
+      msg += `Expect bins[${d}]["${which}"].length = ${name}["size"][${d}]`
+      let got = `bins[${d}][${which}].length = ${bins[d][which].length} `
+      got += `and ${name}["size"][${d}] = ${param.size[d]}`
       return {
         description: callerName() + msg,
-        got: `bins[${d}][${which}].length = ${bins[d][which].length} and ${name}["size"][${d}] = ${param.size[d]}`,
+        got,
         error: bins[d][which].length !== param.size[d]
       }
     }
@@ -1526,8 +1555,8 @@ function BinsCentersOrRangesOK (parameters, pn, d, which, version) {
       // by using '"centers": null' and not including the 'ranges' attribute."
       // Could be written into schema, but is complex.
       // What about case where ranges are known, but centers are not known?
-      const msg = callerName() + `If ${name}["bins"][${d}]["centers"] = null, ` +
-              `no ${name}["bins"][${d}]["ranges"] allowed.`
+      let msg = callerName() + `If ${name}["bins"][${d}]["centers"] = null, `
+      msg += `no ${name}["bins"][${d}]["ranges"] allowed.`
       return {
         description: callerName() + msg,
         got: `${name}["bins"][${d}]["ranges"] ≠ null`,
@@ -1535,9 +1564,10 @@ function BinsCentersOrRangesOK (parameters, pn, d, which, version) {
       }
     }
   }
-
+  let desc = `Expect ${name}["bins"][${d}]["${which}"] to have correct size and `
+  desc += 'if "centers" = null, no "ranges" given.'
   return {
-    description: callerName() + `Expect ${name}["bins"][${d}]["${which}"] to have correct size and if "centers" = null, no "ranges" given.`,
+    description: callerName() + desc,
     got: '',
     error: false
   }
@@ -1579,21 +1609,24 @@ function FillOK (fill, type, len, name, what) {
   }
 
   if (what === 'isotime') {
-    desc = 'Expect length of fill value for a isotime parameter to be equal to length of the string parameter'
+    desc = 'Expect length of fill value for a isotime parameter to be equal'
+    desc += 'to length of the string parameter'
     if (len === fill.length && name !== 'Time') {
       t = true
       got += ' isotime length = ' + len + '; fill length = ' + fill.length
     }
   }
   if (what === 'string') {
-    desc = 'Expect length of fill value for a string parameter to be &lt;= length of the string parameter'
+    desc = 'Expect length of fill value for a string parameter to be '
+    desc += '&lt;= length of the string parameter'
     if (len < fill.length) {
       t = true
       got += ' string length = ' + len + '; fill length = ' + fill.length
     }
   }
   if (what === 'string-parse') {
-    desc = 'Expect fill value for a string parameter to not parse to an integer or float'
+    desc = 'Expect fill value for a string parameter to not parse to an '
+    desc += 'integer or float'
     if (isinteger(fill) || isfloat(fill)) {
       t = true
       got += ' This was probably not intended.'
@@ -1603,7 +1636,8 @@ function FillOK (fill, type, len, name, what) {
     desc = "Expect fill value to not be the string '<code>null</code>'."
     if (fill === 'null') {
       t = true
-      got += ' The string "null"; Probably "fill": null and not "fill": "null" was intended.'
+      got += ' The string "null"; Probably "fill": null and not "fill": '
+      got += '"null" was intended.'
     }
   }
   if (what === 'integer-nan') {
@@ -1663,11 +1697,14 @@ function LocationOK (name, location) {
   if (!location.vectorComponents) { return }
 
   const err = location.point.length !== location.vectorComponents.length
-  const desc = "Expect length of location.point array to match length of location.vectorComponents array."
+  let desc = 'Expect length of location.point array to match length of '
+  desc += 'location.vectorComponents array.'
+  let got = `location.point.length = ${location.point.length} and `
+  got += `location.vectorComponents.length = ${location.vectorComponents.length}`
   return {
     description: callerName() + desc,
     error: err,
-    got: `location.point.length = ${location.point.length} and location.vectorComponents.length = ${location.vectorComponents.length}`
+    got
   }
 }
 exports.LocationOK = LocationOK
@@ -1679,10 +1716,10 @@ function VectorComponentsOK (name, size, vectorComponents) {
     size = [size]
   }
 
-  const if_ = "If vectorComponents given, "
+  const if_ = 'If vectorComponents given, '
 
-  const c1 = "size array must have length of 1"
-  const desc1 = if_ + c1 + "."
+  const c1 = 'size array must have length of 1'
+  const desc1 = if_ + c1 + '.'
   const err1 = size.length !== 1
   if (err1) {
     return {
@@ -1692,19 +1729,21 @@ function VectorComponentsOK (name, size, vectorComponents) {
     }
   }
 
-  const c2 = "number of elements in vectorComponents to equal size[0]"
-  const desc2 = if_ + c2 + "."
+  const c2 = 'number of elements in vectorComponents to equal size[0]'
+  const desc2 = if_ + c2 + '.'
   const err2 = size[0] !== vectorComponents.length
   if (err2) {
+    let got = `size[0] = ${size[0]} and vectorComponents.length = `
+    got += vectorComponents.length
     return {
       description: callerName() + desc2,
       error: err2,
-      got: `size[0] = ${size[0]} and vectorComponents.length = ${vectorComponents.length}`
+      got
     }
   }
 
   return {
-    description: callerName() + if_ + c1 + " and " + c2 + ".",
+    description: callerName() + `${if_} ${c1} and ${c2}.`,
     error: false,
     got: 'All conditions satisfied.'
   }
@@ -1712,8 +1751,10 @@ function VectorComponentsOK (name, size, vectorComponents) {
 exports.VectorComponentsOK = VectorComponentsOK
 
 function LastModifiedGiven (headers) {
+  let desc = 'Prefer <code>Last-Modified</code> header to be given for '
+  desc += 'responses that return only metadata.'
   return {
-    description: callerName() + 'Prefer <code>Last-Modified</code> header to be given for responses that return only metadata.',
+    description: callerName() + desc,
     error: headers['last-modified'] === undefined,
     got: 'Last-Modified: ' + headers['last-modified']
   }
@@ -1721,8 +1762,10 @@ function LastModifiedGiven (headers) {
 exports.LastModifiedGiven = LastModifiedGiven
 
 function HTTP302or200 (res) {
-  const desc = 'Expect HTTP status code to be <code>200</code> or <code>302</code> and Location header to have URL that ends with <code>/hapi/</code>.'
-  let got = `HTTP status code <code>${res.statusCode}</code> and Location header <code>${res.headers.location}</code>`
+  let desc = 'Expect HTTP status code to be <code>200</code> or <code>302</code> '
+  desc += 'and Location header to have URL that ends with <code>/hapi/</code>.'
+  let got = `HTTP status code <code>${res.statusCode}</code> and Location `
+  got += `header <code>${res.headers.location}</code>`
   let err = true
   if (res.statusCode === 200) {
     got = `HTTP status code <code>${res.statusCode}</code>.`
@@ -1768,12 +1811,14 @@ function TimeParameterUnitsOK (name, units, type, size) {
 
   if (type === 'isotime') {
     let err = false
-    if ( units===null ) {
-        return {
-            description: callerName() + "Expect parameter of type <code>isotime</code> to have non-null units of \"UTC\".",
-            error: true,
-            got
-        };
+    let desc = 'Expect parameter of type <code>isotime</code> to have '
+    desc += 'non-null units of "UTC".'
+    if (units === null) {
+      return {
+        description: callerName() + desc,
+        error: true,
+        got
+      }
     }
     if (typeof (units) === 'object') {
       for (let i = 0; i < units.length; i++) {
@@ -1790,8 +1835,10 @@ function TimeParameterUnitsOK (name, units, type, size) {
       }
     }
 
+    desc = 'Expect parameter of type <code>isotime</code> to have units '
+    desc += "of '<code>UTC</code>'."
     return {
-      description: callerName() + "Expect parameter of type <code>isotime</code> to have units of '<code>UTC</code>'.",
+      description: callerName() + desc,
       error: err,
       got
     }
@@ -2055,10 +2102,12 @@ function Integer (str, extra) {
   ts += `parseInt("${str}") &lt; -2^31) && `
   ts += `parseInt(${str}) == parseFloat(${str})`
   ts += extra
+  let got = `parseInt('${str}') = ${parseInt(str)} and `
+  got += `parseFloat('${str}') = ${parseFloat(str)}`
   return {
     description: callerName() + 'Expect ' + ts,
     error: t !== true,
-    got: 'parseInt(' + str + ') = ' + parseInt(str) + ' and ' + 'parseFloat(' + str + ') = ' + parseFloat(str)
+    got
   }
 }
 exports.Integer = Integer
@@ -2066,10 +2115,11 @@ exports.Integer = Integer
 function Float (str, extra) {
   extra = extra || ''
   const t = isfloat(str)
-  const ts = `'${str}'.trim() === 'NaN' || Math.abs(parseFloat('${str}')) &lt; ` +
-             Number.MAX_VALUE + ' && ' +
-             "<code>/^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/.test('" + str + "'.trim()) == true</code>" +
-         extra
+  const re = '/^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]{1,3})?$/'
+  let ts = `('${str}'.trim() === 'NaN' || Math.abs(parseFloat('${str}')) &lt; `
+  ts += `${Number.MAX_VALUE}) && `
+  ts += `<code>${re}.test('"${str}"'.trim()) == true</code>`
+  ts += extra
   return {
     description: callerName() + 'Expect ' + ts,
     error: t !== true,
@@ -2079,9 +2129,9 @@ function Float (str, extra) {
 exports.Float = Float
 
 function Unique (arr, arrstr, idstr) {
-  if (!arr.length) {
+  if (!Array.isArray(arr)) {
     return {
-      description: callerName() + 'Expect ' + arrstr + ' to be an array',
+      description: callerName() + `Expect ${arrstr} to be an array`,
       error: true,
       got: typeof (arr)
     }
@@ -2103,7 +2153,7 @@ function Unique (arr, arrstr, idstr) {
   if (e) {
     got = 'Repeated at least once: ' + rids.join(',')
   }
-  const desc = "Expect all '" + idstr + "' values in objects in " + arrstr + ' array to be unique'
+  const desc = `Expect all '${idstr}' values in '${arrstr}' array to be unique`
   return {
     description: callerName() + desc,
     error: e,
@@ -2196,8 +2246,9 @@ function CompressionAvailable (headers) {
 exports.CompressionAvailable = CompressionAvailable
 
 function ContentType (re, given) {
+  const desc = `Expect HTTP <code>Content-Type</code> to match <code>${re}</code>`
   return {
-    description: callerName() + 'Expect HTTP <code>Content-Type</code> to match <code>' + re + '</code>',
+    description: callerName() + desc,
     error: !re.test(given),
     got: re.test(given) ? `<code>${given}</code>` : 'No match.'
   }

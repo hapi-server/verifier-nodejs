@@ -53,8 +53,7 @@ function report (r, url, obj, opts) {
         <head>
           <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
           <title>HAPI Validator</title>
-          <link rel="shortcut icon" href="//hapi-server.org/favicon.svg" type="image/svg+xml">
-          <link rel="icon" href="//hapi-server.org/favicon.svg" type="image/svg+xml">
+          <link rel="icon" href="//hapi-server.org/HAPI-favicon.svg" sizes="any" type="image/svg+xml">
         </head>`
       res.write(`${head}<body>`)
     }

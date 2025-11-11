@@ -150,7 +150,7 @@ function writeURL (url, res) {
 
   res.write("<hr style='border-bottom: 0px; border-top: 1px solid black'>" +
             "<font style='color:blue'><a href='" + url + "'>" +
-            url.replace(/\&parameters/, '&amp;parameters') +
+            url.replace('&parameters', '&amp;parameters') +
             '</a></font></br>')
 }
 exports.writeURL = writeURL

@@ -673,11 +673,11 @@ function run (opts, clientRequest, clientResponse) {
         dataTimeout = 'datasample10xcadence'
         report(r, url, is.CadenceOK(json.cadence, start, stop, 'start/stop'))
         const md = moment.duration(json.cadence)
-        stopo = stop;
+        const stopo = stop
         stop = new Date(start).valueOf() + 100 * md.asMilliseconds()
         stop = new Date(stop).toISOString()
         if (new Date(stop).valueOf() > new Date(stopo).valueOf()) {
-          stop = stopo;
+          stop = stopo
         }
       } else {
         dataTimeout = 'datadefault'
@@ -1124,8 +1124,6 @@ function run (opts, clientRequest, clientResponse) {
 // Helper functions
 
 function setAndCheckOptions (argv, res) {
-  const versions = require('./is.js').versions // Array of implemented versions
-
   let output = argv.output || 'html'
   if (res === undefined) {
     output = argv.output
@@ -1145,12 +1143,12 @@ function setAndCheckOptions (argv, res) {
     plotserver: argv.plotserver || 'http://hapi-server.org/plot'
   }
 
-  if (opts.version && !schemaVersions.includes(opts.version)) {
+  if (opts.version && !is.schemaVersions.includes(opts.version)) {
     if (res) {
-      res.status(400).end('<code>version</code> must be one of ' + schemaVersions)
+      res.status(400).end('<code>version</code> must be one of ' + is.schemaVersions)
       return
     }
-    console.error("'version' must be one of ", schemaVersions)
+    console.error("'version' must be one of ", is.schemaVersions)
     process.exit(1)
   }
 

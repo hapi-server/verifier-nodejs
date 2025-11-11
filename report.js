@@ -47,7 +47,16 @@ function report (r, url, obj, opts) {
     r.stats = { fails: [], passes: [], warns: [] }
 
     if (reqOpts.output === 'html') {
-      res.write("<html><meta charset='UTF-8'><body>")
+      const head =
+      `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+          <title>HAPI Validator</title>
+          <link rel="shortcut icon" href="//hapi-server.org/favicon.svg" type="image/svg+xml">
+          <link rel="icon" href="//hapi-server.org/favicon.svg" type="image/svg+xml">
+        </head>`
+      res.write(`${head}<body>`)
     }
 
     if (reqOpts.version) {

@@ -66,6 +66,7 @@ function isfloat (str) {
 }
 
 function nFields (header, pn) {
+  // Number of fields occupied by a parameter is prod(size array), so size = [6, 7] => nFields = 42.
   let nf = 1
   if (pn === 0) {
     // Primary time parameter

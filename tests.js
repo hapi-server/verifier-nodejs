@@ -760,18 +760,7 @@ function run (opts, clientRequest, clientResponse) {
       report(r, url, is.FileStructureOK(dataAll1Body, 'lastchar'))
       report(r, url, is.FileStructureOK(dataAll1Body, 'extranewline'))
       report(r, url, is.FileStructureOK(dataAll1Body, 'numlines'))
-
-      // <HACK>
-      // Ignore this test for the SuperMag server, dataset indices_all, since
-      // the info query and all-columns query return 410 and 295 columns,
-      // respectively.
-      if (url.includes("https://supermag.jhuapl.edu") &&
-          url.includes("id=indices_all")) {
-        report(r, url, false, dataAll1Body)
-      } else {
-        report(r, url, is.NumberOfColumnsCorrect(r.infoAll[id], dataAll1Body))
-      }
-      // </HACK>
+      report(r, url, is.NumberOfColumnsCorrect(r.infoAll[id], dataAll1Body))
 
       next()
     })
@@ -1115,17 +1104,7 @@ function run (opts, clientRequest, clientResponse) {
       report(r, url, is.TimeInBounds(lines, start, stop))
       report(r, url, is.NumberOfColumnsCorrect(r.infoAll[id], body, pn))
       report(r, url, is.TypeCorrect(r.infoAll[id], body, pn))
-      // <HACK>
-      // Ignore this test for the SuperMag server, dataset indices_all,
-      // parameter Time, since the SuperMag server returns results inconsistent
-      // with the table description.
-      if (opts["url"].includes("https://supermag.jhuapl.edu") &&
-          opts["id"] === "indices_all") {
-        report(r, url, false, body, pn)
-      } else {
-        report(r, url, is.LengthOK(r.infoAll[id], body, pn))
-      }
-      // </HACK>
+      report(r, url, is.LengthOK(r.infoAll[id], body, pn))
       // <HACK>
       // Ignore this test for the SuperMag server, dataset indices_all,
       // since the server returns a different set of columns than described

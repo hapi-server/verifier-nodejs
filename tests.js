@@ -1120,7 +1120,7 @@ function run (opts, clientRequest, clientResponse) {
       // parameter Time, since the SuperMag server returns results inconsistent
       // with the table description.
       if (opts["url"].includes("https://supermag.jhuapl.edu") &&
-          opts["id"] === "indices_all" && opts["parameter"] === "Time") {
+          opts["id"] === "indices_all") {
         report(r, url, false, body, pn)
       } else {
         report(r, url, is.LengthOK(r.infoAll[id], body, pn))
@@ -1130,7 +1130,8 @@ function run (opts, clientRequest, clientResponse) {
       // Ignore this test for the SuperMag server, dataset indices_all,
       // since the server returns a different set of columns than described
       // in the header.
-      if (opts["url"].includes("https://supermag.jhuapl.edu")) {
+      if (opts["url"].includes("https://supermag.jhuapl.edu") &&
+          opts["id"] === "indices_all") {
         report(r, url, false, body, r.dataAll1Body[id], 'consistent', pn)
       } else {
         report(r, url, is.FileContentSameOrConsistent(r.infoAll[id], body, r.dataAll1Body[id], 'consistent', pn))

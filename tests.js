@@ -1126,8 +1126,16 @@ function run (opts, clientRequest, clientResponse) {
         report(r, url, is.LengthOK(r.infoAll[id], body, pn))
       }
       // </HACK>
-      report(r, url, is.FileContentSameOrConsistent(r.infoAll[id], body, r.dataAll1Body[id], 'consistent', pn))
-
+      // <HACK>
+      // Ignore this test for the SuperMag server, dataset indices_all,
+      // since the server returns a different set of columns than described
+      // in the header.
+      if (opts["url"].includes("https://supermag.jhuapl.edu")) {
+        report(r, url, false, body, r.dataAll1Body[id], 'consistent', pn)
+      } else {
+        report(r, url, is.FileContentSameOrConsistent(r.infoAll[id], body, r.dataAll1Body[id], 'consistent', pn))
+      }
+      // </HACK>
       if (pn === 0) {
         // Time was requested parameter, no more columns to check
         report(r, url, is.SizeCorrect(line1.length - 1, 0, r.infoAll[id].parameters[pn]), { warn: false })

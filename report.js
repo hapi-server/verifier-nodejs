@@ -76,15 +76,18 @@ function report (r, url, obj, opts) {
     }
 
     // Parse is.js to get line numbers for test functions.
-    let istext = fs.readFileSync(path.join(__dirname, 'is.js')).toString()
-    istext = istext.split('\n')
-    report.lineobj = {}
     // Store locations in report.lineobj array.
     // TODO: This should happen on server start not here.
-    for (let i = 0; i < istext.length; i++) {
-      if (istext[i].match(/^function/)) {
-        const key = istext[i].replace(/^function (.*)?\(.*/, '$1')
-        report.lineobj[key] = i + 1
+    if (!report.lineobj) {
+      let istext = fs.readFileSync(path.join(__dirname, 'is.js')).toString()
+      istext = istext.split('\n')
+      report.lineobj = {}
+      for (let i = 0; i < istext.length; i++) {
+        if (istext[i].match(/^function/)) {
+          let key = istext[i].replace(/^function (.*)?\(.*/, '$1')
+          key = key.trim()
+          report.lineobj[key] = i + 1
+        }
       }
     }
   }

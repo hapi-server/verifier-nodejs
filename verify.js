@@ -111,7 +111,6 @@ if (argv.url !== '' || argv.test === true) {
       return
     }
 
-    console.log(req.query.url)
     const allowed = ['url', 'id', 'dataset', 'parameter', 'parameters',
       'time.min', 'start', 'time.max', 'stop', 'version',
       'datatimeout', 'metatimeout', 'output']

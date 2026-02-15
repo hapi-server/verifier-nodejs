@@ -467,7 +467,6 @@ function run (opts, clientRequest, clientResponse) {
         report(r, url, is.FillOK(fill, type, len, name, type, i))
 
         if (type === 'isotime' && fill) {
-          console.log(fill, hapiVersion)
           report(r, url, is.HAPITime(fill, hapiVersion))
         }
 

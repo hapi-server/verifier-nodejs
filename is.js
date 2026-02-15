@@ -1588,7 +1588,7 @@ function AllowedOutputFormat (json) {
 }
 exports.AllowedOutputFormat = AllowedOutputFormat
 
-function FillOK (fill, type, len, name, what) {
+function FillOK (fill, type, len, name, what, pn) {
   if (!fill) { return } // No fill or fill=null so no test needed.
 
   let t = false
@@ -1609,11 +1609,20 @@ function FillOK (fill, type, len, name, what) {
   }
 
   if (what === 'isotime') {
-    desc = 'Expect length of fill value for a isotime parameter to be equal'
-    desc += 'to length of the string parameter'
-    if (len === fill.length && name !== 'Time') {
-      t = true
-      got += ' isotime length = ' + len + '; fill length = ' + fill.length
+    if (pn === 0) { // Primary time variable
+      desc = 'Expect no fill value for primary time variable to be null.'
+      if (fill !== null) {
+        t = true
+        got += `fill = ${fill}`
+      }
+    } else {
+      // Not primary time variable, for which fill not allowed.
+      desc = 'Expect length of fill value for a isotime parameter to be equal '
+      desc += 'to match length value in parameter definition.'
+      if (len !== fill.length) {
+        t = true
+        got += ' isotime length = ' + len + '; fill length = ' + fill.length
+      }
     }
   }
   if (what === 'string') {
@@ -2031,6 +2040,7 @@ function HAPITime (isostr, version) {
     return ((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0)
   }
 
+  got = isostr
   let regexPass = false
   let re
   for (let i = 0; i < schemaregexes.length; i++) {
@@ -2044,21 +2054,19 @@ function HAPITime (isostr, version) {
 
   // console.log(" Regex pass: " + regexPass);
   let semanticPass = true
-  if (regexPass) {
-    // Only check semantic rules if regular expression test passed.
-    const year = parseInt(isostr.slice(0, 4))
-    let isoStringSplit = isostr.split(/-|T/)
 
-    let doy, mo, day
-    if (isoStringSplit.length > 1) {
-      if (isoStringSplit[1].length === 3) {
-        doy = parseInt(isoStringSplit[1])
-      } else {
-        mo = parseInt(isoStringSplit[1])
-        isoStringSplit = isostr.split(/-/)
-        if (isoStringSplit.length > 2) {
-          day = parseInt(isoStringSplit[2])
-        }
+  const year = parseInt(isostr.slice(0, 4))
+  let isoStringSplit = isostr.split(/-|T/)
+
+  let doy, mo, day
+  if (isoStringSplit.length > 1) {
+    if (isoStringSplit[1].length === 3) {
+      doy = parseInt(isoStringSplit[1])
+    } else {
+      mo = parseInt(isoStringSplit[1])
+      isoStringSplit = isostr.split(/-/)
+      if (isoStringSplit.length > 2) {
+        day = parseInt(isoStringSplit[2])
       }
     }
 
@@ -2083,10 +2091,20 @@ function HAPITime (isostr, version) {
       }
     }
   }
-  // console.log(" Semantic pass: " + regexPass);
+
+  if (regexPass) {
+    got += ' matched a schema regex pattern.'
+  } else {
+    got += ' did not match any schema regex patterns.'
+  }
+  if (semanticPass) {
+    got += ' Passed semantic tests.'
+  } else {
+    got += ' Did not pass semantic tests.'
+  }
 
   const e = !(regexPass && semanticPass)
-  // if (t==false) {console.log("x" + isostr)}
+
   return {
     description: callerName() + 'Expect time value to be a valid HAPI time string.',
     error: e,

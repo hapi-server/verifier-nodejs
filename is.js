@@ -829,11 +829,11 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
 
       // Number of columns
       if (line.length > lineAll.length) {
-        const desc = 'Expect number of columns from one parameter request to be' +
-             ' equal to or less than number of columns in all parameter request.'
-        got += '\n# columns in single parameter request = ' + line.length +
-             ' # in all parameter request = <code>' + lineAll.length +
-             '</code>.'
+        const desc = 'Expect number of columns from single parameter request to be' +
+                     ' equal to or less than number of columns in all parameter request.'
+        got += '\n# columns in single parameter request = <code>' + line.length +
+               '</code>\n# in all parameter request = <code>' + lineAll.length +
+               '</code>.'
         return {
           description: callerName() + desc,
           error: true,
@@ -845,13 +845,21 @@ function FileContentSameOrConsistent (header, body, bodyAll, what, pn) {
       // nf = number of fields for parameter
       // fc = first column of field for parameter
       for (let j = 0; j < nf - 1; j++) {
-        if (!line[1 + j] || !lineAll[fc + j]) {
+        if (line[1 + j] === undefined) {
           t = true
           if (gotCount < gotLimit) {
-            got += '\nProblem with line <code>' + (i) + '</code>:\n' +
-              '  Single parameter request: <code>' + line[1 + j] +
-              '</code>\n  All parameter request: <code>' + lineAll[fc + j] +
-              '</code>'
+            got += `\nProblem with line <code>${i + 1}</code>:\n`
+            got += `  Single parameter request does not have a column <code>${j + 1}</code>`
+          }
+          gotCount++
+          break
+        }
+
+        if (lineAll[fc + j] === undefined) {
+          t = true
+          if (gotCount < gotLimit) {
+            got += `\nProblem with line <code>${i + 1}</code>:\n`
+            got += `  All parameter request does not have a column <code>${j + 1}</code>`
           }
           gotCount++
           break

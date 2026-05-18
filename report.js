@@ -174,9 +174,10 @@ function writeNote (msg, style, res) {
   if (res) {
     res.write(msg + '<br>')
   } else {
-    console.log(msg + 'Passes are being suppressed.')
+    console.log(msg)
   }
 }
+exports.writeNote = writeNote
 
 function writeResult (obj, status, res) {
   if (status === undefined) {

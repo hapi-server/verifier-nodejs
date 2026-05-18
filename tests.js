@@ -5,6 +5,7 @@ const { URL } = require('url')
 
 const is = require('./is.js') // Test library
 const report = require('./report.js').report // Logging
+const writeNote = require('./report.js').writeNote
 
 // TODO: The control flow of this code is difficult to follow because of
 // the callbacks. The code runs tests in serial, so it should be modified
@@ -27,7 +28,7 @@ function run (opts, clientRequest, clientResponse) {
   report.shush = opts.quiet
 
   // First object passed to report().
-  const r = { res: clientResponse, opts, infoAll: {}, dataAll1Body: {} }
+  const r = { res: clientResponse, opts, infoAll: {}, infoUsingID: {}, dataAll0Body: {}, dataAll1Body: {} }
 
   let ignoreVersionError = false
   if (opts.version) {
@@ -264,12 +265,74 @@ function run (opts, clientRequest, clientResponse) {
         return
       }
 
-      if (opts.parameter) {
-        // 'parameter' given in client request
-        infoAll()
-      } else {
-        infoError()
+      infoUsingID()
+    })
+  }
+
+  function _idQueryParameter () {
+    if (versionParts(r.catalog.HAPI).major >= 3) {
+      return 'dataset'
+    }
+    return 'id'
+  }
+
+  function _timeminQueryParameter () {
+    if (versionParts(r.catalog.HAPI).major >= 3) {
+      return 'start'
+    }
+    return 'time.min'
+  }
+
+  function _timemaxQueryParameter () {
+    if (versionParts(r.catalog.HAPI).major >= 3) {
+      return 'stop'
+    }
+    return 'time.max'
+  }
+
+  function infoUsingID () {
+    // If version >= 3, check that info?id=ID works. If not, give an error
+    // and use dataset=ID for the rest of the tests.
+    if (CLOSED) { return }
+
+    if (versionParts(r.catalog.HAPI).major < 3) {
+      infoAll()
+      return
+    }
+
+    const datasets = r.datasetsToCheck
+    const id = datasets[0].id
+    const timeoutString = timeoutCondition(infoUsingID, 'metadata')
+    const url = encodeURI(opts.url + '/info?id=' + id)
+
+    report(r, url)
+    writeNote('Testing that HAPI 2 syntax (id= instead of dataset=) is supported', '', r.res)
+    request(requestOptions(url, opts, timeoutString), function (err, res, body) {
+      if (err) {
+        if (infoUsingID.tries === 0) {
+          report(r, url, is.RequestError(err, res, timeout(opts, timeoutString)), { warn: true })
+          infoUsingID()
+        } else {
+          report(r, url, is.RequestError(err, res, timeout(opts, timeoutString)), { stop: true })
+          infoError()
+        }
+        return
       }
+
+      report(r, url, is.RequestError(err, res, timeout(opts, timeoutString)))
+      if (!report(r, url, is.HTTP200(res), { stop: true })) {
+        infoError()
+        return
+      }
+      report(r, url, is.ContentType(/^application\/json/, res.headers['content-type']))
+      if (!report(r, url, is.JSONParsable(body), { stop: true })) {
+        infoError()
+        return
+      }
+
+      r.infoUsingID[id] = JSON.parse(body)
+
+      infoError()
     })
   }
 
@@ -278,10 +341,11 @@ function run (opts, clientRequest, clientResponse) {
 
     if (opts.parameter) {
       infoAll()
+      return
     }
 
     const timeoutString = timeoutCondition(infoError, 'metadata')
-    const url = encodeURI(opts.url + '/info?id=' + 'a_test_of_an_invalid_id_by_verifier-nodejs')
+    const url = encodeURI(opts.url + '/info?' + _idQueryParameter() + '=' + 'a_test_of_an_invalid_id_by_verifier-nodejs')
 
     report(r, url)
     request(requestOptions(url, opts, timeoutString), function (err, res, body) {
@@ -311,10 +375,12 @@ function run (opts, clientRequest, clientResponse) {
     })
   }
 
-  function nextDataset (r, currentId) {
+  function _nextDataset (r, currentId) {
     if (r.datasetsToCheck.length > 1) {
       r.datasetsToCheck.shift() // Remove first element
+      delete r.dataAll0Body[currentId]
       delete r.dataAll1Body[currentId]
+      delete r.infoUsingID[currentId]
       infoAll() // Start next dataset
     } else {
       finished()
@@ -327,7 +393,7 @@ function run (opts, clientRequest, clientResponse) {
     const datasets = r.datasetsToCheck
     const id = datasets[0].id
 
-    const url = encodeURI(opts.url + '/info?id=' + datasets[0].id)
+    const url = encodeURI(opts.url + '/info?' + _idQueryParameter() + '=' + datasets[0].id)
 
     // Initialize object that stores additional info for this dataset.
     r.catalog[id] = {}
@@ -346,7 +412,7 @@ function run (opts, clientRequest, clientResponse) {
         if (infoAll.tries === 0) {
           infoAll() // Try again
         } else {
-          nextDataset(r, id)
+          _nextDataset(r, id)
         }
         return
       }
@@ -360,7 +426,7 @@ function run (opts, clientRequest, clientResponse) {
       }
 
       if (!report(r, url, is.HTTP200(res), rargs)) {
-        nextDataset(r, id)
+        _nextDataset(r, id)
         return
       }
 
@@ -369,12 +435,15 @@ function run (opts, clientRequest, clientResponse) {
       report(r, url, is.LastModifiedGiven(res.headers), { warn: true })
 
       if (!report(r, url, is.JSONParsable(body), rargs)) {
-        nextDataset(r, id)
+        _nextDataset(r, id)
         return
       }
 
       const json = JSON.parse(body)
       r.infoAll[id] = json
+      if (r.infoUsingID[id]) {
+        report(r, url, is.InfoSame(json, r.infoUsingID[id], 'APIvsAPI'), { warn: true })
+      }
 
       versionCheckAndReport(r, url, opts, json.HAPI)
       const hapiVersion = version(opts, json.HAPI)
@@ -486,7 +555,7 @@ function run (opts, clientRequest, clientResponse) {
 
       if (opts.parameter) {
         // No need to check single parameter request, because already checked above.
-        dataAll1()
+        dataAll0()
       } else {
         infoSingleParameter()
       }
@@ -523,7 +592,7 @@ function run (opts, clientRequest, clientResponse) {
       }
     }
 
-    const url = encodeURI(opts.url + '/info' + '?id=' + id + '&parameters=' + parameter)
+    const url = encodeURI(opts.url + '/info' + '?' + _idQueryParameter() + '=' + id + '&parameters=' + parameter)
 
     report(r, url)
     request(requestOptions(url, opts, timeoutString), function (err, res, body) {
@@ -592,56 +661,7 @@ function run (opts, clientRequest, clientResponse) {
 
       report(r, url, is.InfoEquivalent(infoAll, infoFirst))
 
-      infoUsingDataset()
-    })
-  }
-
-  function infoUsingDataset () {
-    // Check that dataset=DATASET is supported if HAPI version >= 3.0
-    if (versionParts(r.catalog.HAPI).major < 3) {
-      dataAll1()
-      return
-    }
-
-    if (CLOSED) { return }
-
-    const datasets = r.datasetsToCheck
-    const id = datasets[0].id
-
-    const timeoutString = timeoutCondition(infoUsingDataset, 'metadata')
-
-    const url = encodeURI(opts.url + '/info?dataset=' + datasets[0].id)
-
-    report(r, url)
-    request(requestOptions(url, opts, timeoutString), function (err, res, body) {
-      if (err) {
-        if (infoUsingDataset.tries === 0) {
-          report(r, url, is.RequestError(err, res, timeout(opts, timeoutString)), { warn: true })
-          infoUsingDataset() // Try again
-        } else {
-          report(r, url, is.RequestError(err, res, timeout(opts, timeoutString)), { stop: true })
-          dataAll1()
-        }
-        return
-      }
-
-      report(r, url, is.RequestError(err, res, timeout(opts, timeoutString)))
-      report(r, url, is.CORSAvailable(res.headers), { warn: true })
-      report(r, url, is.LastModifiedGiven(res.headers), { warn: true })
-      if (!report(r, url, is.HTTP200(res), { stop: true })) {
-        dataAll1()
-        return
-      }
-      report(r, url, is.ContentType(/^application\/json/, res.headers['content-type']))
-      if (!report(r, url, is.JSONParsable(body), { stop: true })) {
-        dataAll1()
-        return
-      }
-
-      const infoAllUsingDataset = JSON.parse(body)
-
-      report(r, url, is.InfoSame(r.infoAll[id], infoAllUsingDataset, 'APIvsAPI'), { warn: true })
-      dataAll1()
+      dataAll0()
     })
   }
 
@@ -699,8 +719,55 @@ function run (opts, clientRequest, clientResponse) {
     r.catalog[id].dataTimeout = dataTimeout
   }
 
+  function dataAll0 () {
+    // Request all parameters using HAPI 2 time.min/time.max syntax.
+
+    if (CLOSED) { return }
+
+    if (versionParts(r.catalog.HAPI).major < 3) {
+      dataAll1()
+      return
+    }
+
+    const datasets = r.datasetsToCheck
+    const id = datasets[0].id
+
+    const timeoutString = timeoutCondition(dataAll0, 'data')
+
+    const url = encodeURI(opts.url +
+          '/data?' + _idQueryParameter() + '=' + id +
+          '&time.min=' + r.catalog[id].startToUse +
+          '&time.max=' + r.catalog[id].stopToUse)
+
+    report(r, url)
+    writeNote('Testing that HAPI 2 syntax (time.min/time.max instead of start/stop) is supported', '', r.res)
+    const reqOpts = requestOptions(url, opts, timeoutString, true)
+
+    request(reqOpts, function (err, res, dataAll0Body) {
+      if (err) {
+        if (dataAll0.tries === 0) {
+          report(r, url, is.RequestError(err, res, timeout(opts, timeoutString)), { warn: true })
+          dataAll0() // Try again
+        } else {
+          report(r, url, is.RequestError(err, res, timeout(opts, timeoutString)), { warn: true, stop: true })
+          dataAll1()
+        }
+        return
+      }
+
+      report(r, url, is.RequestError(err, res, timeout(opts, timeoutString)))
+      if (!report(r, url, is.HTTP200(res), { stop: true })) {
+        dataAll1()
+        return
+      }
+
+      r.dataAll0Body[id] = dataAll0Body
+      dataAll1()
+    })
+  }
+
   function dataAll1 () {
-    // Request all parameters using time format in request.
+    // Request all parameters using preferred time format in request.
 
     if (CLOSED) { return }
 
@@ -710,9 +777,9 @@ function run (opts, clientRequest, clientResponse) {
     const timeoutString = timeoutCondition(dataAll1, 'data')
 
     const url = encodeURI(opts.url +
-          '/data?id=' + id +
-          '&time.min=' + r.catalog[id].startToUse +
-          '&time.max=' + r.catalog[id].stopToUse)
+          '/data?' + _idQueryParameter() + '=' + id +
+          '&' + _timeminQueryParameter() + '=' + r.catalog[id].startToUse +
+          '&' + _timemaxQueryParameter() + '=' + r.catalog[id].stopToUse)
 
     report(r, url)
     const reqOpts = requestOptions(url, opts, timeoutString, true)
@@ -766,6 +833,9 @@ function run (opts, clientRequest, clientResponse) {
       report(r, url, is.FileStructureOK(dataAll1Body, 'numlines'))
 
       report(r, url, is.NumberOfColumnsCorrect(r.infoAll[id], dataAll1Body))
+      if (r.dataAll0Body[id]) {
+        report(r, url, is.FileContentSameOrConsistent(r.infoAll[id], dataAll1Body, r.dataAll0Body[id], 'same'))
+      }
 
       next()
     })
@@ -790,16 +860,16 @@ function run (opts, clientRequest, clientResponse) {
     if (testName === 'alternateTimeFormat') {
       // switchTimeFormat converts YMD -> DOY or YDOY -> YMD
       url = encodeURI(opts.url +
-          '/data?id=' + id +
-          '&time.min=' + switchTimeFormat(r.catalog[id].startToUse) +
-          '&time.max=' + switchTimeFormat(r.catalog[id].stopToUse))
+          '/data?' + _idQueryParameter() + '=' + id +
+          '&' + _timeminQueryParameter() + '=' + switchTimeFormat(r.catalog[id].startToUse) +
+          '&' + _timemaxQueryParameter() + '=' + switchTimeFormat(r.catalog[id].stopToUse))
     }
     if (testName === 'emptyParameters') {
       url = encodeURI(opts.url +
-          '/data?id=' + id +
+          '/data?' + _idQueryParameter() + '=' + id +
           '&parameters=' +
-          '&time.min=' + switchTimeFormat(r.catalog[id].startToUse) +
-          '&time.max=' + switchTimeFormat(r.catalog[id].stopToUse))
+          '&' + _timeminQueryParameter() + '=' + switchTimeFormat(r.catalog[id].startToUse) +
+          '&' + _timemaxQueryParameter() + '=' + switchTimeFormat(r.catalog[id].stopToUse))
     }
     if (testName === 'hapi3API') {
       url = encodeURI(opts.url +
@@ -864,9 +934,9 @@ function run (opts, clientRequest, clientResponse) {
     const timeoutString = timeoutCondition(dataAllHeader, 'data')
 
     const url = encodeURI(opts.url +
-          '/data?id=' + id +
-          '&time.min=' + r.catalog[id].startToUse +
-          '&time.max=' + r.catalog[id].stopToUse +
+          '/data?' + _idQueryParameter() + '=' + id +
+          '&' + _timeminQueryParameter() + '=' + r.catalog[id].startToUse +
+          '&' + _timemaxQueryParameter() + '=' + r.catalog[id].stopToUse +
           '&include=header')
 
     report(r, url)
@@ -948,7 +1018,7 @@ function run (opts, clientRequest, clientResponse) {
       stop2 = stop2.slice(0, -1)
     }
 
-    const url = encodeURI(opts.url + '/data?id=' + id + '&time.min=' + start2 + '&time.max=' + stop2)
+    const url = encodeURI(opts.url + '/data?' + _idQueryParameter() + '=' + id + '&' + _timeminQueryParameter() + '=' + start2 + '&' + _timemaxQueryParameter() + '=' + stop2)
 
     report(r, url)
     const reqOpts = requestOptions(url, opts, timeoutString, true)
@@ -993,7 +1063,7 @@ function run (opts, clientRequest, clientResponse) {
     if (pn === -1 || pn === r.infoAll[id].parameters.length) {
       // All parameters for dataset have been checked.
       // -1 is case when one parameter given (opts["parameter"] === false)
-      nextDataset(r, id)
+      _nextDataset(r, id)
       return
     }
 
@@ -1014,10 +1084,10 @@ function run (opts, clientRequest, clientResponse) {
     const timeoutString = timeoutCondition(datar, 'data')
 
     const url = encodeURI(opts.url +
-            '/data?id=' + datasets[0].id +
+          '/data?' + _idQueryParameter() + '=' + datasets[0].id +
             '&parameters=' + parameter +
-            '&time.min=' + start +
-            '&time.max=' + stop)
+            '&' + _timeminQueryParameter() + '=' + start +
+            '&' + _timemaxQueryParameter() + '=' + stop)
 
     if (!parameter) {
       report(r, url,

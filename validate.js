@@ -107,6 +107,12 @@ function getVersion (argv, json) {
 }
 
 function inferSubSchema (json) {
+  if (json.HAPI === '3.4' && json.$schema) {
+    const schema = json.$schema
+    if (schema.endsWith('#infoFileListing')) {
+      return 'infoFileListing'
+    }
+  }
   if (json.id) {
     return 'about'
   }

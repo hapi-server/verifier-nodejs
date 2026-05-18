@@ -27,7 +27,21 @@ fs.readdirSync(base).forEach(file => {
 const schemaVersions = Object.keys(schemas).sort()
 exports.schemaVersions = schemaVersions
 
+function metadataVersion (version) {
+  if (typeof version !== 'string') {
+    return version
+  }
+
+  const parts = version.split('.')
+  if (parts.length === 3) {
+    return parts.slice(0, 2).join('.')
+  }
+
+  return version
+}
+
 function schema (version) {
+  version = metadataVersion(version)
   const json = schemas[version]
   if (!json) {
     return false
@@ -145,9 +159,13 @@ function HAPIVersionSame (url, version, urlLast, versionLast) {
 exports.HAPIVersionSame = HAPIVersionSame
 
 function HAPIVersion (version, ignoreVersionError) {
+  const schemaVersion = metadataVersion(version)
   let got = '<code>' + version + '</code>'
   let err = false
-  if (!schemaVersions.includes(version)) {
+  if (schemaVersion !== version) {
+    got += `; patch version is not needed and will be ignored; using <code>${schemaVersion}</code>`
+  }
+  if (!schemaVersions.includes(schemaVersion)) {
     err = true
     got = `'<code>${version}</code>', which is not valid and/or implemented by verifier.`
     if (ignoreVersionError) {
@@ -190,12 +208,13 @@ function JSONParsable (text) {
 exports.JSONParsable = JSONParsable
 
 function HAPIJSON (text, version, part, ignoreVersionError) {
-  const schemaFull = schema(version)
+  const schemaVersion = metadataVersion(version)
+  const schemaFull = schema(schemaVersion)
 
   if (schemaFull === false) {
     const known = JSON.stringify(Object.keys(schemas))
     const desc = 'Expect HAPI version to be one of <code>' + known + '</code>'
-    const got = `Schema version '<code>${version}</code>' is not one of <code>${known}</code>`
+    const got = `Schema version '<code>${schemaVersion}</code>' is not one of <code>${known}</code>`
     return {
       description: callerName() + desc,
       error: true,
@@ -220,7 +239,7 @@ function HAPIJSON (text, version, part, ignoreVersionError) {
     }
   }
 
-  if (part === 'error' && parseInt(version.split('.')) < 3) {
+  if (part === 'error' && parseInt(schemaVersion.split('.')) < 3) {
     // In version 3+, error is a top-level element.
     part = 'HAPIStatus'
   }
@@ -231,7 +250,7 @@ function HAPIJSON (text, version, part, ignoreVersionError) {
   if (!schemaFull[part]) {
     const desc = `Expect HAPI JSON schema to have a element named '${part}'.`
     let got = `No element named '${part}' in HAPI schema. `
-    got += `Is HAPI schema version '${version}' correct?`
+    got += `Is HAPI schema version '${schemaVersion}' correct?`
     return {
       description: callerName() + desc,
       error: true,
@@ -272,10 +291,10 @@ function HAPIJSON (text, version, part, ignoreVersionError) {
       }
     }
 
-    const url = `${schemaURL}/blob/main/HAPI-data-access-schema-${version}.json`
-    text = `HAPI ${version} '${part}' schema`
+    const url = `${schemaURL}/blob/main/HAPI-data-access-schema-${schemaVersion}.json`
+    text = `HAPI ${schemaVersion} '${part}' schema`
     let desc = `Expect body to be valid <a href="${url}">${text}</a>.`
-    desc += versionWarning(version)
+    desc += versionWarning(schemaVersion)
 
     return {
       description: callerName + desc,
@@ -287,6 +306,7 @@ function HAPIJSON (text, version, part, ignoreVersionError) {
 exports.HAPIJSON = HAPIJSON
 
 function timeregexes (version) {
+  version = metadataVersion(version)
   const json = schemas[version]
   if (!json) {
     return false

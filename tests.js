@@ -250,7 +250,7 @@ function run (opts, clientRequest, clientResponse) {
         }
       }
 
-      if (r.capabilities.catalogDepthOptions) {
+      if (r.capabilities && r.capabilities.catalogDepthOptions) {
         if (catalog.catalogDepthOptionsToCheck === undefined) {
           // Copy
           const toCheck = JSON.parse(JSON.stringify(r.capabilities.catalogDepthOptions))
